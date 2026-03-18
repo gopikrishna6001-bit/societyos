@@ -1,0 +1,16 @@
+{
+  "name": "SocietyOS",
+  "short_name": "SocietyOS",
+  "description": "Smart society management for Sunrise Residency",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#f59e0b",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "categories": ["utilities", "lifestyle"],
+  "lang": "en-IN"
+}
