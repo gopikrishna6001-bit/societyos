@@ -2680,7 +2680,6 @@ export default function SocietyOS() {
     { id: "staff",       label: "Gate & Staff", icon: "staff"      },
     { id: "meetings",    label: "Meetings",     icon: "calendar"   },
     { id: "amenities",   label: "Amenities",    icon: "amenity"    },
-    { id: "campaigns",   label: "Campaigns",    icon: "campaign"   },
     { id: "volunteers",  label: "Volunteers",   icon: "volunteer"  },
     { id: "whatsapp",    label: "WhatsApp",     icon: "whatsapp"   },
     { id: "ai",          label: "AI Assistant", icon: "ai"         },
@@ -2784,7 +2783,6 @@ export default function SocietyOS() {
           {tab === "staff"       && <GateReal />}
           {tab === "meetings"    && <MeetingsReal />}
           {tab === "amenities"   && <AmenitiesReal />}
-          {tab === "campaigns"   && <VolunteersReal />}
           {tab === "volunteers"  && <VolunteersReal />}
           {tab === "whatsapp"    && <WhatsAppCenter data={data} setData={setData} />}
           {tab === "ai"          && <AIAssistant data={data} />}
@@ -2810,7 +2808,6 @@ export default function SocietyOS() {
                   { id: "committee",   label: "Committee",  icon: "committee",   color: "#f59e0b" },
                   { id: "meetings",    label: "Meetings",   icon: "calendar",    color: "#38bdf8" },
                   { id: "amenities",   label: "Amenities",  icon: "amenity",     color: "#4ade80" },
-                  { id: "campaigns",   label: "Events",     icon: "campaign",    color: "#f472b6" },
                   { id: "maintenance", label: "Maintenance",icon: "maintenance", color: "#fb923c" },
                   { id: "volunteers",  label: "Volunteers", icon: "volunteer",   color: "#fbbf24" },
                   { id: "whatsapp",    label: "WhatsApp",   icon: "whatsapp",    color: "#25d366" },
