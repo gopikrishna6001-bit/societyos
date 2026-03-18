@@ -167,6 +167,48 @@ const INITIAL_DATA = {
     { id: 4, flat: "303", name: "Kiran Rao",      block: "B", avatar: "KR", assignedIssues: ["Lift complaint log","Security roster check"], completedTasks: 8, pendingTasks: 1, heroPoints: 180, streak: 2, badges: ["🔒 Safety First"], lastActive: "Yesterday", appreciations: ["Secretary: Kiran caught the lift issue before it broke down. Saved ₹40,000!"] },
     { id: 5, flat: "201", name: "Vijay Kumar",    block: "A", avatar: "VK", assignedIssues: ["Vendor negotiation","AGM coordination"], completedTasks: 15, pendingTasks: 1, heroPoints: 290, streak: 5, badges: ["🤝 Deal Maker","🏛️ Society Pillar"], lastActive: "Today", appreciations: ["All 10 flats: Thank you President for the new elevator AMC deal!"] },
   ],
+  currentUser: {
+    flat: "101", name: "Ramesh Sharma", avatar: "RS",
+    roles: ["Treasurer", "Resident", "Volunteer"],
+    primaryRole: "Treasurer",
+    permissions: ["view_finances", "approve_expenses", "mark_paid", "send_reminders", "raise_complaint", "vote_polls", "book_amenity"],
+  },
+  admin: {
+    societies: [
+      { id: "SOC001", name: "Sunrise Residency", city: "Hyderabad", blocks: 2, flats: 10, residents: 10, status: "active", plan: "Pro", since: "2026-03-18" },
+    ],
+    blocks: [
+      { id: "B-A", society: "SOC001", name: "Block A", floors: 3, flatsPerFloor: 2, totalFlats: 6 },
+      { id: "B-B", society: "SOC001", name: "Block B", floors: 2, flatsPerFloor: 2, totalFlats: 4 },
+    ],
+    flats: [
+      { number: "101", block: "A", floor: 1, sqft: 1200, type: "2BHK", owner: "Ramesh Sharma", status: "occupied" },
+      { number: "102", block: "A", floor: 1, sqft: 1200, type: "2BHK", owner: "Suresh Reddy", status: "occupied" },
+      { number: "201", block: "A", floor: 2, sqft: 1400, type: "3BHK", owner: "Vijay Kumar", status: "occupied" },
+      { number: "202", block: "A", floor: 2, sqft: 1400, type: "3BHK", owner: "Priya Singh", status: "occupied" },
+      { number: "301", block: "A", floor: 3, sqft: 1200, type: "2BHK", owner: "Deepak Mehta", status: "occupied" },
+      { number: "302", block: "B", floor: 1, sqft: 1100, type: "2BHK", owner: "Anitha Nair", status: "occupied" },
+      { number: "303", block: "B", floor: 1, sqft: 1100, type: "2BHK", owner: "Kiran Rao", status: "occupied" },
+      { number: "304", block: "B", floor: 2, sqft: 1100, type: "2BHK", owner: "Sanjay Gupta", status: "occupied" },
+      { number: "305", block: "B", floor: 2, sqft: 1100, type: "2BHK", owner: "Lakshmi Iyer", status: "occupied" },
+      { number: "103", block: "A", floor: 1, sqft: 900, type: "1BHK", owner: "Amit Patel", status: "tenant" },
+    ],
+    maintenanceModels: [
+      { id: 1, name: "Flat Rate", description: "Fixed amount per flat regardless of size", amount: 3000, unit: "per flat/month", active: true },
+      { id: 2, name: "Per Sq Ft", description: "Calculated based on carpet area", amount: 2.5, unit: "per sqft/month", active: false },
+      { id: 3, name: "Tiered by BHK", description: "Different rates for 1BHK/2BHK/3BHK", amount: null, tiers: { "1BHK": 2000, "2BHK": 3000, "3BHK": 4000 }, unit: "per flat/month", active: false },
+      { id: 4, name: "Income Based", description: "Progressive — higher earners pay more", amount: null, unit: "variable", active: false },
+    ],
+    roles: [
+      { name: "Super Admin", color: "#f87171", permissions: ["all"], description: "Full system access" },
+      { name: "President", color: "#f59e0b", permissions: ["final_approvals","view_all","manage_committee","override"], description: "Final authority" },
+      { name: "Secretary", color: "#818cf8", permissions: ["manage_complaints","post_notices","assign_maintenance","view_residents"], description: "Day-to-day operations" },
+      { name: "Treasurer", color: "#4ade80", permissions: ["view_finances","approve_expenses","mark_paid","send_reminders"], description: "Financial management" },
+      { name: "Committee Member", color: "#38bdf8", permissions: ["view_all","vote_motions","manage_assigned"], description: "Committee participation" },
+      { name: "Resident", color: "#64748b", permissions: ["raise_complaint","vote_polls","book_amenity","view_notices"], description: "Standard resident access" },
+      { name: "Tenant", color: "#475569", permissions: ["raise_complaint","book_amenity","view_notices"], description: "Limited tenant access" },
+    ],
+  },
 };
 
 // ─── Icons ───────────────────────────────────────────────────────────────────
@@ -273,120 +315,155 @@ const btnPrimary = { background: "linear-gradient(135deg, #d97706, #f59e0b)", bo
 // ═══════════════════════════════════════════════════════════════════════════════
 // SECTION: DASHBOARD
 // ═══════════════════════════════════════════════════════════════════════════════
-const Dashboard = ({ data }) => {
+const Dashboard = ({ data, onNavigate }) => {
   const openComplaints = data.complaints.filter(c => c.status === "open").length;
   const pendingMaintenance = data.maintenance.filter(m => m.status !== "completed").length;
   const unpaidFlats = data.finances.collections.filter(c => !c.paid).length;
   const activePolls = data.polls.filter(p => p.status === "active").length;
+  const [showHealthDetail, setShowHealthDetail] = useState(false);
 
   const stats = [
-    { label: "Open Complaints", value: openComplaints, color: "#f87171", icon: "alert", sub: "Needs attention" },
-    { label: "Maintenance Tasks", value: pendingMaintenance, color: "#fbbf24", icon: "maintenance", sub: "In queue" },
-    { label: "Unpaid Dues", value: `${unpaidFlats} flats`, color: "#fb923c", icon: "finance", sub: "This month" },
-    { label: "Active Polls", value: activePolls, color: "#818cf8", icon: "vote", sub: "Awaiting votes" },
+    { label: "Open Complaints", value: openComplaints, color: "#f87171", icon: "alert", sub: "Tap to manage", nav: "conflicts" },
+    { label: "Maintenance Tasks", value: pendingMaintenance, color: "#fbbf24", icon: "maintenance", sub: "Tap to view queue", nav: "maintenance" },
+    { label: "Unpaid Dues", value: `${unpaidFlats} flats`, color: "#fb923c", icon: "finance", sub: "Tap to collect", nav: "finances" },
+    { label: "Active Polls", value: activePolls, color: "#818cf8", icon: "vote", sub: "Tap to vote", nav: "voting" },
   ];
 
   const activityFeed = [
-    { time: "2 hrs ago", text: "Flat 103 raised a noise complaint against Flat 501", type: "complaint" },
-    { time: "4 hrs ago", text: "AI mediation resolved parking dispute between 304 & 201", type: "ai" },
-    { time: "6 hrs ago", text: "March maintenance fee collected from 7/10 flats", type: "finance" },
-    { time: "1 day ago", text: "AGM notice pinned by Secretary", type: "notice" },
-    { time: "1 day ago", text: "Elevator servicing scheduled for March 20th", type: "maintenance" },
-    { time: "2 days ago", text: "CCTV poll reached 22 votes — results pending", type: "poll" },
+    { time: "2 hrs ago", text: "Flat 103 raised a noise complaint against Flat 501", type: "complaint", nav: "conflicts" },
+    { time: "4 hrs ago", text: "AI mediation resolved parking dispute between 304 & 201", type: "ai", nav: "conflicts" },
+    { time: "6 hrs ago", text: "March maintenance fee collected from 7/10 flats", type: "finance", nav: "finances" },
+    { time: "1 day ago", text: "AGM notice pinned by Secretary", type: "notice", nav: "notices" },
+    { time: "1 day ago", text: "Elevator servicing scheduled for March 20th", type: "maintenance", nav: "maintenance" },
+    { time: "2 days ago", text: "CCTV poll reached 22 votes — results pending", type: "poll", nav: "voting" },
   ];
 
   const typeColor = { complaint: "#f87171", ai: "#818cf8", finance: "#4ade80", notice: "#fbbf24", maintenance: "#38bdf8", poll: "#a78bfa" };
 
+  const healthItems = [
+    { label: "Fee compliance", value: "70%", detail: `${data.finances.collections.filter(c=>c.paid).length}/10 flats paid`, color: "#4ade80", nav: "finances" },
+    { label: "Open complaints", value: openComplaints, detail: "Unresolved issues", color: "#f87171", nav: "conflicts" },
+    { label: "Maintenance backlog", value: pendingMaintenance, detail: "Tasks pending", color: "#fbbf24", nav: "maintenance" },
+    { label: "Poll participation", value: "73%", detail: "Average across 3 polls", color: "#818cf8", nav: "voting" },
+    { label: "Volunteer activity", value: `${data.volunteers.filter(v=>v.pendingTasks===0).length}/${data.volunteers.length}`, detail: "Volunteers all-clear", color: "#4ade80", nav: "volunteers" },
+    { label: "Harmony avg", value: `${Math.round(data.residents.reduce((s,r)=>{const sc=Math.max(0,100-r.defaultMonths*8-r.complaintsAgainst*15);return s+sc;},0)/data.residents.length)}/100`, detail: "Community harmony", color: "#f472b6", nav: "residents" },
+  ];
+
   return (
     <div>
-      <div style={{ marginBottom: 28 }}>
-        <h2 style={{ color: "#e2e8f0", fontSize: 26, fontFamily: "'Playfair Display', serif", margin: "0 0 4px 0" }}>Society Dashboard</h2>
-        <p style={{ color: "#64748b", fontSize: 14, margin: 0 }}>Sunrise Residency, Hyderabad — Live Overview</p>
+      <div style={{ marginBottom: 20 }}>
+        <h2 style={{ color: "#e2e8f0", fontSize: 24, fontFamily: "'Playfair Display', serif", margin: "0 0 4px 0" }}>Society Dashboard</h2>
+        <p style={{ color: "#64748b", fontSize: 13, margin: 0 }}>Sunrise Residency, Hyderabad — Live Overview</p>
       </div>
 
-      {/* Health Score */}
-      <div style={{ background: "linear-gradient(135deg, #1a1f35 0%, #161b27 100%)", border: "1px solid #2a2f45", borderRadius: 16, padding: 24, marginBottom: 20, display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap" }}>
-        <div style={{ flex: "0 0 auto" }}>
-          <div style={{ width: 80, height: 80, borderRadius: "50%", background: "conic-gradient(#4ade80 0% 68%, #2a2f45 68% 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <div style={{ width: 60, height: 60, borderRadius: "50%", background: "#161b27", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column" }}>
-              <span style={{ color: "#4ade80", fontSize: 20, fontWeight: 800 }}>68</span>
+      {/* Health Score — fully clickable */}
+      <div onClick={() => setShowHealthDetail(true)} style={{ background: "linear-gradient(135deg, #1a1f35 0%, #161b27 100%)", border: "1px solid #2a2f45", borderRadius: 16, padding: 20, marginBottom: 16, cursor: "pointer", transition: "border-color 0.2s" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
+          <div style={{ flex: "0 0 auto" }}>
+            <div style={{ width: 72, height: 72, borderRadius: "50%", background: "conic-gradient(#4ade80 0% 68%, #2a2f45 68% 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ width: 54, height: 54, borderRadius: "50%", background: "#161b27", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column" }}>
+                <span style={{ color: "#4ade80", fontSize: 18, fontWeight: 800, lineHeight: 1 }}>68</span>
+              </div>
             </div>
           </div>
-        </div>
-        <div style={{ flex: 1, minWidth: 200 }}>
-          <div style={{ color: "#94a3b8", fontSize: 11, fontWeight: 600, letterSpacing: "1px", textTransform: "uppercase", marginBottom: 4 }}>Community Health Score</div>
-          <div style={{ color: "#e2e8f0", fontSize: 22, fontWeight: 700, marginBottom: 6 }}>Moderate — Needs Attention</div>
-          <div style={{ color: "#64748b", fontSize: 13 }}>3 unresolved conflicts · 30% fee defaulters · 2 urgent maintenance tasks pending</div>
-        </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <div style={{ background: "#1b2d1b", border: "1px solid #4ade8033", borderRadius: 8, padding: "8px 14px", textAlign: "center" }}>
-            <div style={{ color: "#4ade80", fontSize: 18, fontWeight: 700 }}>68%</div>
-            <div style={{ color: "#64748b", fontSize: 11 }}>Compliance</div>
+          <div style={{ flex: 1, minWidth: 150 }}>
+            <div style={{ color: "#94a3b8", fontSize: 10, fontWeight: 600, letterSpacing: "1px", textTransform: "uppercase", marginBottom: 3 }}>Community Health Score</div>
+            <div style={{ color: "#e2e8f0", fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Moderate — Needs Attention</div>
+            <div style={{ color: "#64748b", fontSize: 12 }}>3 unresolved conflicts · 30% fee defaulters</div>
           </div>
-          <div style={{ background: "#2d1b1b", border: "1px solid #f8717133", borderRadius: 8, padding: "8px 14px", textAlign: "center" }}>
-            <div style={{ color: "#f87171", fontSize: 18, fontWeight: 700 }}>5</div>
-            <div style={{ color: "#64748b", fontSize: 11 }}>Open Issues</div>
-          </div>
-          <div style={{ background: "#1b1b2d", border: "1px solid #818cf833", borderRadius: 8, padding: "8px 14px", textAlign: "center" }}>
-            <div style={{ color: "#818cf8", fontSize: 18, fontWeight: 700 }}>1</div>
-            <div style={{ color: "#64748b", fontSize: 11 }}>AI Resolved</div>
-          </div>
+          <div style={{ color: "#64748b", fontSize: 18 }}>›</div>
         </div>
+        <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
+          {[
+            { v: "68%", l: "Compliance", c: "#4ade80" },
+            { v: "5", l: "Open Issues", c: "#f87171" },
+            { v: "1", l: "AI Resolved", c: "#818cf8" },
+          ].map((x,i) => (
+            <div key={i} style={{ background: "#0d1117", borderRadius: 8, padding: "6px 12px", textAlign: "center", flex: 1 }}>
+              <div style={{ color: x.c, fontSize: 16, fontWeight: 800 }}>{x.v}</div>
+              <div style={{ color: "#475569", fontSize: 10 }}>{x.l}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ marginTop: 10, color: "#475569", fontSize: 11, textAlign: "right" }}>Tap for full breakdown →</div>
       </div>
 
-      {/* Stats Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 24 }}>
+      {/* Health Detail Modal */}
+      <Modal open={showHealthDetail} onClose={() => setShowHealthDetail(false)} title="Community Health Breakdown">
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {healthItems.map((h, i) => (
+            <div key={i} onClick={() => { setShowHealthDetail(false); onNavigate(h.nav); }}
+              style={{ background: "#0d1117", borderRadius: 10, padding: "12px 16px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", border: `1px solid ${h.color}22` }}>
+              <div>
+                <div style={{ color: "#94a3b8", fontSize: 12 }}>{h.label}</div>
+                <div style={{ color: "#64748b", fontSize: 11, marginTop: 2 }}>{h.detail}</div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ color: h.color, fontSize: 20, fontWeight: 800 }}>{h.value}</span>
+                <span style={{ color: "#475569" }}>›</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Modal>
+
+      {/* Clickable Stats Grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginBottom: 16 }}>
         {stats.map((s, i) => (
-          <div key={i} style={{ background: "#161b27", border: `1px solid ${s.color}22`, borderLeft: `3px solid ${s.color}`, borderRadius: 12, padding: 20 }}>
+          <div key={i} onClick={() => onNavigate(s.nav)}
+            style={{ background: "#161b27", border: `1px solid ${s.color}22`, borderLeft: `3px solid ${s.color}`, borderRadius: 12, padding: 16, cursor: "pointer", transition: "transform 0.1s, border-color 0.2s", active: { transform: "scale(0.98)" } }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div>
-                <div style={{ color: "#64748b", fontSize: 12, fontWeight: 600, letterSpacing: "0.5px", textTransform: "uppercase", marginBottom: 8 }}>{s.label}</div>
-                <div style={{ color: s.color, fontSize: 28, fontWeight: 800, lineHeight: 1 }}>{s.value}</div>
-                <div style={{ color: "#475569", fontSize: 12, marginTop: 4 }}>{s.sub}</div>
+                <div style={{ color: "#64748b", fontSize: 10, fontWeight: 600, letterSpacing: "0.5px", textTransform: "uppercase", marginBottom: 6 }}>{s.label}</div>
+                <div style={{ color: s.color, fontSize: 26, fontWeight: 800, lineHeight: 1 }}>{s.value}</div>
+                <div style={{ color: "#475569", fontSize: 11, marginTop: 4, display: "flex", alignItems: "center", gap: 4 }}>{s.sub} <span>›</span></div>
               </div>
-              <div style={{ color: s.color, opacity: 0.6 }}><Icon name={s.icon} size={22} /></div>
+              <div style={{ color: s.color, opacity: 0.5 }}><Icon name={s.icon} size={20} /></div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Two column */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, flexWrap: "wrap" }}>
-        {/* Activity Feed */}
-        <div style={{ background: "#161b27", border: "1px solid #2a2f45", borderRadius: 12, padding: 20 }}>
-          <h3 style={{ color: "#e2e8f0", fontSize: 15, margin: "0 0 16px 0", fontFamily: "'Playfair Display', serif" }}>Live Activity Feed</h3>
-          {activityFeed.map((a, i) => (
-            <div key={i} style={{ display: "flex", gap: 12, marginBottom: 14, paddingBottom: 14, borderBottom: i < activityFeed.length - 1 ? "1px solid #2a2f45" : "none" }}>
-              <div style={{ width: 8, height: 8, borderRadius: "50%", background: typeColor[a.type], marginTop: 5, flexShrink: 0 }} />
-              <div style={{ flex: 1 }}>
-                <div style={{ color: "#cbd5e1", fontSize: 13, lineHeight: 1.4 }}>{a.text}</div>
-                <div style={{ color: "#475569", fontSize: 11, marginTop: 3 }}>{a.time}</div>
-              </div>
+      {/* Activity Feed — full width */}
+      <div style={{ background: "#161b27", border: "1px solid #2a2f45", borderRadius: 12, padding: 18, marginBottom: 14 }}>
+        <h3 style={{ color: "#e2e8f0", fontSize: 14, margin: "0 0 14px 0", fontFamily: "'Playfair Display', serif" }}>Live Activity Feed</h3>
+        {activityFeed.map((a, i) => (
+          <div key={i} onClick={() => onNavigate(a.nav)}
+            style={{ display: "flex", gap: 10, marginBottom: 12, paddingBottom: 12, borderBottom: i < activityFeed.length - 1 ? "1px solid #1e2535" : "none", cursor: "pointer" }}>
+            <div style={{ width: 7, height: 7, borderRadius: "50%", background: typeColor[a.type], marginTop: 5, flexShrink: 0 }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ color: "#cbd5e1", fontSize: 13, lineHeight: 1.4 }}>{a.text}</div>
+              <div style={{ color: "#475569", fontSize: 11, marginTop: 2 }}>{a.time}</div>
+            </div>
+            <span style={{ color: "#2a2f45", fontSize: 14 }}>›</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Financial Snapshot — full width */}
+      <div style={{ background: "#161b27", border: "1px solid #2a2f45", borderRadius: 12, padding: 18 }}>
+        <h3 style={{ color: "#e2e8f0", fontSize: 14, margin: "0 0 14px 0", fontFamily: "'Playfair Display', serif" }}>Financial Snapshot</h3>
+        <div onClick={() => onNavigate("finances")} style={{ background: "#0d1117", borderRadius: 10, padding: 14, marginBottom: 12, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <div style={{ color: "#64748b", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>Society Balance</div>
+            <div style={{ color: "#4ade80", fontSize: 26, fontWeight: 800, margin: "4px 0" }}>₹{data.finances.balance.toLocaleString("en-IN")}</div>
+            <div style={{ color: "#475569", fontSize: 11 }}>Tap for full ledger →</div>
+          </div>
+          <Icon name="finance" size={28} />
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+          {[
+            { label: "Collected", value: `₹${(data.finances.collections.filter(c=>c.paid).length * 3000).toLocaleString("en-IN")}`, color: "#4ade80", nav: "finances" },
+            { label: "Pending", value: `₹${(data.finances.collections.filter(c=>!c.paid).length * 3000).toLocaleString("en-IN")}`, color: "#f87171", nav: "finances" },
+            { label: "Expenses (Mar)", value: "₹32,500", color: "#fbbf24", nav: "finances" },
+            { label: "Pending approval", value: "₹35,000", color: "#fb923c", nav: "finances" },
+          ].map((item, i) => (
+            <div key={i} onClick={() => onNavigate(item.nav)}
+              style={{ background: "#0d1117", borderRadius: 8, padding: "10px 12px", cursor: "pointer" }}>
+              <div style={{ color: "#475569", fontSize: 11, marginBottom: 3 }}>{item.label}</div>
+              <div style={{ color: item.color, fontSize: 15, fontWeight: 700 }}>{item.value}</div>
             </div>
           ))}
-        </div>
-
-        {/* Quick Finance */}
-        <div style={{ background: "#161b27", border: "1px solid #2a2f45", borderRadius: 12, padding: 20 }}>
-          <h3 style={{ color: "#e2e8f0", fontSize: 15, margin: "0 0 16px 0", fontFamily: "'Playfair Display', serif" }}>Financial Snapshot</h3>
-          <div style={{ background: "#0d1117", borderRadius: 10, padding: 16, marginBottom: 14 }}>
-            <div style={{ color: "#64748b", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>Society Balance</div>
-            <div style={{ color: "#4ade80", fontSize: 30, fontWeight: 800, margin: "4px 0" }}>₹{data.finances.balance.toLocaleString("en-IN")}</div>
-            <div style={{ color: "#475569", fontSize: 12 }}>Updated March 18, 2026</div>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            {[
-              { label: "Collected this month", value: `₹${(data.finances.collections.filter(c=>c.paid).length * 3000).toLocaleString("en-IN")}`, color: "#4ade80" },
-              { label: "Pending dues", value: `₹${(data.finances.collections.filter(c=>!c.paid).length * 3000).toLocaleString("en-IN")}`, color: "#f87171" },
-              { label: "Total expenses (Mar)", value: "₹32,500", color: "#fbbf24" },
-              { label: "Pending approvals", value: "₹35,000", color: "#fb923c" },
-            ].map((item, i) => (
-              <div key={i} style={{ background: "#0d1117", borderRadius: 8, padding: "10px 12px" }}>
-                <div style={{ color: "#475569", fontSize: 11, marginBottom: 4 }}>{item.label}</div>
-                <div style={{ color: item.color, fontSize: 16, fontWeight: 700 }}>{item.value}</div>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     </div>
@@ -400,6 +477,7 @@ const Conflicts = ({ data, setData }) => {
   const [aiLoading, setAiLoading] = useState(null);
   const [aiResults, setAiResults] = useState({});
   const [showModal, setShowModal] = useState(false);
+  const [myVotes, setMyVotes] = useState({});
   const [form, setForm] = useState({ title: "", category: "Noise", description: "", flat: "", priority: "medium" });
 
   const handleAIMediate = async (complaint) => {
@@ -421,7 +499,9 @@ const Conflicts = ({ data, setData }) => {
   };
 
   const handleVote = (id) => {
-    setData(prev => ({ ...prev, complaints: prev.complaints.map(c => c.id === id ? { ...c, votes: c.votes + 1 } : c) }));
+    const alreadyVoted = myVotes[id];
+    setMyVotes(prev => ({ ...prev, [id]: !alreadyVoted }));
+    setData(prev => ({ ...prev, complaints: prev.complaints.map(c => c.id === id ? { ...c, votes: c.votes + (alreadyVoted ? -1 : 1) } : c) }));
   };
 
   const handleSubmit = () => {
@@ -477,11 +557,14 @@ const Conflicts = ({ data, setData }) => {
                 <p style={{ color: "#64748b", fontSize: 13, margin: 0, lineHeight: 1.5 }}>{c.description}</p>
               </div>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, flexShrink: 0 }}>
-                <button onClick={() => handleVote(c.id)} style={{ background: "#0d1117", border: "1px solid #2a2f45", borderRadius: 8, padding: "6px 12px", color: "#fbbf24", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                <button onClick={() => handleVote(c.id)} style={{ background: myVotes[c.id] ? "#2d2510" : "#0d1117", border: `1px solid ${myVotes[c.id] ? "#fbbf24" : "#2a2f45"}`, borderRadius: 8, padding: "6px 12px", color: myVotes[c.id] ? "#fbbf24" : "#64748b", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, minWidth: 52, transition: "all 0.15s" }}>
                   <Icon name="up" size={14} />
                   <span style={{ fontSize: 16, fontWeight: 700 }}>{c.votes}</span>
-                  <span style={{ fontSize: 10, color: "#475569" }}>support</span>
+                  <span style={{ fontSize: 9, color: myVotes[c.id] ? "#fbbf24" : "#475569" }}>{myVotes[c.id] ? "supported" : "support"}</span>
                 </button>
+                {myVotes[c.id] && (
+                  <button onClick={() => handleVote(c.id)} style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: 9, padding: 0, textDecoration: "underline" }}>unsupport</button>
+                )}
               </div>
             </div>
 
@@ -2284,6 +2367,281 @@ const Volunteers = ({ data, setData }) => {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// SECTION: SUPER ADMIN
+// ═══════════════════════════════════════════════════════════════════════════════
+const SuperAdmin = ({ data, setData }) => {
+  const [tab, setTab] = useState("overview");
+  const [showAddResident, setShowAddResident] = useState(false);
+  const [showAddFlat, setShowAddFlat] = useState(false);
+  const [activeModel, setActiveModel] = useState(data.admin.maintenanceModels.findIndex(m => m.active));
+  const [residentForm, setResidentForm] = useState({ name: "", flat: "", phone: "", type: "owner", block: "A" });
+  const [flatForm, setFlatForm] = useState({ number: "", block: "A", floor: "1", sqft: "", type: "2BHK", owner: "" });
+
+  const roleColors = { "Super Admin": "#f87171", President: "#f59e0b", Secretary: "#818cf8", Treasurer: "#4ade80", "Committee Member": "#38bdf8", Resident: "#64748b", Tenant: "#475569" };
+
+  const setMaintenanceModel = (idx) => {
+    setActiveModel(idx);
+    setData(prev => ({ ...prev, admin: { ...prev.admin, maintenanceModels: prev.admin.maintenanceModels.map((m, i) => ({ ...m, active: i === idx })) } }));
+  };
+
+  const addResident = () => {
+    if (!residentForm.name || !residentForm.flat) return;
+    const newR = { flat: residentForm.flat, name: residentForm.name, phone: residentForm.phone, email: "", type: residentForm.type, since: new Date().toISOString().slice(0, 10), members: 1, vehicle: "", avatar: residentForm.name.split(" ").map(w => w[0]).join("").slice(0,2).toUpperCase(), paidMonths: 0, defaultMonths: 0, complaintsAgainst: 0, complaintsRaised: 0, pollsVoted: 0, pollsTotal: 0 };
+    setData(prev => ({ ...prev, residents: [...prev.residents, newR] }));
+    setShowAddResident(false);
+    setResidentForm({ name: "", flat: "", phone: "", type: "owner", block: "A" });
+  };
+
+  const tabs = ["overview", "society", "residents", "roles", "maintenance", "settings"];
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <h2 style={{ color: "#e2e8f0", fontSize: 24, fontFamily: "'Playfair Display', serif", margin: "0 0 4px 0" }}>Super Admin</h2>
+          <p style={{ color: "#64748b", fontSize: 13, margin: 0 }}>Society setup, residents, roles, permissions, maintenance models</p>
+        </div>
+        <div style={{ background: "#2d1b1b", border: "1px solid #f8717133", borderRadius: 20, padding: "4px 14px", display: "flex", gap: 6, alignItems: "center" }}>
+          <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#f87171" }} />
+          <span style={{ color: "#f87171", fontSize: 12, fontWeight: 700 }}>Super Admin Mode</span>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", gap: 6, marginBottom: 20, background: "#0d1117", borderRadius: 10, padding: 4, overflowX: "auto" }}>
+        {tabs.map(t => (
+          <button key={t} onClick={() => setTab(t)} style={{ background: tab === t ? "#1e2535" : "none", border: tab === t ? "1px solid #2a2f45" : "none", borderRadius: 8, padding: "7px 14px", color: tab === t ? "#e2e8f0" : "#64748b", cursor: "pointer", fontSize: 12, fontWeight: 600, textTransform: "capitalize", whiteSpace: "nowrap" }}>{t}</button>
+        ))}
+      </div>
+
+      {/* OVERVIEW */}
+      {tab === "overview" && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
+          {[
+            { label: "Societies", val: data.admin.societies.length, color: "#f59e0b", icon: "🏢" },
+            { label: "Total Blocks", val: data.admin.blocks.length, color: "#38bdf8", icon: "🏗️" },
+            { label: "Total Flats", val: data.admin.flats.length, color: "#818cf8", icon: "🏠" },
+            { label: "Residents", val: data.residents.length, color: "#4ade80", icon: "👥" },
+            { label: "Committee Size", val: data.committee.members.length, color: "#fbbf24", icon: "🏛️" },
+            { label: "Active Roles", val: data.admin.roles.length, color: "#f472b6", icon: "🎭" },
+          ].map((s, i) => (
+            <div key={i} style={{ background: "#161b27", border: `1px solid ${s.color}22`, borderLeft: `3px solid ${s.color}`, borderRadius: 12, padding: 16, cursor: "pointer" }} onClick={() => setTab(["overview","society","society","residents","overview","roles"][i])}>
+              <div style={{ fontSize: 24, marginBottom: 8 }}>{s.icon}</div>
+              <div style={{ color: s.color, fontSize: 24, fontWeight: 800 }}>{s.val}</div>
+              <div style={{ color: "#64748b", fontSize: 12, marginTop: 3 }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* SOCIETY SETUP */}
+      {tab === "society" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {/* Society card */}
+          {data.admin.societies.map(s => (
+            <div key={s.id} style={{ background: "#161b27", border: "1px solid #2a2f45", borderRadius: 14, padding: 20 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 10, marginBottom: 14 }}>
+                <div>
+                  <div style={{ color: "#e2e8f0", fontSize: 16, fontWeight: 700 }}>{s.name}</div>
+                  <div style={{ color: "#64748b", fontSize: 12, marginTop: 3 }}>{s.city} · ID: {s.id} · Since: {s.since}</div>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <span style={{ background: "#1b2d1b", color: "#4ade80", borderRadius: 20, padding: "3px 12px", fontSize: 11, fontWeight: 700 }}>● {s.status}</span>
+                  <span style={{ background: "#2d2510", color: "#fbbf24", borderRadius: 20, padding: "3px 12px", fontSize: 11, fontWeight: 700 }}>{s.plan}</span>
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                {[{ l: "Blocks", v: s.blocks }, { l: "Flats", v: s.flats }, { l: "Residents", v: s.residents }].map((x,i) => (
+                  <div key={i} style={{ background: "#0d1117", borderRadius: 8, padding: "10px 12px", textAlign: "center" }}>
+                    <div style={{ color: "#e2e8f0", fontSize: 18, fontWeight: 800 }}>{x.v}</div>
+                    <div style={{ color: "#475569", fontSize: 11 }}>{x.l}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+
+          {/* Blocks */}
+          <h3 style={{ color: "#94a3b8", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1px", margin: "8px 0 0" }}>Blocks & Flats</h3>
+          {data.admin.blocks.map(b => (
+            <div key={b.id} style={{ background: "#161b27", border: "1px solid #2a2f45", borderRadius: 12, padding: 16 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+                <div style={{ color: "#e2e8f0", fontSize: 14, fontWeight: 700 }}>Block {b.name.replace("Block ", "")}</div>
+                <span style={{ color: "#64748b", fontSize: 12 }}>{b.totalFlats} flats · {b.floors} floors</span>
+              </div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {data.admin.flats.filter(f => f.block === b.name.replace("Block ", "")).map(f => (
+                  <div key={f.number} style={{ background: f.status === "occupied" ? "#1b2d1b" : f.status === "tenant" ? "#2d2510" : "#1e2535", border: `1px solid ${f.status === "occupied" ? "#4ade8033" : f.status === "tenant" ? "#fbbf2433" : "#2a2f45"}`, borderRadius: 8, padding: "6px 12px", textAlign: "center" }}>
+                    <div style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 700 }}>Flat {f.number}</div>
+                    <div style={{ color: "#475569", fontSize: 10 }}>{f.type} · {f.sqft}sqft</div>
+                    <div style={{ color: f.status === "occupied" ? "#4ade80" : "#fbbf24", fontSize: 9, fontWeight: 700, marginTop: 2 }}>{f.status}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* RESIDENTS MANAGEMENT */}
+      {tab === "residents" && (
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
+            <div style={{ color: "#64748b", fontSize: 13 }}>{data.residents.length} residents · {data.residents.filter(r=>r.type==="owner").length} owners · {data.residents.filter(r=>r.type==="tenant").length} tenants</div>
+            <button style={btnPrimary} onClick={() => setShowAddResident(true)}><Icon name="plus" size={14} />Add Resident</button>
+          </div>
+          <div style={{ background: "#161b27", border: "1px solid #2a2f45", borderRadius: 12, overflow: "hidden" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "80px 1fr 80px 80px 100px", padding: "10px 16px", background: "#0d1117", borderBottom: "1px solid #2a2f45" }}>
+              {["Flat", "Name", "Type", "Block", "Role"].map(h => <span key={h} style={{ color: "#475569", fontSize: 10, fontWeight: 700, textTransform: "uppercase" }}>{h}</span>)}
+            </div>
+            {data.residents.map((r, i) => {
+              const committeeRole = data.committee.members.find(m => m.flat === r.flat);
+              return (
+                <div key={r.flat} style={{ display: "grid", gridTemplateColumns: "80px 1fr 80px 80px 100px", padding: "12px 16px", borderBottom: i < data.residents.length - 1 ? "1px solid #1e2535" : "none", alignItems: "center" }}>
+                  <span style={{ color: "#fbbf24", fontWeight: 700, fontSize: 13 }}>{r.flat}</span>
+                  <div>
+                    <div style={{ color: "#e2e8f0", fontSize: 13 }}>{r.name}</div>
+                    <div style={{ color: "#475569", fontSize: 11 }}>{r.phone}</div>
+                  </div>
+                  <span style={{ color: r.type === "owner" ? "#4ade80" : "#fbbf24", fontSize: 11, fontWeight: 600, textTransform: "capitalize" }}>{r.type}</span>
+                  <span style={{ color: "#64748b", fontSize: 12 }}>Block {data.admin.flats.find(f=>f.number===r.flat)?.block || "?"}</span>
+                  <span style={{ color: committeeRole ? roleColors[committeeRole.role] || "#64748b" : "#475569", fontSize: 11, fontWeight: committeeRole ? 700 : 400 }}>{committeeRole ? committeeRole.role : "Resident"}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          <Modal open={showAddResident} onClose={() => setShowAddResident(false)} title="Add New Resident">
+            <div style={{ display: "flex", flexDirection: "column", gap: 13 }}>
+              <div><label style={labelStyle}>Full Name</label><input style={inputStyle} value={residentForm.name} onChange={e => setResidentForm({...residentForm, name: e.target.value})} placeholder="e.g. Arun Kumar" /></div>
+              <div><label style={labelStyle}>Flat Number</label><input style={inputStyle} value={residentForm.flat} onChange={e => setResidentForm({...residentForm, flat: e.target.value})} placeholder="e.g. 401" /></div>
+              <div><label style={labelStyle}>Phone</label><input style={inputStyle} value={residentForm.phone} onChange={e => setResidentForm({...residentForm, phone: e.target.value})} placeholder="9XXXXXXXXX" /></div>
+              <div><label style={labelStyle}>Type</label>
+                <select style={inputStyle} value={residentForm.type} onChange={e => setResidentForm({...residentForm, type: e.target.value})}>
+                  <option value="owner">Owner</option><option value="tenant">Tenant</option>
+                </select>
+              </div>
+              <div><label style={labelStyle}>Block</label>
+                <select style={inputStyle} value={residentForm.block} onChange={e => setResidentForm({...residentForm, block: e.target.value})}>
+                  {data.admin.blocks.map(b => <option key={b.id} value={b.name.replace("Block ","")}>{b.name}</option>)}
+                </select>
+              </div>
+              <button style={{ ...btnPrimary, justifyContent: "center" }} onClick={addResident}>Add Resident</button>
+            </div>
+          </Modal>
+        </div>
+      )}
+
+      {/* ROLES & PERMISSIONS */}
+      {tab === "roles" && (
+        <div>
+          <div style={{ background: "#1b1b2d", border: "1px solid #818cf833", borderRadius: 12, padding: 14, marginBottom: 16, fontSize: 13, color: "#818cf8" }}>
+            💡 Roles define what each person can see and do. Assign roles to residents via the Residents tab. Committee roles auto-sync from Committee section.
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {data.admin.roles.map((role, i) => (
+              <div key={i} style={{ background: "#161b27", border: `1px solid ${roleColors[role.name] || "#2a2f45"}22`, borderLeft: `3px solid ${roleColors[role.name] || "#64748b"}`, borderRadius: 12, padding: 18 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10, marginBottom: 10 }}>
+                  <div>
+                    <div style={{ color: roleColors[role.name] || "#e2e8f0", fontSize: 15, fontWeight: 700 }}>{role.name}</div>
+                    <div style={{ color: "#64748b", fontSize: 12, marginTop: 2 }}>{role.description}</div>
+                  </div>
+                  <div style={{ color: "#475569", fontSize: 12 }}>{data.residents.filter(r => { const cm = data.committee.members.find(m => m.flat === r.flat); return cm ? cm.role === role.name : role.name === "Resident"; }).length} assigned</div>
+                </div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {(role.permissions[0] === "all" ? ["view_all","approve_expenses","manage_committee","post_notices","manage_complaints","assign_roles","delete_records"] : role.permissions).map((p, j) => (
+                    <span key={j} style={{ background: "#0d1117", border: "1px solid #2a2f45", borderRadius: 20, padding: "3px 10px", color: "#94a3b8", fontSize: 10, fontWeight: 600 }}>{p.replace(/_/g, " ")}</span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* MAINTENANCE MODELS */}
+      {tab === "maintenance" && (
+        <div>
+          <div style={{ background: "#1b2d1b", border: "1px solid #4ade8033", borderRadius: 12, padding: 14, marginBottom: 16 }}>
+            <div style={{ color: "#4ade80", fontSize: 13, fontWeight: 600 }}>Currently active: <strong>{data.admin.maintenanceModels.find(m=>m.active)?.name || "Flat Rate"}</strong></div>
+            <div style={{ color: "#16a34a", fontSize: 12, marginTop: 3 }}>Changing the model recalculates all dues. Takes effect from next billing cycle.</div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {data.admin.maintenanceModels.map((model, i) => (
+              <div key={i} onClick={() => setMaintenanceModel(i)}
+                style={{ background: model.active ? "#1b2d1b" : "#161b27", border: `2px solid ${model.active ? "#4ade80" : "#2a2f45"}`, borderRadius: 14, padding: 20, cursor: "pointer", transition: "all 0.2s" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                  <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                    <div style={{ width: 20, height: 20, borderRadius: "50%", border: `2px solid ${model.active ? "#4ade80" : "#2a2f45"}`, background: model.active ? "#4ade80" : "none", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      {model.active && <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#0d1117" }} />}
+                    </div>
+                    <div>
+                      <div style={{ color: "#e2e8f0", fontSize: 15, fontWeight: 700 }}>{model.name}</div>
+                      <div style={{ color: "#64748b", fontSize: 12, marginTop: 2 }}>{model.description}</div>
+                    </div>
+                  </div>
+                  {model.active && <span style={{ background: "#1b2d1b", color: "#4ade80", borderRadius: 20, padding: "2px 10px", fontSize: 11, fontWeight: 700 }}>Active</span>}
+                </div>
+                {model.amount && (
+                  <div style={{ background: "#0d1117", borderRadius: 8, padding: "10px 14px", display: "inline-flex", gap: 8, alignItems: "baseline" }}>
+                    <span style={{ color: "#fbbf24", fontSize: 20, fontWeight: 800 }}>₹{model.amount}</span>
+                    <span style={{ color: "#475569", fontSize: 12 }}>{model.unit}</span>
+                  </div>
+                )}
+                {model.tiers && (
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {Object.entries(model.tiers).map(([type, amt]) => (
+                      <div key={type} style={{ background: "#0d1117", borderRadius: 8, padding: "8px 12px", textAlign: "center" }}>
+                        <div style={{ color: "#fbbf24", fontSize: 16, fontWeight: 800 }}>₹{amt}</div>
+                        <div style={{ color: "#475569", fontSize: 11 }}>{type}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {model.name === "Per Sq Ft" && (
+                  <div style={{ marginTop: 10, background: "#0d1117", borderRadius: 8, padding: 12 }}>
+                    <div style={{ color: "#64748b", fontSize: 12, marginBottom: 6 }}>Sample calculations:</div>
+                    {data.admin.flats.slice(0,3).map(f => (
+                      <div key={f.number} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
+                        <span style={{ color: "#94a3b8" }}>Flat {f.number} ({f.sqft} sqft)</span>
+                        <span style={{ color: "#fbbf24", fontWeight: 700 }}>₹{(f.sqft * model.amount).toLocaleString("en-IN")}/month</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* SETTINGS */}
+      {tab === "settings" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {[
+            { label: "Society Name", val: "Sunrise Residency", editable: true },
+            { label: "City", val: "Hyderabad, Telangana", editable: true },
+            { label: "Total Flats", val: "10", editable: false },
+            { label: "Monthly Due Date", val: "1st of every month", editable: true },
+            { label: "Late Fee", val: "₹100 after 7 days", editable: true },
+            { label: "WhatsApp Number", val: "+91 98765 43210", editable: true },
+            { label: "Society Registration No.", val: "AP/RWA/2019/4521", editable: true },
+            { label: "Bank Account", val: "HDFC xxxx-xxxx-1234", editable: true },
+          ].map((s, i) => (
+            <div key={i} style={{ background: "#161b27", border: "1px solid #2a2f45", borderRadius: 10, padding: "14px 18px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ color: "#64748b", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>{s.label}</div>
+                <div style={{ color: "#e2e8f0", fontSize: 14, marginTop: 3 }}>{s.val}</div>
+              </div>
+              {s.editable && <button style={{ background: "#1e2535", border: "1px solid #2a2f45", borderRadius: 7, padding: "5px 12px", color: "#94a3b8", cursor: "pointer", fontSize: 12 }}>Edit</button>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // ROOT APP
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function SocietyOS() {
@@ -2314,6 +2672,7 @@ export default function SocietyOS() {
     { id: "volunteers",  label: "Volunteers",   icon: "volunteer"  },
     { id: "whatsapp",    label: "WhatsApp",     icon: "whatsapp"   },
     { id: "ai",          label: "AI Assistant", icon: "ai"         },
+    { id: "admin",       label: "Super Admin",  icon: "shield"     },
   ];
 
   const alerts = data.complaints.filter(c => c.status === "open").length + data.maintenance.filter(m => m.status === "open").length;
@@ -2349,8 +2708,16 @@ export default function SocietyOS() {
             </div>
           )}
           {alerts > 0 && isMobile && <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#f87171" }} />}
-          <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#1e2535", border: "1px solid #2a2f45", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-            <Icon name="user" size={15} />
+          <div onClick={() => setTab("admin")} style={{ display: "flex", gap: 8, alignItems: "center", background: "#1e2535", border: "1px solid #2a2f45", borderRadius: 20, padding: "4px 10px 4px 5px", cursor: "pointer" }}>
+            <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#4ade8022", border: "1px solid #4ade8044", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: "#4ade80" }}>
+              {data.currentUser.avatar}
+            </div>
+            {!isMobile && (
+              <div>
+                <div style={{ color: "#e2e8f0", fontSize: 11, fontWeight: 700, lineHeight: 1 }}>{data.currentUser.name.split(" ")[0]}</div>
+                <div style={{ color: "#4ade80", fontSize: 9, fontWeight: 600 }}>{data.currentUser.primaryRole}</div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -2394,7 +2761,7 @@ export default function SocietyOS() {
 
         {/* Main Content */}
         <div style={{ flex: 1, padding: isMobile ? "16px 14px 110px" : "24px 28px", overflowX: "hidden", maxWidth: isMobile ? "100vw" : "calc(100vw - 220px)", width: "100%" }}>
-          {tab === "dashboard"   && <Dashboard data={data} />}
+          {tab === "dashboard"   && <Dashboard data={data} onNavigate={setTab} />}
           {tab === "conflicts"   && <Conflicts data={data} setData={setData} />}
           {tab === "maintenance" && <Maintenance data={data} setData={setData} />}
           {tab === "finances"    && <Finances data={data} setData={setData} />}
@@ -2409,6 +2776,7 @@ export default function SocietyOS() {
           {tab === "volunteers"  && <Volunteers data={data} setData={setData} />}
           {tab === "whatsapp"    && <WhatsAppCenter data={data} setData={setData} />}
           {tab === "ai"          && <AIAssistant data={data} />}
+          {tab === "admin"       && <SuperAdmin data={data} setData={setData} />}
         </div>
       </div>
 
