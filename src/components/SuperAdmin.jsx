@@ -29,10 +29,18 @@ export default function SuperAdmin() {
   const [roles, setRoles] = useState([]);
   const [models, setModels] = useState([]);
   const [residents, setResidents] = useState([]);
+  const [features, setFeatures] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState(null);
   const [editSociety, setEditSociety] = useState({});
+  const [editRole, setEditRole] = useState(null);
+
+  const DEFAULT_FEATURES = {
+    finances: true, complaints: true, maintenance: true, residents: true,
+    gate: true, notices: true, polls: true, meetings: true,
+    amenities: true, volunteers: true, committee: true, whatsapp: true, ai: true,
+  };
 
   const [showAddBlock, setShowAddBlock] = useState(false);
   const [showAddFlat, setShowAddFlat] = useState(false);
@@ -63,9 +71,56 @@ export default function SuperAdmin() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    // Load feature toggles from localStorage
+    const saved = localStorage.getItem(`features_${SOCIETY_ID}`);
+    setFeatures(saved ? JSON.parse(saved) : DEFAULT_FEATURES);
+  }, []);
 
-  const saveSociety = async () => {
+  const saveFeatures = (newFeatures) => {
+    setFeatures(newFeatures);
+    localStorage.setItem(`features_${SOCIETY_ID}`, JSON.stringify(newFeatures));
+  };
+
+  const deleteBlock = async (id, name) => {
+    const hasFlats = flats.some(f => f.block_id === id);
+    if (hasFlats) { toast(`Remove all flats in Block ${name} first`, "#f87171"); return; }
+    if (!confirm(`Delete Block ${name}? This cannot be undone.`)) return;
+    await supabase.from("blocks").delete().eq("id", id);
+    setBlocks(p => p.filter(b => b.id !== id));
+    toast(`Block ${name} deleted`);
+  };
+
+  const deleteFlat = async (id, number) => {
+    if (!confirm(`Delete Flat ${number}? This will also remove associated data.`)) return;
+    await supabase.from("flats").delete().eq("id", id);
+    setFlats(p => p.filter(f => f.id !== id));
+    toast(`Flat ${number} deleted`);
+  };
+
+  const updateFlat = async (id, field, value) => {
+    await supabase.from("flats").update({ [field]: value }).eq("id", id);
+    setFlats(p => p.map(f => f.id === id ? { ...f, [field]: value } : f));
+  };
+
+  const saveEditRole = async () => {
+    if (!editRole) return;
+    setSaving(true);
+    const perms = typeof editRole.permissions === "string"
+      ? editRole.permissions.split(",").map(p => p.trim()).filter(Boolean)
+      : editRole.permissions;
+    await supabase.from("roles").update({
+      name: editRole.name,
+      color: editRole.color,
+      description: editRole.description,
+      permissions: perms,
+    }).eq("id", editRole.id);
+    setRoles(p => p.map(r => r.id === editRole.id ? { ...r, ...editRole, permissions: perms } : r));
+    toast("✓ Role updated");
+    setEditRole(null);
+    setSaving(false);
+  };
     setSaving(true);
     const { error } = await supabase.from("societies").update(editSociety).eq("id", SOCIETY_ID);
     if (error) { toast(error.message, "#f87171"); setSaving(false); return; }
@@ -159,7 +214,7 @@ export default function SuperAdmin() {
       </div>
 
       <div style={{ display: "flex", gap: 5, marginBottom: 18, background: "#0d1117", borderRadius: 10, padding: 4, overflowX: "auto" }}>
-        {["overview", "society", "blocks & flats", "roles", "maintenance model", "settings"].map(t => (
+        {["overview", "society", "blocks & flats", "roles", "maintenance model", "features", "settings"].map(t => (
           <button key={t} onClick={() => setTab(t)} style={{ background: tab === t ? "#1e2535" : "none", border: tab === t ? "1px solid #2a2f45" : "none", borderRadius: 8, padding: "7px 14px", color: tab === t ? "#e2e8f0" : "#64748b", cursor: "pointer", fontSize: 12, fontWeight: 600, textTransform: "capitalize", whiteSpace: "nowrap" }}>{t}</button>
         ))}
       </div>
@@ -252,19 +307,28 @@ export default function SuperAdmin() {
               </div>
               {blocks.map(b => (
                 <div key={b.id} style={{ background: "#161b27", border: "1px solid #2a2f45", borderRadius: 14, padding: 18, marginBottom: 12 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
                     <div>
                       <div style={{ color: "#e2e8f0", fontSize: 15, fontWeight: 700 }}>Block {b.name}</div>
-                      <div style={{ color: "#64748b", fontSize: 12 }}>{b.floors} floors · {b.flats_per_floor} flats/floor · {b.total_flats || b.floors * b.flats_per_floor} total</div>
+                      <div style={{ color: "#64748b", fontSize: 12 }}>{b.floors} floors · {b.flats_per_floor} flats/floor · {flats.filter(f => f.block_id === b.id).length} flats added</div>
                     </div>
-                    <div style={{ color: "#4ade80", fontSize: 13, fontWeight: 600 }}>{flats.filter(f => f.block_id === b.id && f.status === "occupied").length} occupied</div>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <div style={{ color: "#4ade80", fontSize: 13, fontWeight: 600 }}>{flats.filter(f => f.block_id === b.id && f.status === "occupied").length} occupied</div>
+                      <button onClick={() => deleteBlock(b.id, b.name)} style={{ background: "#2d1b1b", border: "1px solid #f8717133", borderRadius: 8, padding: "5px 10px", color: "#f87171", cursor: "pointer", fontSize: 12 }}>Delete Block</button>
+                    </div>
                   </div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                     {flats.filter(f => f.block_id === b.id).map(f => (
-                      <div key={f.id} style={{ background: f.status === "occupied" ? "#1b2d1b" : f.status === "vacant" ? "#2d1b1b" : "#2d2510", border: `1px solid ${f.status === "occupied" ? "#4ade8033" : f.status === "vacant" ? "#f8717133" : "#fbbf2433"}`, borderRadius: 8, padding: "6px 12px", textAlign: "center", minWidth: 70 }}>
+                      <div key={f.id} style={{ background: f.status === "occupied" ? "#1b2d1b" : f.status === "vacant" ? "#2d1b1b" : "#2d2510", border: `1px solid ${f.status === "occupied" ? "#4ade8033" : f.status === "vacant" ? "#f8717133" : "#fbbf2433"}`, borderRadius: 8, padding: "8px 12px", textAlign: "center", minWidth: 80 }}>
                         <div style={{ color: "#e2e8f0", fontSize: 12, fontWeight: 700 }}>{f.number}</div>
-                        <div style={{ color: "#475569", fontSize: 10 }}>{f.type}</div>
-                        <div style={{ color: f.status === "occupied" ? "#4ade80" : f.status === "vacant" ? "#f87171" : "#fbbf24", fontSize: 9, fontWeight: 700, textTransform: "uppercase" }}>{f.status}</div>
+                        <div style={{ color: "#475569", fontSize: 10 }}>{f.type} · {f.sqft}sqft</div>
+                        <select value={f.status} onChange={e => updateFlat(f.id, "status", e.target.value)}
+                          style={{ background: "none", border: "none", color: f.status === "occupied" ? "#4ade80" : f.status === "vacant" ? "#f87171" : "#fbbf24", fontSize: 9, fontWeight: 700, cursor: "pointer", padding: 0, marginTop: 3, textTransform: "uppercase" }}>
+                          <option value="occupied">Occupied</option>
+                          <option value="vacant">Vacant</option>
+                          <option value="under-renovation">Renovation</option>
+                        </select>
+                        <button onClick={() => deleteFlat(f.id, f.number)} style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: 10, display: "block", margin: "4px auto 0", padding: 0 }}>× remove</button>
                       </div>
                     ))}
                   </div>
@@ -290,9 +354,13 @@ export default function SuperAdmin() {
                       </div>
                       <div style={{ color: "#64748b", fontSize: 12 }}>{r.description}</div>
                     </div>
-                    {!r.is_system && (
-                      <button onClick={() => deleteRole(r.id, r.name, r.is_system)} style={{ background: "#2d1b1b", border: "1px solid #f8717133", borderRadius: 8, padding: "5px 12px", color: "#f87171", cursor: "pointer", fontSize: 12 }}>Delete</button>
-                    )}
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button onClick={() => setEditRole({ ...r, permissions: Array.isArray(r.permissions) ? r.permissions.join(", ") : r.permissions })}
+                        style={{ background: "#1e2535", border: "1px solid #2a2f45", borderRadius: 8, padding: "5px 12px", color: "#94a3b8", cursor: "pointer", fontSize: 12 }}>✏ Edit</button>
+                      {!r.is_system && (
+                        <button onClick={() => deleteRole(r.id, r.name, r.is_system)} style={{ background: "#2d1b1b", border: "1px solid #f8717133", borderRadius: 8, padding: "5px 12px", color: "#f87171", cursor: "pointer", fontSize: 12 }}>Delete</button>
+                      )}
+                    </div>
                   </div>
                   <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
                     {(r.permissions?.[0] === "all" ? ["all permissions"] : r.permissions || []).map((p, i) => (
@@ -362,8 +430,49 @@ export default function SuperAdmin() {
             </div>
           )}
 
-          {/* SETTINGS */}
-          {tab === "settings" && (
+          {/* FEATURES */}
+          {tab === "features" && (
+            <div>
+              <div style={{ background: "#1b1b3a", border: "1px solid #818cf833", borderRadius: 12, padding: 14, marginBottom: 16 }}>
+                <div style={{ color: "#818cf8", fontSize: 13, fontWeight: 600 }}>💡 Feature Toggles</div>
+                <div style={{ color: "#475569", fontSize: 12, marginTop: 3 }}>Turn off modules your society doesn't need. Disabled modules are hidden from navigation.</div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {[
+                  { key: "finances", label: "Finances & Billing", desc: "Invoices, payments, expenses, ledger", icon: "💰" },
+                  { key: "complaints", label: "Complaints & Conflicts", desc: "Raise and track complaints, AI mediation", icon: "⚖️" },
+                  { key: "maintenance", label: "Maintenance", desc: "Tasks, assets, vendors, AMC tracking", icon: "🔧" },
+                  { key: "residents", label: "Residents Management", desc: "Profiles, roles, vehicles, family", icon: "👥" },
+                  { key: "gate", label: "Gate & Staff", desc: "Visitor log, deliveries, staff attendance", icon: "🚦" },
+                  { key: "notices", label: "Notice Board", desc: "Post and manage society notices", icon: "📢" },
+                  { key: "polls", label: "Polls & Voting", desc: "Community polls and decision making", icon: "🗳️" },
+                  { key: "meetings", label: "Meetings", desc: "Schedule, RSVP, minutes", icon: "📅" },
+                  { key: "amenities", label: "Amenities & Booking", desc: "Pool, gym, clubhouse booking", icon: "🏊" },
+                  { key: "volunteers", label: "Volunteers & Campaigns", desc: "Hero points, tasks, community events", icon: "🤝" },
+                  { key: "committee", label: "Committee", desc: "Members, roles, AI reports, audit log", icon: "🏛️" },
+                  { key: "whatsapp", label: "WhatsApp Centre", desc: "Broadcast, templates, delivery tracking", icon: "📱" },
+                  { key: "ai", label: "AI Assistant", desc: "AI chat for RWA advice and drafting", icon: "✨" },
+                ].map(f => {
+                  const enabled = features[f.key] !== false;
+                  return (
+                    <div key={f.key} style={{ background: "#161b27", border: `1px solid ${enabled ? "#2a2f45" : "#2d1b1b"}`, borderRadius: 12, padding: "14px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", opacity: enabled ? 1 : 0.7 }}>
+                      <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                        <span style={{ fontSize: 20 }}>{f.icon}</span>
+                        <div>
+                          <div style={{ color: enabled ? "#e2e8f0" : "#64748b", fontSize: 14, fontWeight: 600 }}>{f.label}</div>
+                          <div style={{ color: "#475569", fontSize: 12 }}>{f.desc}</div>
+                        </div>
+                      </div>
+                      <button onClick={() => saveFeatures({ ...features, [f.key]: !enabled })}
+                        style={{ background: enabled ? "#1b2d1b" : "#2d1b1b", border: `1px solid ${enabled ? "#4ade8033" : "#f8717133"}`, borderRadius: 20, padding: "6px 16px", color: enabled ? "#4ade80" : "#f87171", cursor: "pointer", fontSize: 12, fontWeight: 700, minWidth: 72 }}>
+                        {enabled ? "ON" : "OFF"}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <div style={{ background: "#2d1b1b", border: "1px solid #f8717133", borderRadius: 12, padding: 16 }}>
                 <div style={{ color: "#f87171", fontSize: 14, fontWeight: 700, marginBottom: 4 }}>⚠ Danger Zone</div>
@@ -428,7 +537,34 @@ export default function SuperAdmin() {
         </div>
       </Modal>
 
-      {/* ADD ROLE MODAL */}
+      {/* EDIT ROLE MODAL */}
+      <Modal open={!!editRole} onClose={() => setEditRole(null)} title={`Edit Role — ${editRole?.name}`}>
+        {editRole && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 13 }}>
+            <div><label style={lbl}>Role Name</label>
+              <input style={inp} value={editRole.name} onChange={e => setEditRole(p => ({ ...p, name: e.target.value }))} />
+            </div>
+            <div><label style={lbl}>Description</label>
+              <input style={inp} value={editRole.description || ""} onChange={e => setEditRole(p => ({ ...p, description: e.target.value }))} />
+            </div>
+            <div><label style={lbl}>Color</label>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {["#f87171","#fb923c","#fbbf24","#4ade80","#38bdf8","#818cf8","#f472b6","#a78bfa","#64748b"].map(c => (
+                  <div key={c} onClick={() => setEditRole(p => ({ ...p, color: c }))} style={{ width: 28, height: 28, borderRadius: "50%", background: c, cursor: "pointer", border: editRole.color === c ? "3px solid #fff" : "3px solid transparent" }} />
+                ))}
+              </div>
+            </div>
+            <div>
+              <label style={lbl}>Permissions (comma separated)</label>
+              <textarea style={{ ...inp, height: 80, resize: "vertical" }} value={typeof editRole.permissions === "string" ? editRole.permissions : (editRole.permissions || []).join(", ")} onChange={e => setEditRole(p => ({ ...p, permissions: e.target.value }))} />
+              <div style={{ color: "#475569", fontSize: 11, marginTop: 4 }}>
+                Available: all, view_all, view_finances, approve_expenses, mark_paid, send_reminders, manage_complaints, post_notices, assign_maintenance, raise_complaint, vote_polls, book_amenity, view_notices, view_residents, manage_committee, final_approvals, override
+              </div>
+            </div>
+            <button style={{ ...btnPrimary, justifyContent: "center", opacity: saving ? 0.6 : 1 }} onClick={saveEditRole} disabled={saving}>{saving ? "Saving…" : "Save Changes"}</button>
+          </div>
+        )}
+      </Modal>
       <Modal open={showAddRole} onClose={() => setShowAddRole(false)} title="Create Custom Role">
         <div style={{ display: "flex", flexDirection: "column", gap: 13 }}>
           <div><label style={lbl}>Role Name *</label><input style={inp} value={roleForm.name} onChange={e => setRoleForm({ ...roleForm, name: e.target.value })} placeholder="e.g. Block Captain" /></div>

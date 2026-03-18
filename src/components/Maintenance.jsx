@@ -60,10 +60,10 @@ export default function Maintenance() {
   const load = async () => {
     setLoading(true);
     const [tsk, ast, vnd, sch] = await Promise.all([
-      supabase.from("maintenance_tasks").select("*, assets(name), vendors(name)").eq("society_id", SOCIETY_ID).order("created_at", { ascending: false }),
-      supabase.from("assets").select("*, amc_contracts(*, vendors(name))").eq("society_id", SOCIETY_ID),
-      supabase.from("vendors").select("*").eq("society_id", SOCIETY_ID),
-      supabase.from("preventive_schedule").select("*, assets(name)").eq("society_id", SOCIETY_ID).order("next_due"),
+      supabase.from("maintenance_tasks").select("*").eq("society_id", SOCIETY_ID).order("created_at", { ascending: false }),
+      supabase.from("assets").select("*").eq("society_id", SOCIETY_ID).order("created_at", { ascending: false }),
+      supabase.from("vendors").select("*").eq("society_id", SOCIETY_ID).order("name"),
+      supabase.from("preventive_schedule").select("*").eq("society_id", SOCIETY_ID).order("next_due"),
     ]);
     setTasks(tsk.data || []);
     setAssets(ast.data || []);
@@ -220,11 +220,9 @@ export default function Maintenance() {
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {assets.length === 0 && <div style={{ background: "#161b27", border: "1px solid #2a2f45", borderRadius: 12, padding: 40, textAlign: "center", color: "#475569" }}>No assets. Add lifts, generators, pumps etc.</div>}
               {assets.map(a => {
-                const amc = (a.amc_contracts || [])[0];
-                const amcDays = amc ? daysUntil(amc.end_date) : null;
                 const warrantyDays = a.warranty_expiry ? daysUntil(a.warranty_expiry) : null;
                 return (
-                  <div key={a.id} style={{ background: "#161b27", border: `1px solid ${amcDays !== null && amcDays <= 30 ? "#f8717133" : "#2a2f45"}`, borderRadius: 14, padding: 18 }}>
+                  <div key={a.id} style={{ background: "#161b27", border: "1px solid #2a2f45", borderRadius: 14, padding: 18 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 10, marginBottom: 12 }}>
                       <div>
                         <div style={{ color: "#e2e8f0", fontSize: 15, fontWeight: 700, marginBottom: 4 }}>{a.name}</div>
@@ -236,24 +234,12 @@ export default function Maintenance() {
                       {a.purchase_date && <div style={{ background: "#0d1117", borderRadius: 8, padding: "8px 10px" }}><div style={{ color: "#475569", fontSize: 10 }}>Purchased</div><div style={{ color: "#e2e8f0", fontSize: 12 }}>{a.purchase_date}</div></div>}
                       {a.purchase_cost && <div style={{ background: "#0d1117", borderRadius: 8, padding: "8px 10px" }}><div style={{ color: "#475569", fontSize: 10 }}>Cost</div><div style={{ color: "#fbbf24", fontSize: 12 }}>₹{Number(a.purchase_cost).toLocaleString("en-IN")}</div></div>}
                       {warrantyDays !== null && <div style={{ background: warrantyDays <= 30 ? "#2d1b1b" : "#0d1117", borderRadius: 8, padding: "8px 10px" }}><div style={{ color: "#475569", fontSize: 10 }}>Warranty</div><div style={{ color: warrantyDays <= 30 ? "#f87171" : "#4ade80", fontSize: 12 }}>{warrantyDays > 0 ? `${warrantyDays}d left` : "Expired"}</div></div>}
+                      {a.life_years && <div style={{ background: "#0d1117", borderRadius: 8, padding: "8px 10px" }}><div style={{ color: "#475569", fontSize: 10 }}>Life</div><div style={{ color: "#94a3b8", fontSize: 12 }}>{a.life_years} years</div></div>}
                     </div>
-                    {amc ? (
-                      <div style={{ background: amcDays !== null && amcDays <= 60 ? "#2d1b1b" : "#1b2d1b", border: `1px solid ${amcDays !== null && amcDays <= 60 ? "#f8717133" : "#4ade8033"}`, borderRadius: 8, padding: "10px 14px", marginBottom: 10 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-                          <div>
-                            <div style={{ color: amcDays !== null && amcDays <= 60 ? "#f87171" : "#4ade80", fontSize: 12, fontWeight: 700 }}>AMC Active {amcDays !== null && amcDays <= 60 && "— Expiring Soon!"}</div>
-                            <div style={{ color: "#64748b", fontSize: 11, marginTop: 2 }}>Expires: {amc.end_date} · ₹{amc.annual_cost?.toLocaleString("en-IN")}/yr · {amc.service_visits} visits/yr</div>
-                            {amc.contact_phone && <div style={{ color: "#475569", fontSize: 11 }}>Contact: {amc.contact_name} {amc.contact_phone}</div>}
-                          </div>
-                          {amcDays !== null && <div style={{ color: amcDays <= 30 ? "#f87171" : "#fbbf24", fontSize: 18, fontWeight: 900 }}>{amcDays}d</div>}
-                        </div>
-                      </div>
-                    ) : (
-                      <div style={{ color: "#475569", fontSize: 12, marginBottom: 10 }}>No AMC contract</div>
-                    )}
-                    <button onClick={() => setShowAddAMC(a)} style={{ background: "#1b2d1b", border: "1px solid #4ade8033", borderRadius: 8, padding: "6px 14px", color: "#4ade80", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
-                      {amc ? "Renew AMC" : "+ Add AMC"}
-                    </button>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button onClick={() => setShowAddAMC(a)} style={{ background: "#1b2d1b", border: "1px solid #4ade8033", borderRadius: 8, padding: "6px 14px", color: "#4ade80", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>+ Add AMC</button>
+                      <button onClick={async () => { if (confirm(`Delete asset "${a.name}"?`)) { await supabase.from("assets").delete().eq("id", a.id); setAssets(p => p.filter(x => x.id !== a.id)); toast("Asset deleted"); } }} style={{ background: "#2d1b1b", border: "1px solid #f8717133", borderRadius: 8, padding: "6px 14px", color: "#f87171", cursor: "pointer", fontSize: 12 }}>Delete</button>
+                    </div>
                   </div>
                 );
               })}

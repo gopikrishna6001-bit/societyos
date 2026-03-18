@@ -1,3 +1,4 @@
+import ResidentPortal from "./components/ResidentPortal.jsx";
 import WhatsAppCentreReal from "./components/WhatsAppCentre.jsx";
 import AIAssistantReal from "./components/AIAssistant.jsx";
 import SuperAdminReal from "./components/SuperAdmin.jsx";
@@ -1140,7 +1141,14 @@ const AIAssistant = ({ data }) => {
       `}</style>
     </div>
   );
-};
+{!residentView && (
+  <button onClick={() => {
+    const flat = prompt("Enter flat number to preview resident view:");
+    if (flat) setResidentView(flat);
+  }} style={{ background: "#1b1b3a", border: "1px solid #818cf833", borderRadius: 8, padding: "5px 12px", color: "#818cf8", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>
+    👤 Resident View
+  </button>
+)}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SECTION: RESIDENTS & FLAT PROFILES + HARMONY SCORE
@@ -2664,6 +2672,7 @@ export default function SocietyOS() {
   const [data, setData] = useState(INITIAL_DATA);
   const [tab, setTab] = useState("dashboard");
   const [showMore, setShowMore] = useState(false);
+  const [residentView, setResidentView] = useState(null); // flat number string or null
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
 
   useEffect(() => {
@@ -2776,7 +2785,7 @@ export default function SocietyOS() {
 
         {/* Main Content */}
         <div style={{ flex: 1, padding: isMobile ? "16px 14px 110px" : "24px 28px", overflowX: "hidden", maxWidth: isMobile ? "100vw" : "calc(100vw - 220px)", width: "100%" }}>
-          {tab === "dashboard"   && <DashboardReal onNavigate={setTab} />}
+          {residentView ? <ResidentPortal flatNumber={residentView} onExitResidentView={() => setResidentView(null)} /> : tab === "dashboard" && <DashboardReal onNavigate={setTab} />}
           {tab === "conflicts"   && <ComplaintsReal />}
           {tab === "maintenance" && <MaintenanceReal />}
           {tab === "finances"    && <FinancesReal />}
