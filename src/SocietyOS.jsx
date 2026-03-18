@@ -2784,7 +2784,7 @@ export default function SocietyOS() {
           {tab === "staff"       && <GateReal />}
           {tab === "meetings"    && <MeetingsReal />}
           {tab === "amenities"   && <AmenitiesReal />}
-          {tab === "campaigns"   && <VolunteersReal />} />}
+          {tab === "campaigns"   && <VolunteersReal />}
           {tab === "volunteers"  && <VolunteersReal />}
           {tab === "whatsapp"    && <WhatsAppCenter data={data} setData={setData} />}
           {tab === "ai"          && <AIAssistant data={data} />}
