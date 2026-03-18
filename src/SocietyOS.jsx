@@ -1,3 +1,7 @@
+import NoticesReal from "./components/Notices.jsx";
+import PollsReal from "./components/Polls.jsx";
+import MeetingsReal from "./components/Meetings.jsx";
+import AmenitiesReal from "./components/Amenities.jsx";
 import GateReal from "./components/Gate.jsx";
 import ResidentsReal from "./components/Residents.jsx";
 import ComplaintsReal from "./components/Complaints.jsx";
@@ -2770,13 +2774,13 @@ export default function SocietyOS() {
           {tab === "conflicts"   && <ComplaintsReal />}
           {tab === "maintenance" && <Maintenance data={data} setData={setData} />}
           {tab === "finances"    && <FinancesReal />}
-          {tab === "voting"      && <Voting data={data} setData={setData} />}
-          {tab === "notices"     && <Notices data={data} setData={setData} />}
+          {tab === "voting"      && <PollsReal />}
+          {tab === "notices"     && <NoticesReal />}
           {tab === "residents"   && <ResidentsReal />}
           {tab === "committee"   && <Committee data={data} setData={setData} />}
           {tab === "staff"       && <GateReal />}
-          {tab === "meetings"    && <Meetings data={data} setData={setData} />}
-          {tab === "amenities"   && <Amenities data={data} setData={setData} />}
+          {tab === "meetings"    && <MeetingsReal />}
+          {tab === "amenities"   && <AmenitiesReal />}
           {tab === "campaigns"   && <Campaigns data={data} setData={setData} />}
           {tab === "volunteers"  && <Volunteers data={data} setData={setData} />}
           {tab === "whatsapp"    && <WhatsAppCenter data={data} setData={setData} />}
