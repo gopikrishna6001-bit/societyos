@@ -1,3 +1,4 @@
+import ComplaintsReal from "./components/Complaints.jsx";
 import FinancesReal from "./components/Finances.jsx";
 import { useState, useEffect, useRef } from "react";
 
@@ -2764,7 +2765,7 @@ export default function SocietyOS() {
         {/* Main Content */}
         <div style={{ flex: 1, padding: isMobile ? "16px 14px 110px" : "24px 28px", overflowX: "hidden", maxWidth: isMobile ? "100vw" : "calc(100vw - 220px)", width: "100%" }}>
           {tab === "dashboard"   && <Dashboard data={data} onNavigate={setTab} />}
-          {tab === "conflicts"   && <Conflicts data={data} setData={setData} />}
+          {tab === "conflicts"   && <ComplaintsReal />}
           {tab === "maintenance" && <Maintenance data={data} setData={setData} />}
           {tab === "finances"    && <FinancesReal />}
           {tab === "voting"      && <Voting data={data} setData={setData} />}
