@@ -2495,3 +2495,6 @@ export default function SocietyOS() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
