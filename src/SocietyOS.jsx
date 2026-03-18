@@ -1,3 +1,6 @@
+import VolunteersReal from "./components/Volunteers.jsx";
+import MaintenanceReal from "./components/Maintenance.jsx";
+import CommitteeReal from "./components/Committee.jsx"
 import NoticesReal from "./components/Notices.jsx";
 import PollsReal from "./components/Polls.jsx";
 import MeetingsReal from "./components/Meetings.jsx";
@@ -2772,17 +2775,17 @@ export default function SocietyOS() {
         <div style={{ flex: 1, padding: isMobile ? "16px 14px 110px" : "24px 28px", overflowX: "hidden", maxWidth: isMobile ? "100vw" : "calc(100vw - 220px)", width: "100%" }}>
           {tab === "dashboard"   && <Dashboard data={data} onNavigate={setTab} />}
           {tab === "conflicts"   && <ComplaintsReal />}
-          {tab === "maintenance" && <Maintenance data={data} setData={setData} />}
+          {tab === "maintenance" && <MaintenanceReal />}
           {tab === "finances"    && <FinancesReal />}
           {tab === "voting"      && <PollsReal />}
           {tab === "notices"     && <NoticesReal />}
           {tab === "residents"   && <ResidentsReal />}
-          {tab === "committee"   && <Committee data={data} setData={setData} />}
+          {tab === "committee"   && <CommitteeReal />}
           {tab === "staff"       && <GateReal />}
           {tab === "meetings"    && <MeetingsReal />}
           {tab === "amenities"   && <AmenitiesReal />}
-          {tab === "campaigns"   && <Campaigns data={data} setData={setData} />}
-          {tab === "volunteers"  && <Volunteers data={data} setData={setData} />}
+          {tab === "campaigns"   && <VolunteersReal />} />}
+          {tab === "volunteers"  && <VolunteersReal />}
           {tab === "whatsapp"    && <WhatsAppCenter data={data} setData={setData} />}
           {tab === "ai"          && <AIAssistant data={data} />}
           {tab === "admin"       && <SuperAdmin data={data} setData={setData} />}
