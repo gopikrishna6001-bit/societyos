@@ -1,3 +1,4 @@
+import ResidentsReal from "./components/Residents.jsx";
 import ComplaintsReal from "./components/Complaints.jsx";
 import FinancesReal from "./components/Finances.jsx";
 import { useState, useEffect, useRef } from "react";
@@ -2770,7 +2771,7 @@ export default function SocietyOS() {
           {tab === "finances"    && <FinancesReal />}
           {tab === "voting"      && <Voting data={data} setData={setData} />}
           {tab === "notices"     && <Notices data={data} setData={setData} />}
-          {tab === "residents"   && <Residents data={data} />}
+          {tab === "residents"   && <ResidentsReal />}
           {tab === "committee"   && <Committee data={data} setData={setData} />}
           {tab === "staff"       && <StaffManagement data={data} setData={setData} />}
           {tab === "meetings"    && <Meetings data={data} setData={setData} />}
