@@ -1,4 +1,4 @@
-import ResidentsReal from "./components/Gate.jsx";
+import GateReal from "./components/Gate.jsx";
 import ResidentsReal from "./components/Residents.jsx";
 import ComplaintsReal from "./components/Complaints.jsx";
 import FinancesReal from "./components/Finances.jsx";
