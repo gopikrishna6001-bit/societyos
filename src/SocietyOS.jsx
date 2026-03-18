@@ -1,3 +1,4 @@
+import FinancesReal from "./components/Finances.jsx";
 import { useState, useEffect, useRef } from "react";
 
 const ANTHROPIC_API_URL = typeof import.meta !== "undefined" && import.meta.env?.VITE_AI_ENDPOINT
@@ -711,7 +712,8 @@ const Maintenance = ({ data, setData }) => {
     </div>
   );
 };
-
+// Finances is now a real Supabase-connected component
+// imported from components/Finances.jsx
 // ═══════════════════════════════════════════════════════════════════════════════
 // SECTION: FINANCES
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2764,7 +2766,7 @@ export default function SocietyOS() {
           {tab === "dashboard"   && <Dashboard data={data} onNavigate={setTab} />}
           {tab === "conflicts"   && <Conflicts data={data} setData={setData} />}
           {tab === "maintenance" && <Maintenance data={data} setData={setData} />}
-          {tab === "finances"    && <Finances data={data} setData={setData} />}
+          {tab === "finances"    && <FinancesReal />}
           {tab === "voting"      && <Voting data={data} setData={setData} />}
           {tab === "notices"     && <Notices data={data} setData={setData} />}
           {tab === "residents"   && <Residents data={data} />}
