@@ -1,3 +1,4 @@
+import ResidentsReal from "./components/Gate.jsx";
 import ResidentsReal from "./components/Residents.jsx";
 import ComplaintsReal from "./components/Complaints.jsx";
 import FinancesReal from "./components/Finances.jsx";
@@ -2773,7 +2774,7 @@ export default function SocietyOS() {
           {tab === "notices"     && <Notices data={data} setData={setData} />}
           {tab === "residents"   && <ResidentsReal />}
           {tab === "committee"   && <Committee data={data} setData={setData} />}
-          {tab === "staff"       && <StaffManagement data={data} setData={setData} />}
+          {tab === "staff"       && <GateReal />}
           {tab === "meetings"    && <Meetings data={data} setData={setData} />}
           {tab === "amenities"   && <Amenities data={data} setData={setData} />}
           {tab === "campaigns"   && <Campaigns data={data} setData={setData} />}
