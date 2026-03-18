@@ -2289,6 +2289,7 @@ const Volunteers = ({ data, setData }) => {
 export default function SocietyOS() {
   const [data, setData] = useState(INITIAL_DATA);
   const [tab, setTab] = useState("dashboard");
+  const [showMore, setShowMore] = useState(false);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
 
   useEffect(() => {
@@ -2326,44 +2327,7 @@ export default function SocietyOS() {
         ::-webkit-scrollbar-track { background: #0d1117; }
         ::-webkit-scrollbar-thumb { background: #2a2f45; border-radius: 3px; }
         input, select, textarea { color-scheme: dark; }
-      `}</style>
-
-      {/* Top Bar */}
-      <div style={{ background: "#0a0d13", borderBottom: "1px solid #1e2535", padding: "0 16px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56, position: "sticky", top: 0, zIndex: 100 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 30, height: 30, borderRadius: 8, background: "linear-gradient(135deg, #d97706, #f59e0b)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <Icon name="peace" size={16} />
-          </div>
-          <div>
-            <div style={{ color: "#e2e8f0", fontSize: 14, fontWeight: 800, fontFamily: "'Playfair Display', serif", letterSpacing: "-0.3px" }}>SocietyOS</div>
-            <div style={{ color: "#475569", fontSize: 9, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.8px", marginTop: -1 }}>Sunrise Residency</div>
-          </div>
-        </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          {alerts > 0 && (
-            <div className="topbar-alerts" style={{ background: "#2d1b1b", border: "1px solid #f8717133", borderRadius: 20, padding: "3px 10px", display: "flex", gap: 5, alignItems: "center" }}>
-              <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#f87171" }} />
-              <span style={{ color: "#f87171", fontSize: 11, fontWeight: 600 }}>{alerts} issues</span>
-            </div>
-          )}
-          {alerts > 0 && (
-            <div style={{ display: "none" }} className="mobile-alert">
-              <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#f87171" }} />
-            </div>
-          )}
-          <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#1e2535", border: "1px solid #2a2f45", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-            <Icon name="user" size={15} />
-          </div>
-        </div>
-      </div>
-
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=DM+Sans:wght@400;500;600;700;800&display=swap');
-        * { box-sizing: border-box; }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #0d1117; }
-        ::-webkit-scrollbar-thumb { background: #2a2f45; border-radius: 3px; }
-        input, select, textarea { color-scheme: dark; }
+        @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
       `}</style>
 
       {/* Top Bar */}
@@ -2448,52 +2412,70 @@ export default function SocietyOS() {
         </div>
       </div>
 
-      {/* Mobile Bottom Navigation */}
+      {/* Mobile Bottom Navigation — 5 tabs + More drawer */}
       {isMobile && (
-        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#0a0d13", borderTop: "1px solid #1e2535", zIndex: 200, paddingBottom: "env(safe-area-inset-bottom, 8px)" }}>
-          {/* Primary row */}
-          <div style={{ display: "flex", justifyContent: "space-around", padding: "8px 0 4px" }}>
+        <>
+          {/* More drawer backdrop */}
+          {showMore && (
+            <div onClick={() => setShowMore(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 299, backdropFilter: "blur(2px)" }} />
+          )}
+
+          {/* More drawer */}
+          {showMore && (
+            <div style={{ position: "fixed", bottom: 70, left: 12, right: 12, background: "#161b27", border: "1px solid #2a2f45", borderRadius: 20, zIndex: 300, padding: 16, animation: "slideUp 0.2s ease" }}>
+              <div style={{ color: "#475569", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1px", marginBottom: 12, paddingLeft: 4 }}>All Sections</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                {[
+                  { id: "residents",   label: "Residents",  icon: "residents",   color: "#818cf8" },
+                  { id: "committee",   label: "Committee",  icon: "committee",   color: "#f59e0b" },
+                  { id: "meetings",    label: "Meetings",   icon: "calendar",    color: "#38bdf8" },
+                  { id: "amenities",   label: "Amenities",  icon: "amenity",     color: "#4ade80" },
+                  { id: "campaigns",   label: "Events",     icon: "campaign",    color: "#f472b6" },
+                  { id: "maintenance", label: "Maintenance",icon: "maintenance", color: "#fb923c" },
+                  { id: "volunteers",  label: "Volunteers", icon: "volunteer",   color: "#fbbf24" },
+                  { id: "whatsapp",    label: "WhatsApp",   icon: "whatsapp",    color: "#25d366" },
+                  { id: "ai",          label: "AI",         icon: "ai",          color: "#818cf8" },
+                ].map(item => (
+                  <button key={item.id} onClick={() => { setTab(item.id); setShowMore(false); }}
+                    style={{ background: tab === item.id ? `${item.color}18` : "#0d1117", border: `1px solid ${tab === item.id ? item.color + "44" : "#2a2f45"}`, borderRadius: 12, padding: "14px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                    <span style={{ color: tab === item.id ? item.color : "#64748b" }}><Icon name={item.icon} size={22} /></span>
+                    <span style={{ color: tab === item.id ? item.color : "#64748b", fontSize: 10, fontWeight: tab === item.id ? 700 : 500, textAlign: "center" }}>{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Bottom Tab Bar */}
+          <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#0a0d13", borderTop: "1px solid #1e2535", zIndex: 200, display: "flex", alignItems: "center", height: 66, paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
             {[
-              { id: "dashboard",  label: "Home",    icon: "dashboard"  },
-              { id: "conflicts",  label: "Issues",  icon: "conflict"   },
-              { id: "finances",   label: "Finance", icon: "finance"    },
-              { id: "notices",    label: "Notices", icon: "notice"     },
-              { id: "voting",     label: "Polls",   icon: "vote"       },
-              { id: "staff",      label: "Gate",    icon: "staff"      },
-              { id: "volunteers", label: "Heroes",  icon: "volunteer"  },
-              { id: "ai",         label: "AI",      icon: "ai"         },
+              { id: "dashboard",  label: "Home",    icon: "dashboard" },
+              { id: "conflicts",  label: "Issues",  icon: "conflict"  },
+              { id: "finances",   label: "Finance", icon: "finance"   },
+              { id: "notices",    label: "Notices", icon: "notice"    },
+              { id: "staff",      label: "Gate",    icon: "staff"     },
             ].map(item => {
-              const isActive = tab === item.id;
+              const isActive = tab === item.id && !showMore;
+              const badge = item.id === "conflicts" ? data.complaints.filter(c => c.status === "open").length : item.id === "staff" ? data.deliveries.filter(d => d.status === "at-gate").length : 0;
               return (
-                <button key={item.id} onClick={() => setTab(item.id)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "2px 6px", border: "none", background: "none", color: isActive ? "#f59e0b" : "#475569", cursor: "pointer", flex: 1 }}>
-                  <Icon name={item.icon} size={22} />
-                  <span style={{ fontSize: 9, fontWeight: isActive ? 700 : 400 }}>{item.label}</span>
-                  {isActive && <div style={{ width: 4, height: 4, borderRadius: "50%", background: "#f59e0b" }} />}
+                <button key={item.id} onClick={() => { setTab(item.id); setShowMore(false); }}
+                  style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "8px 0", border: "none", background: "none", cursor: "pointer", position: "relative" }}>
+                  {badge > 0 && <div style={{ position: "absolute", top: 4, right: "50%", marginRight: -16, width: 16, height: 16, borderRadius: "50%", background: "#f87171", color: "#fff", fontSize: 9, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{badge}</div>}
+                  <span style={{ color: isActive ? "#f59e0b" : "#475569" }}><Icon name={item.icon} size={22} /></span>
+                  <span style={{ fontSize: 10, fontWeight: isActive ? 700 : 400, color: isActive ? "#f59e0b" : "#475569" }}>{item.label}</span>
+                  {isActive && <div style={{ position: "absolute", bottom: 0, width: 20, height: 2, borderRadius: 1, background: "#f59e0b" }} />}
                 </button>
               );
             })}
+            {/* More button */}
+            <button onClick={() => setShowMore(p => !p)}
+              style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "8px 0", border: "none", background: "none", cursor: "pointer", position: "relative" }}>
+              <span style={{ color: showMore ? "#f59e0b" : "#475569", fontSize: 22, lineHeight: 1 }}>⋯</span>
+              <span style={{ fontSize: 10, fontWeight: showMore ? 700 : 400, color: showMore ? "#f59e0b" : "#475569" }}>More</span>
+              {showMore && <div style={{ position: "absolute", bottom: 0, width: 20, height: 2, borderRadius: 1, background: "#f59e0b" }} />}
+            </button>
           </div>
-          {/* Secondary row */}
-          <div style={{ display: "flex", justifyContent: "space-around", padding: "4px 0 6px", borderTop: "1px solid #1e253566" }}>
-            {[
-              { id: "residents",   label: "People",    icon: "residents"  },
-              { id: "committee",   label: "Committee", icon: "committee"  },
-              { id: "meetings",    label: "Meetings",  icon: "calendar"   },
-              { id: "amenities",   label: "Amenities", icon: "amenity"    },
-              { id: "campaigns",   label: "Events",    icon: "campaign"   },
-              { id: "maintenance", label: "Tasks",     icon: "maintenance"},
-              { id: "whatsapp",    label: "WhatsApp",  icon: "whatsapp"   },
-            ].map(item => {
-              const isActive = tab === item.id;
-              return (
-                <button key={item.id} onClick={() => setTab(item.id)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "2px 4px", border: "none", background: "none", color: isActive ? "#f59e0b" : "#2a3550", cursor: "pointer", flex: 1 }}>
-                  <Icon name={item.icon} size={16} />
-                  <span style={{ fontSize: 8, fontWeight: isActive ? 700 : 400 }}>{item.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        </>
       )}
     </div>
   );
