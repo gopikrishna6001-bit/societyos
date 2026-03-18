@@ -121,6 +121,7 @@ export default function SuperAdmin() {
     setEditRole(null);
     setSaving(false);
   };
+  const saveSociety = async () => {
     setSaving(true);
     const { error } = await supabase.from("societies").update(editSociety).eq("id", SOCIETY_ID);
     if (error) { toast(error.message, "#f87171"); setSaving(false); return; }
