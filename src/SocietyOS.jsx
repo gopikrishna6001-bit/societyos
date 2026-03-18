@@ -2289,6 +2289,13 @@ const Volunteers = ({ data, setData }) => {
 export default function SocietyOS() {
   const [data, setData] = useState(INITIAL_DATA);
   const [tab, setTab] = useState("dashboard");
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   const navItems = [
     { id: "dashboard",   label: "Dashboard",    icon: "dashboard"  },
@@ -2351,55 +2358,78 @@ export default function SocietyOS() {
       </div>
 
       <style>{`
-        @media (max-width: 768px) {
-          .sidebar { display: none !important; }
-          .main-content { max-width: 100vw !important; padding: 16px 14px 90px !important; }
-          .bottom-nav { display: flex !important; }
-          .topbar-alerts { display: none !important; }
-        }
-        @media (min-width: 769px) {
-          .bottom-nav { display: none !important; }
-          .sidebar { display: block !important; }
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=DM+Sans:wght@400;500;600;700;800&display=swap');
+        * { box-sizing: border-box; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0d1117; }
+        ::-webkit-scrollbar-thumb { background: #2a2f45; border-radius: 3px; }
+        input, select, textarea { color-scheme: dark; }
       `}</style>
 
-      <div style={{ display: "flex" }}>
-        {/* Desktop Sidebar */}
-        <div className="sidebar" style={{ width: 220, background: "#0a0d13", borderRight: "1px solid #1e2535", minHeight: "calc(100vh - 60px)", padding: "20px 12px", position: "sticky", top: 60, height: "calc(100vh - 60px)", overflowY: "auto", flexShrink: 0 }}>
-          {navItems.map(item => {
-            const isActive = tab === item.id;
-            const badge = item.id === "conflicts"  ? data.complaints.filter(c => c.status === "open").length
-              : item.id === "maintenance" ? data.maintenance.filter(m => m.status === "open").length
-              : item.id === "residents"   ? data.residents.filter(r => calcHarmony(r) < 55).length
-              : item.id === "whatsapp"    ? data.whatsapp.sentLog.length
-              : item.id === "staff"       ? data.deliveries.filter(d => d.status === "at-gate").length
-              : item.id === "meetings"    ? data.meetings.filter(m => m.status === "upcoming").length
-              : item.id === "volunteers"  ? data.volunteers.filter(v => v.pendingTasks > 0).length
-              : item.id === "campaigns"   ? data.campaigns.filter(c => c.status === "upcoming").length
-              : 0;
-            return (
-              <button key={item.id} onClick={() => setTab(item.id)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10, border: "none", background: isActive ? "#1e2535" : "none", color: isActive ? "#f59e0b" : "#64748b", cursor: "pointer", fontSize: 13, fontWeight: isActive ? 700 : 500, marginBottom: 4, textAlign: "left", transition: "all 0.15s" }}>
-                <span style={{ opacity: isActive ? 1 : 0.7 }}><Icon name={item.icon} size={17} /></span>
-                <span style={{ flex: 1 }}>{item.label}</span>
-                {badge > 0 && <span style={{ background: item.id === "residents" ? "#fb923c" : item.id === "whatsapp" ? "#25d366" : "#f87171", color: "#0d0f14", borderRadius: 10, padding: "1px 7px", fontSize: 10, fontWeight: 800 }}>{badge}</span>}
-                {item.id === "ai" && <span style={{ background: "#312e81", color: "#818cf8", borderRadius: 10, padding: "1px 7px", fontSize: 9, fontWeight: 800 }}>AI</span>}
-              </button>
-            );
-          })}
-          <div style={{ marginTop: 24, padding: "16px 12px", background: "#161b27", borderRadius: 10, border: "1px solid #2a2f45" }}>
-            <div style={{ color: "#64748b", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 8 }}>Society Health</div>
-            <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 6 }}>
-              <div style={{ flex: 1, height: 6, background: "#0d1117", borderRadius: 3 }}>
-                <div style={{ width: "68%", height: "100%", background: "linear-gradient(90deg, #f59e0b, #4ade80)", borderRadius: 3 }} />
-              </div>
-              <span style={{ color: "#4ade80", fontSize: 11, fontWeight: 700 }}>68</span>
-            </div>
-            <div style={{ color: "#475569", fontSize: 11 }}>Moderate health</div>
+      {/* Top Bar */}
+      <div style={{ background: "#0a0d13", borderBottom: "1px solid #1e2535", padding: "0 16px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56, position: "sticky", top: 0, zIndex: 100 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 30, height: 30, borderRadius: 8, background: "linear-gradient(135deg, #d97706, #f59e0b)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <Icon name="peace" size={16} />
+          </div>
+          <div>
+            <div style={{ color: "#e2e8f0", fontSize: 14, fontWeight: 800, fontFamily: "'Playfair Display', serif" }}>SocietyOS</div>
+            <div style={{ color: "#475569", fontSize: 9, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.8px" }}>Sunrise Residency</div>
           </div>
         </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {alerts > 0 && !isMobile && (
+            <div style={{ background: "#2d1b1b", border: "1px solid #f8717133", borderRadius: 20, padding: "3px 10px", display: "flex", gap: 5, alignItems: "center" }}>
+              <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#f87171" }} />
+              <span style={{ color: "#f87171", fontSize: 11, fontWeight: 600 }}>{alerts} issues</span>
+            </div>
+          )}
+          {alerts > 0 && isMobile && <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#f87171" }} />}
+          <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#1e2535", border: "1px solid #2a2f45", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+            <Icon name="user" size={15} />
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: "flex" }}>
+        {/* Sidebar — desktop only */}
+        {!isMobile && (
+          <div style={{ width: 220, background: "#0a0d13", borderRight: "1px solid #1e2535", minHeight: "calc(100vh - 56px)", padding: "20px 12px", position: "sticky", top: 56, height: "calc(100vh - 56px)", overflowY: "auto", flexShrink: 0 }}>
+            {navItems.map(item => {
+              const isActive = tab === item.id;
+              const badge = item.id === "conflicts"  ? data.complaints.filter(c => c.status === "open").length
+                : item.id === "maintenance" ? data.maintenance.filter(m => m.status === "open").length
+                : item.id === "residents"   ? data.residents.filter(r => calcHarmony(r) < 55).length
+                : item.id === "whatsapp"    ? data.whatsapp.sentLog.length
+                : item.id === "staff"       ? data.deliveries.filter(d => d.status === "at-gate").length
+                : item.id === "meetings"    ? data.meetings.filter(m => m.status === "upcoming").length
+                : item.id === "volunteers"  ? data.volunteers.filter(v => v.pendingTasks > 0).length
+                : item.id === "campaigns"   ? data.campaigns.filter(c => c.status === "upcoming").length
+                : 0;
+              return (
+                <button key={item.id} onClick={() => setTab(item.id)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10, border: "none", background: isActive ? "#1e2535" : "none", color: isActive ? "#f59e0b" : "#64748b", cursor: "pointer", fontSize: 13, fontWeight: isActive ? 700 : 500, marginBottom: 4, textAlign: "left", transition: "all 0.15s" }}>
+                  <span style={{ opacity: isActive ? 1 : 0.7 }}><Icon name={item.icon} size={17} /></span>
+                  <span style={{ flex: 1 }}>{item.label}</span>
+                  {badge > 0 && <span style={{ background: item.id === "residents" ? "#fb923c" : item.id === "whatsapp" ? "#25d366" : "#f87171", color: "#0d0f14", borderRadius: 10, padding: "1px 7px", fontSize: 10, fontWeight: 800 }}>{badge}</span>}
+                  {item.id === "ai" && <span style={{ background: "#312e81", color: "#818cf8", borderRadius: 10, padding: "1px 7px", fontSize: 9, fontWeight: 800 }}>AI</span>}
+                </button>
+              );
+            })}
+            <div style={{ marginTop: 24, padding: "16px 12px", background: "#161b27", borderRadius: 10, border: "1px solid #2a2f45" }}>
+              <div style={{ color: "#64748b", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 8 }}>Society Health</div>
+              <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 6 }}>
+                <div style={{ flex: 1, height: 6, background: "#0d1117", borderRadius: 3 }}>
+                  <div style={{ width: "68%", height: "100%", background: "linear-gradient(90deg, #f59e0b, #4ade80)", borderRadius: 3 }} />
+                </div>
+                <span style={{ color: "#4ade80", fontSize: 11, fontWeight: 700 }}>68</span>
+              </div>
+              <div style={{ color: "#475569", fontSize: 11 }}>Moderate health</div>
+            </div>
+          </div>
+        )}
 
         {/* Main Content */}
-        <div className="main-content" style={{ flex: 1, padding: "24px 20px", overflowX: "hidden", maxWidth: "calc(100vw - 220px)" }}>
+        <div style={{ flex: 1, padding: isMobile ? "16px 14px 110px" : "24px 28px", overflowX: "hidden", maxWidth: isMobile ? "100vw" : "calc(100vw - 220px)", width: "100%" }}>
           {tab === "dashboard"   && <Dashboard data={data} />}
           {tab === "conflicts"   && <Conflicts data={data} setData={setData} />}
           {tab === "maintenance" && <Maintenance data={data} setData={setData} />}
@@ -2419,51 +2449,49 @@ export default function SocietyOS() {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <div className="bottom-nav" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#0a0d13", borderTop: "1px solid #1e2535", zIndex: 200, padding: "6px 0 8px", overflowX: "auto" }}>
-        {/* Quick access row — most used 8 sections */}
-        <div style={{ display: "flex", justifyContent: "space-around", minWidth: "100%", gap: 0 }}>
-          {[
-            { id: "dashboard",   label: "Home",      icon: "dashboard"  },
-            { id: "conflicts",   label: "Issues",    icon: "conflict"   },
-            { id: "finances",    label: "Finance",   icon: "finance"    },
-            { id: "notices",     label: "Notices",   icon: "notice"     },
-            { id: "voting",      label: "Polls",     icon: "vote"       },
-            { id: "volunteers",  label: "Heroes",    icon: "volunteer"  },
-            { id: "staff",       label: "Gate",      icon: "staff"      },
-            { id: "ai",          label: "AI",        icon: "ai"         },
-          ].map(item => {
-            const isActive = tab === item.id;
-            return (
-              <button key={item.id} onClick={() => setTab(item.id)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "4px 10px", border: "none", background: "none", color: isActive ? "#f59e0b" : "#475569", cursor: "pointer", minWidth: 52, flex: 1 }}>
-                <span style={{ color: isActive ? "#f59e0b" : "#475569" }}><Icon name={item.icon} size={20} /></span>
-                <span style={{ fontSize: 9, fontWeight: isActive ? 700 : 500, letterSpacing: "0.3px" }}>{item.label}</span>
-                {isActive && <div style={{ width: 4, height: 4, borderRadius: "50%", background: "#f59e0b", marginTop: 1 }} />}
-              </button>
-            );
-          })}
+      {isMobile && (
+        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#0a0d13", borderTop: "1px solid #1e2535", zIndex: 200, paddingBottom: "env(safe-area-inset-bottom, 8px)" }}>
+          {/* Primary row */}
+          <div style={{ display: "flex", justifyContent: "space-around", padding: "8px 0 4px" }}>
+            {[
+              { id: "dashboard",  label: "Home",    icon: "dashboard"  },
+              { id: "conflicts",  label: "Issues",  icon: "conflict"   },
+              { id: "finances",   label: "Finance", icon: "finance"    },
+              { id: "notices",    label: "Notices", icon: "notice"     },
+              { id: "voting",     label: "Polls",   icon: "vote"       },
+              { id: "staff",      label: "Gate",    icon: "staff"      },
+              { id: "volunteers", label: "Heroes",  icon: "volunteer"  },
+              { id: "ai",         label: "AI",      icon: "ai"         },
+            ].map(item => {
+              const isActive = tab === item.id;
+              return (
+                <button key={item.id} onClick={() => setTab(item.id)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "2px 6px", border: "none", background: "none", color: isActive ? "#f59e0b" : "#475569", cursor: "pointer", flex: 1 }}>
+                  <Icon name={item.icon} size={22} />
+                  <span style={{ fontSize: 9, fontWeight: isActive ? 700 : 400 }}>{item.label}</span>
+                  {isActive && <div style={{ width: 4, height: 4, borderRadius: "50%", background: "#f59e0b" }} />}
+                </button>
+              );
+            })}
+          </div>
+          {/* Secondary row */}
+          <div style={{ display: "flex", justifyContent: "space-around", padding: "4px 0 6px", borderTop: "1px solid #1e253566" }}>
+            {[
+              { id: "residents",   label: "People",    icon: "residents"  },
+              { id: "committee",   label: "Committee", icon: "committee"  },
+              { id: "meetings",    label: "Meetings",  icon: "calendar"   },
+              { id: "amenities",   label: "Amenities", icon: "amenity"    },
+              { id: "campaigns",   label: "Events",    icon: "campaign"   },
+              { id: "maintenance", label: "Tasks",     icon: "maintenance"},
+              { id: "whatsapp",    label: "WhatsApp",  icon: "whatsapp"   },
+            ].map(item => {
+              const isActive = tab === item.id;
+              return (
+                <button key={item.id} onClick={() => setTab(item.id)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "2px 4px", border: "none", background: "none", color: isActive ? "#f59e0b" : "#2a3550", cursor: "pointer", flex: 1 }}>
+                  <Icon name={item.icon} size={16} />
+                  <span style={{ fontSize: 8, fontWeight: isActive ? 700 : 400 }}>{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
-
-        {/* More sections row */}
-        <div style={{ display: "flex", justifyContent: "space-around", minWidth: "100%", gap: 0, borderTop: "1px solid #1e253544", marginTop: 4, paddingTop: 4 }}>
-          {[
-            { id: "residents",   label: "Residents", icon: "residents"  },
-            { id: "committee",   label: "Committee", icon: "committee"  },
-            { id: "meetings",    label: "Meetings",  icon: "calendar"   },
-            { id: "amenities",   label: "Amenities", icon: "amenity"    },
-            { id: "campaigns",   label: "Events",    icon: "campaign"   },
-            { id: "maintenance", label: "Tasks",     icon: "maintenance"},
-            { id: "whatsapp",    label: "WhatsApp",  icon: "whatsapp"   },
-          ].map(item => {
-            const isActive = tab === item.id;
-            return (
-              <button key={item.id} onClick={() => setTab(item.id)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "4px 8px", border: "none", background: "none", color: isActive ? "#f59e0b" : "#2a3550", cursor: "pointer", minWidth: 44, flex: 1 }}>
-                <span style={{ color: isActive ? "#f59e0b" : "#2a3550" }}><Icon name={item.icon} size={16} /></span>
-                <span style={{ fontSize: 8, fontWeight: isActive ? 700 : 500 }}>{item.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
+      )}
