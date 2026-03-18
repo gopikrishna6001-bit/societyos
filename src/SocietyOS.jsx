@@ -1,3 +1,7 @@
+import WhatsAppCentreReal from "./components/WhatsAppCentre.jsx";
+import AIAssistantReal from "./components/AIAssistant.jsx";
+import SuperAdminReal from "./components/SuperAdmin.jsx";
+import DashboardReal from "./components/Dashboard.jsx";
 import VolunteersReal from "./components/Volunteers.jsx";
 import MaintenanceReal from "./components/Maintenance.jsx";
 import CommitteeReal from "./components/Committee.jsx"
@@ -2772,7 +2776,7 @@ export default function SocietyOS() {
 
         {/* Main Content */}
         <div style={{ flex: 1, padding: isMobile ? "16px 14px 110px" : "24px 28px", overflowX: "hidden", maxWidth: isMobile ? "100vw" : "calc(100vw - 220px)", width: "100%" }}>
-          {tab === "dashboard"   && <Dashboard data={data} onNavigate={setTab} />}
+          {tab === "dashboard"   && <DashboardReal onNavigate={setTab} />}
           {tab === "conflicts"   && <ComplaintsReal />}
           {tab === "maintenance" && <MaintenanceReal />}
           {tab === "finances"    && <FinancesReal />}
@@ -2784,9 +2788,9 @@ export default function SocietyOS() {
           {tab === "meetings"    && <MeetingsReal />}
           {tab === "amenities"   && <AmenitiesReal />}
           {tab === "volunteers"  && <VolunteersReal />}
-          {tab === "whatsapp"    && <WhatsAppCenter data={data} setData={setData} />}
-          {tab === "ai"          && <AIAssistant data={data} />}
-          {tab === "admin"       && <SuperAdmin data={data} setData={setData} />}
+          {tab === "whatsapp"    && <WhatsAppCentreReal />}
+          {tab === "ai"          && <AIAssistantReal />}
+          {tab === "admin"       && <SuperAdminReal />}
         </div>
       </div>
 
