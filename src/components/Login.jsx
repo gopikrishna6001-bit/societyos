@@ -26,29 +26,36 @@ export default function Login({ onLogin }) {
   });
 
   const findResident = async () => {
-    if (!phone || !flat) { setError("Enter your phone number and flat number"); return; }
+    if (!phone && !flat) { setError("Enter your phone number or flat number"); return; }
     setLoading(true);
     setError("");
 
-    // Find by phone + flat, or just flat + block
     let query = supabase.from("residents")
-      .select("*, user_roles(*, roles(name, color, permissions)), committee_members(role)")
+      .select("*, committee_members(role)")
       .eq("society_id", SOCIETY_ID)
       .eq("status", "active");
 
+    // Phone is primary identifier
     if (phone) query = query.eq("phone", phone.replace(/\D/g, "").slice(-10));
     if (flat) query = query.eq("flat_number", flat);
     if (block) query = query.eq("block", block);
 
-    const { data, error: err } = await query.single();
+    const { data, error: err } = await query;
 
-    if (err || !data) {
-      setError("No resident found with these details. Contact your secretary.");
+    if (err || !data || data.length === 0) {
+      setError("No resident found. Check your details or contact secretary.");
       setLoading(false);
       return;
     }
 
-    setResident(data);
+    // Multiple matches — need block to disambiguate
+    if (data.length > 1 && !block) {
+      setError(`Multiple flats found with number ${flat}. Please select your block.`);
+      setLoading(false);
+      return;
+    }
+
+    setResident(data[0]);
     setStep("pin");
     setLoading(false);
   };
@@ -147,9 +154,10 @@ export default function Login({ onLogin }) {
               </div>
 
               <div style={{ marginTop: 20, padding: 14, background: "#0d1117", borderRadius: 10, color: "#475569", fontSize: 12, lineHeight: 1.7 }}>
-                <strong style={{ color: "#64748b" }}>Default PIN:</strong> Your flat number padded to 4 digits<br />
-                Flat 101 → PIN: <strong style={{ color: "#fbbf24" }}>0101</strong><br />
-                Flat 22 → PIN: <strong style={{ color: "#fbbf24" }}>0022</strong>
+                <strong style={{ color: "#64748b" }}>Login with:</strong> Your registered phone number + flat number<br />
+                Block is only needed if your flat number exists in multiple blocks<br />
+                <strong style={{ color: "#64748b" }}>Default PIN:</strong> Flat number padded to 4 digits<br />
+                Flat 101 → <strong style={{ color: "#fbbf24" }}>0101</strong> · Flat 22 → <strong style={{ color: "#fbbf24" }}>0022</strong>
               </div>
             </div>
           )}
