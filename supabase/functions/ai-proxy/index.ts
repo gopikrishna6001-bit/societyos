@@ -1,7 +1,3 @@
-// supabase/functions/ai-proxy/index.ts
-// Deploy with: supabase functions deploy ai-proxy
-// Set secret: supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const CORS = {
@@ -10,37 +6,46 @@ const CORS = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: CORS });
   }
-
   try {
     const body = await req.json();
+    const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY") ?? "";
+    const systemText = body.system ? body.system + "\n\n" : "";
+    const userMessage = body.messages?.[body.messages.length - 1]?.content ?? "";
+    const fullPrompt = systemText + userMessage;
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`;
+    
+    const response = await fetch(geminiUrl, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": Deno.env.get("ANTHROPIC_API_KEY") ?? "",
-        "anthropic-version": "2023-06-01",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: body.model || "claude-sonnet-4-20250514",
-        max_tokens: body.max_tokens || 1000,
-        system: body.system || "",
-        messages: body.messages,
+        contents: [{ parts: [{ text: fullPrompt }] }],
+        generationConfig: { maxOutputTokens: body.max_tokens || 1000 },
       }),
     });
 
     const data = await response.json();
-    return new Response(JSON.stringify(data), {
-      headers: { ...CORS, "Content-Type": "application/json" },
-    });
+    
+    // Return full Gemini response for debugging
+    if (data.error) {
+      return new Response(
+        JSON.stringify({ content: [{ type: "text", text: "Gemini error: " + JSON.stringify(data.error) }] }),
+        { headers: { ...CORS, "Content-Type": "application/json" } }
+      );
+    }
+
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "No response from Gemini";
+    return new Response(
+      JSON.stringify({ content: [{ type: "text", text }] }),
+      { headers: { ...CORS, "Content-Type": "application/json" } }
+    );
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { ...CORS, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ content: [{ type: "text", text: "Exception: " + err.message }] }),
+      { status: 500, headers: { ...CORS, "Content-Type": "application/json" } }
+    );
   }
 });
