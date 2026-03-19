@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { supabase, SOCIETY_ID } from "./lib/supabase.js";
 import Login from "./components/Login.jsx";
 import DashboardReal from "./components/Dashboard.jsx";
 import ComplaintsReal from "./components/Complaints.jsx";
@@ -137,7 +138,6 @@ export default function SocietyOS() {
   const changePin = async () => {
     if (newPin.length !== 4) { setPinMsg("PIN must be 4 digits"); return; }
     if (newPin !== confirmPin) { setPinMsg("PINs do not match"); return; }
-    const { supabase, SOCIETY_ID } = await import("./lib/supabase.js");
     await supabase.from("residents").update({ pin: newPin, pin_changed: true }).eq("id", auth.resident.id);
     setAuth(p => ({ ...p, resident: { ...p.resident, pin: newPin, pin_changed: true } }));
     localStorage.setItem("societyos_auth", JSON.stringify({ ...auth, resident: { ...auth.resident, pin: newPin, pin_changed: true } }));
