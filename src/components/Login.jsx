@@ -47,21 +47,16 @@ export default function Login({ onLogin }) {
     setLoading(true);
     setError("");
 
-    // Just validate phone exists — actual auth happens at PIN step
-    const { data, error: err } = await supabase
-      .from("residents")
-      .select("id, name, flat_number, block, type, pin_changed")
-      .eq("phone", cleaned)
-      .eq("status", "active")
-      .single();
+    // Call Edge Function with action "lookup" — returns masked resident info
+    const result = await callAuth({ action: "lookup", phone: cleaned });
 
-    if (err || !data) {
-      setError("Phone number not registered. Contact your society secretary.");
+    if (result.error) {
+      setError(result.error);
       setLoading(false);
       return;
     }
 
-    setResident(data);
+    setResident(result.resident);
     setStep("pin");
     setLoading(false);
   };

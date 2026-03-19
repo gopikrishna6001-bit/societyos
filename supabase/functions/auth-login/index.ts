@@ -22,6 +22,34 @@ serve(async (req) => {
   try {
     const { action, phone, pin, resident_id, new_pin } = await req.json();
 
+    // ── LOOKUP (check phone exists, return masked info) ───────────────────────
+    if (action === "lookup") {
+      if (!phone) return json({ error: "Phone required" }, 400);
+      const cleaned = phone.replace(/\D/g, "").slice(-10);
+
+      const { data: residents } = await adminClient
+        .from("residents")
+        .select("id, name, flat_number, block, type, pin_changed")
+        .eq("phone", cleaned)
+        .eq("status", "active");
+
+      if (!residents?.length) {
+        return json({ error: "Phone number not registered. Contact your society secretary." }, 401);
+      }
+
+      const r = residents[0];
+      return json({
+        resident: {
+          id: r.id,
+          name: r.name,
+          flat_number: r.flat_number,
+          block: r.block,
+          type: r.type,
+          pin_changed: r.pin_changed,
+        }
+      });
+    }
+
     // ── LOGIN ──────────────────────────────────────────────────────────────────
     if (action === "login") {
       if (!phone || !pin) {
