@@ -31,23 +31,20 @@ serve(async (req) => {
         .from("residents")
         .select("id, name, flat_number, block, type, pin_changed")
         .eq("phone", cleaned)
-        .eq("status", "active");
+        .eq("status", "active")
+        .order("flat_number");
 
       if (!residents?.length) {
         return json({ error: "Phone number not registered. Contact your society secretary." }, 401);
       }
 
-      const r = residents[0];
-      return json({
-        resident: {
-          id: r.id,
-          name: r.name,
-          flat_number: r.flat_number,
-          block: r.block,
-          type: r.type,
-          pin_changed: r.pin_changed,
-        }
-      });
+      // Single flat — proceed to PIN
+      if (residents.length === 1) {
+        return json({ resident: residents[0], multiple: false });
+      }
+
+      // Multiple flats — return all, ask user to pick
+      return json({ residents, multiple: true });
     }
 
     // ── LOGIN ──────────────────────────────────────────────────────────────────
@@ -58,12 +55,17 @@ serve(async (req) => {
 
       const cleaned = phone.replace(/\D/g, "").slice(-10);
 
-      // Find resident by phone
-      const { data: residents, error: findErr } = await adminClient
-        .from("residents")
+      // Find resident — use resident_id if provided (multi-flat owner)
+      let query = adminClient.from("residents")
         .select("*, committee_members(role)")
         .eq("phone", cleaned)
         .eq("status", "active");
+
+      if (resident_id) {
+        query = query.eq("id", resident_id);
+      }
+
+      const { data: residents, error: findErr } = await query;
 
       if (findErr || !residents?.length) {
         return json({ error: "Phone number not registered. Contact your secretary." }, 401);
