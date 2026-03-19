@@ -13,9 +13,9 @@ export default function Login({ onLogin }) {
   const [step, setStep] = useState("phone");
   const [phone, setPhone] = useState("");
   const [pin, setPin] = useState("");
-  const [oldPin, setOldPin] = useState("");
   const [newPin, setNewPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
+  const [isFirstLogin, setIsFirstLogin] = useState(false);
   const [resident, setResident] = useState(null);
   const [society, setSociety] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -53,8 +53,15 @@ export default function Login({ onLogin }) {
     setLoading(true);
     setError("");
     if (resident.pin !== pin) {
-      setError("Incorrect PIN. Try again or use Forgot PIN.");
+      setError("Incorrect PIN. Contact your secretary if you forgot it.");
       setPin("");
+      setLoading(false);
+      return;
+    }
+    // First login — force PIN change
+    if (!resident.pin_changed) {
+      setIsFirstLogin(true);
+      setStep("set_new_pin");
       setLoading(false);
       return;
     }
@@ -63,21 +70,14 @@ export default function Login({ onLogin }) {
     setLoading(false);
   };
 
-  const resetPin = async () => {
-    if (oldPin.length !== 4) { setError("Enter your current PIN first"); return; }
-    if (oldPin !== resident.pin) { setError("Current PIN is incorrect"); setOldPin(""); return; }
-    if (newPin.length !== 4) { setError("New PIN must be exactly 4 digits"); return; }
-    if (newPin !== confirmPin) { setError("New PINs do not match"); return; }
-    if (newPin === "0000" || newPin === "1234") { setError("Choose a stronger PIN"); return; }
-    if (newPin === oldPin) { setError("New PIN must be different from current PIN"); return; }
+  const setFirstPin = async () => {
+    if (newPin.length !== 4) { setError("PIN must be 4 digits"); return; }
+    if (newPin !== confirmPin) { setError("PINs do not match"); return; }
+    if (newPin === pin) { setError("New PIN must be different from default PIN"); return; }
     setLoading(true);
-    await supabase.from("residents").update({ pin: newPin, pin_changed: true }).eq("id", resident.id);
-    setSuccess("✓ PIN reset! Logging you in…");
+    await supabase.from("residents").update({ pin: newPin, pin_changed: true, last_login: new Date().toISOString() }).eq("id", resident.id);
+    onLogin({ resident: { ...resident, pin: newPin, pin_changed: true }, role: determineRole(resident) });
     setLoading(false);
-    setTimeout(async () => {
-      await supabase.from("residents").update({ last_login: new Date().toISOString() }).eq("id", resident.id);
-      onLogin({ resident: { ...resident, pin: newPin, pin_changed: true }, role: determineRole(resident) });
-    }, 1500);
   };
 
   const determineRole = (r) => {
@@ -138,11 +138,6 @@ export default function Login({ onLogin }) {
                 <div style={{ color: "#fbbf24", fontSize: 13, marginTop: 2 }}>
                   {resident?.block ? `Block ${resident.block} · ` : ""}Flat {resident?.flat_number}
                 </div>
-                {!resident?.pin_changed && (
-                  <div style={{ background: "#2d2510", border: "1px solid #fbbf2433", borderRadius: 8, padding: "8px 12px", marginTop: 10, color: "#fbbf24", fontSize: 11, lineHeight: 1.5 }}>
-                    ⚠ Using default PIN. Please change after login.
-                  </div>
-                )}
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 <input style={{ ...inp, fontSize: 28, letterSpacing: "12px" }} type="password" value={pin}
@@ -154,47 +149,42 @@ export default function Login({ onLogin }) {
                   style={{ background: "linear-gradient(135deg,#d97706,#f59e0b)", border: "none", borderRadius: 10, padding: "14px", color: "#0d0f14", fontWeight: 700, cursor: "pointer", fontSize: 15, opacity: (loading || pin.length < 4) ? 0.6 : 1 }}>
                   {loading ? "Verifying…" : "Login →"}
                 </button>
-                <button onClick={() => { setStep("forgot"); setError(""); setPin(""); }}
-                  style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: 13, textDecoration: "underline", padding: "4px" }}>
-                  Forgot PIN?
-                </button>
+                <div style={{ background: "#0d1117", borderRadius: 10, padding: 14, textAlign: "center" }}>
+                  <div style={{ color: "#475569", fontSize: 12 }}>Forgot your PIN?</div>
+                  <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>Contact your society secretary to reset it.</div>
+                </div>
               </div>
             </div>
           )}
 
-          {step === "forgot" && (
+          {step === "set_new_pin" && (
             <div>
-              <button onClick={() => { setStep("pin"); setError(""); setNewPin(""); setConfirmPin(""); setOldPin(""); }}
-                style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 13, padding: "0 0 16px", display: "flex", alignItems: "center", gap: 4 }}>← Back</button>
-              <h3 style={{ color: "#e2e8f0", fontSize: 18, fontFamily: "'Playfair Display',serif", margin: "0 0 6px" }}>Reset Your PIN</h3>
-              <p style={{ color: "#64748b", fontSize: 13, margin: "0 0 20px", lineHeight: 1.6 }}>
-                Verify your identity then set a new PIN.
-              </p>
+              <div style={{ textAlign: "center", marginBottom: 20 }}>
+                <div style={{ fontSize: 32, marginBottom: 8 }}>🔐</div>
+                <h3 style={{ color: "#e2e8f0", fontSize: 18, fontFamily: "'Playfair Display',serif", margin: "0 0 6px" }}>Set Your PIN</h3>
+                <p style={{ color: "#64748b", fontSize: 13, margin: 0, lineHeight: 1.6 }}>
+                  First login detected. Set a personal PIN to secure your account.
+                </p>
+              </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 <div>
-                  <div style={{ color: "#94a3b8", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6, textAlign: "left" }}>Current PIN</div>
-                  <input style={{ ...inp, fontSize: 28, letterSpacing: "12px" }} type="password" value={oldPin}
-                    onChange={e => { setOldPin(e.target.value.replace(/\D/g, "").slice(0,4)); setError(""); }}
+                  <div style={{ color: "#94a3b8", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6, textAlign: "left" }}>New PIN (4 digits)</div>
+                  <input style={{ ...inp, fontSize: 28, letterSpacing: "12px" }} type="password" value={newPin}
+                    onChange={e => { setNewPin(e.target.value.replace(/\D/g, "").slice(0,4)); setError(""); }}
                     placeholder="••••" maxLength={4} autoFocus />
                 </div>
                 <div>
-                  <div style={{ color: "#94a3b8", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6, textAlign: "left" }}>New PIN</div>
-                  <input style={{ ...inp, fontSize: 28, letterSpacing: "12px" }} type="password" value={newPin}
-                    onChange={e => { setNewPin(e.target.value.replace(/\D/g, "").slice(0,4)); setError(""); }}
-                    placeholder="••••" maxLength={4} />
-                </div>
-                <div>
-                  <div style={{ color: "#94a3b8", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6, textAlign: "left" }}>Confirm New PIN</div>
+                  <div style={{ color: "#94a3b8", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6, textAlign: "left" }}>Confirm PIN</div>
                   <input style={{ ...inp, fontSize: 28, letterSpacing: "12px" }} type="password" value={confirmPin}
                     onChange={e => { setConfirmPin(e.target.value.replace(/\D/g, "").slice(0,4)); setError(""); }}
                     placeholder="••••" maxLength={4}
-                    onKeyDown={e => e.key === "Enter" && resetPin()} />
+                    onKeyDown={e => e.key === "Enter" && setFirstPin()} />
                 </div>
                 {error && <div style={{ color: "#f87171", fontSize: 13, textAlign: "center" }}>{error}</div>}
                 {success && <div style={{ color: "#4ade80", fontSize: 13, textAlign: "center" }}>{success}</div>}
-                <button onClick={resetPin} disabled={loading || oldPin.length < 4 || newPin.length < 4 || confirmPin.length < 4}
-                  style={{ background: "linear-gradient(135deg,#d97706,#f59e0b)", border: "none", borderRadius: 10, padding: "14px", color: "#0d0f14", fontWeight: 700, cursor: "pointer", fontSize: 15, opacity: (oldPin.length < 4 || newPin.length < 4) ? 0.6 : 1 }}>
-                  {loading ? "Saving…" : "Set New PIN & Login"}
+                <button onClick={setFirstPin} disabled={loading || newPin.length < 4 || confirmPin.length < 4}
+                  style={{ background: "linear-gradient(135deg,#d97706,#f59e0b)", border: "none", borderRadius: 10, padding: "14px", color: "#0d0f14", fontWeight: 700, cursor: "pointer", fontSize: 15, opacity: (newPin.length < 4 || confirmPin.length < 4) ? 0.6 : 1 }}>
+                  {loading ? "Saving…" : "Set PIN & Enter →"}
                 </button>
               </div>
             </div>
