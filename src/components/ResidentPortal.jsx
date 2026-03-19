@@ -107,7 +107,9 @@ export default function ResidentPortal({ flatNumber, onExitResidentView }) {
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           {unpaidCount > 0 && <span style={{ background: "#2d1b1b", color: "#f87171", borderRadius: 20, padding: "4px 12px", fontSize: 12, fontWeight: 700 }}>₹ {unpaidCount} unpaid</span>}
-          <button onClick={onExitResidentView} style={{ background: "#1e2535", border: "1px solid #2a2f45", borderRadius: 8, padding: "7px 14px", color: "#64748b", cursor: "pointer", fontSize: 12 }}>← Admin View</button>
+          {onExitResidentView && (
+            <button onClick={onExitResidentView} style={{ background: "#1e2535", border: "1px solid #2a2f45", borderRadius: 8, padding: "7px 14px", color: "#64748b", cursor: "pointer", fontSize: 12 }}>← Admin View</button>
+          )}
         </div>
       </div>
 
@@ -186,9 +188,9 @@ export default function ResidentPortal({ flatNumber, onExitResidentView }) {
             <div key={inv.id} style={{ background: "#161b27", border: `1px solid ${inv.status === "paid" ? "#4ade8022" : "#f8717122"}`, borderRadius: 12, padding: 18 }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
                 <span style={{ color: "#e2e8f0", fontSize: 15, fontWeight: 700 }}>{inv.month}</span>
-                <span style={{ background: inv.status === "paid" ? "#1b2d1b" : "#2d1b1b", color: inv.status === "paid" ? "#4ade80" : "#f87171", borderRadius: 20, padding: "2px 10px", fontSize: 11, fontWeight: 700 }}>{inv.status}</span>
+                <span style={{ background: inv.status === "paid" ? "#1b2d1b" : inv.status === "partial" ? "#2d2510" : "#2d1b1b", color: inv.status === "paid" ? "#4ade80" : inv.status === "partial" ? "#fbbf24" : "#f87171", borderRadius: 20, padding: "2px 10px", fontSize: 11, fontWeight: 700 }}>{inv.status}</span>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 12 }}>
                 {[
                   { l: "Billed", v: `₹${Number(inv.total_amount).toLocaleString("en-IN")}`, c: "#e2e8f0" },
                   { l: "Paid", v: `₹${Number(inv.amount_paid).toLocaleString("en-IN")}`, c: "#4ade80" },
@@ -200,10 +202,35 @@ export default function ResidentPortal({ flatNumber, onExitResidentView }) {
                   </div>
                 ))}
               </div>
-              {inv.late_fee > 0 && <div style={{ color: "#fbbf24", fontSize: 11, marginTop: 8 }}>Late fee: ₹{Number(inv.late_fee).toLocaleString("en-IN")}{inv.penalty_waived ? " (waived)" : ""}</div>}
+              {inv.late_fee > 0 && <div style={{ color: "#fbbf24", fontSize: 11, marginBottom: 10 }}>Late fee: ₹{Number(inv.late_fee).toLocaleString("en-IN")}{inv.penalty_waived ? " (waived)" : ""}</div>}
+
+              {/* Payment options for unpaid invoices */}
               {inv.status !== "paid" && (
-                <div style={{ marginTop: 12, background: "#0d1117", borderRadius: 8, padding: "10px 14px", color: "#64748b", fontSize: 12 }}>
-                  Pay via: UPI / Bank Transfer to society account · After payment, inform your secretary with reference number
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div style={{ color: "#94a3b8", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>Pay Now</div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <button onClick={() => {
+                      const upi = `upi://pay?pa=societyfund@upi&pn=Sunrise+Residency&am=${inv.balance_due}&cu=INR&tn=Maintenance+${inv.month}+Flat+${flatNumber}`;
+                      window.open(upi, "_blank");
+                      toast("Opening UPI app…");
+                    }} style={{ background: "linear-gradient(135deg,#1b2d1b,#0d1117)", border: "1px solid #4ade8033", borderRadius: 10, padding: "10px 16px", color: "#4ade80", cursor: "pointer", fontSize: 13, fontWeight: 700, flex: 1 }}>
+                      📱 Pay via UPI
+                    </button>
+                    <button onClick={() => {
+                      navigator.clipboard?.writeText("societyfund@upi");
+                      toast("UPI ID copied! Open any UPI app to pay.");
+                    }} style={{ background: "#161b27", border: "1px solid #2a2f45", borderRadius: 10, padding: "10px 16px", color: "#94a3b8", cursor: "pointer", fontSize: 13, flex: 1 }}>
+                      📋 Copy UPI ID
+                    </button>
+                  </div>
+                  <div style={{ background: "#0d1117", borderRadius: 8, padding: "10px 14px", fontSize: 12, color: "#64748b", lineHeight: 1.6 }}>
+                    <strong style={{ color: "#94a3b8" }}>Bank Transfer:</strong><br/>
+                    Account: Society Fund · IFSC: Contact secretary<br/>
+                    Reference: Flat {flatNumber} · {inv.month}
+                  </div>
+                  <div style={{ background: "#2d2510", border: "1px solid #fbbf2433", borderRadius: 8, padding: "10px 14px", fontSize: 12, color: "#fbbf24" }}>
+                    ⚠ After payment, WhatsApp your treasurer with the reference number to get it marked as paid.
+                  </div>
                 </div>
               )}
             </div>

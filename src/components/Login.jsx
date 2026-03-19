@@ -13,6 +13,7 @@ export default function Login({ onLogin }) {
   const [step, setStep] = useState("phone");
   const [phone, setPhone] = useState("");
   const [pin, setPin] = useState("");
+  const [oldPin, setOldPin] = useState("");
   const [newPin, setNewPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const [resident, setResident] = useState(null);
@@ -63,9 +64,12 @@ export default function Login({ onLogin }) {
   };
 
   const resetPin = async () => {
-    if (newPin.length !== 4) { setError("PIN must be exactly 4 digits"); return; }
-    if (newPin !== confirmPin) { setError("PINs do not match"); return; }
+    if (oldPin.length !== 4) { setError("Enter your current PIN first"); return; }
+    if (oldPin !== resident.pin) { setError("Current PIN is incorrect"); setOldPin(""); return; }
+    if (newPin.length !== 4) { setError("New PIN must be exactly 4 digits"); return; }
+    if (newPin !== confirmPin) { setError("New PINs do not match"); return; }
     if (newPin === "0000" || newPin === "1234") { setError("Choose a stronger PIN"); return; }
+    if (newPin === oldPin) { setError("New PIN must be different from current PIN"); return; }
     setLoading(true);
     await supabase.from("residents").update({ pin: newPin, pin_changed: true }).eq("id", resident.id);
     setSuccess("✓ PIN reset! Logging you in…");
@@ -160,22 +164,27 @@ export default function Login({ onLogin }) {
 
           {step === "forgot" && (
             <div>
-              <button onClick={() => { setStep("pin"); setError(""); setNewPin(""); setConfirmPin(""); }}
+              <button onClick={() => { setStep("pin"); setError(""); setNewPin(""); setConfirmPin(""); setOldPin(""); }}
                 style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 13, padding: "0 0 16px", display: "flex", alignItems: "center", gap: 4 }}>← Back</button>
               <h3 style={{ color: "#e2e8f0", fontSize: 18, fontFamily: "'Playfair Display',serif", margin: "0 0 6px" }}>Reset Your PIN</h3>
               <p style={{ color: "#64748b", fontSize: 13, margin: "0 0 20px", lineHeight: 1.6 }}>
-                Account found for <strong style={{ color: "#fbbf24" }}>{resident?.name}</strong>.<br/>
-                Set a new 4-digit PIN below.
+                Verify your identity then set a new PIN.
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <div>
+                  <div style={{ color: "#94a3b8", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6, textAlign: "left" }}>Current PIN</div>
+                  <input style={{ ...inp, fontSize: 28, letterSpacing: "12px" }} type="password" value={oldPin}
+                    onChange={e => { setOldPin(e.target.value.replace(/\D/g, "").slice(0,4)); setError(""); }}
+                    placeholder="••••" maxLength={4} autoFocus />
+                </div>
                 <div>
                   <div style={{ color: "#94a3b8", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6, textAlign: "left" }}>New PIN</div>
                   <input style={{ ...inp, fontSize: 28, letterSpacing: "12px" }} type="password" value={newPin}
                     onChange={e => { setNewPin(e.target.value.replace(/\D/g, "").slice(0,4)); setError(""); }}
-                    placeholder="••••" maxLength={4} autoFocus />
+                    placeholder="••••" maxLength={4} />
                 </div>
                 <div>
-                  <div style={{ color: "#94a3b8", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6, textAlign: "left" }}>Confirm PIN</div>
+                  <div style={{ color: "#94a3b8", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6, textAlign: "left" }}>Confirm New PIN</div>
                   <input style={{ ...inp, fontSize: 28, letterSpacing: "12px" }} type="password" value={confirmPin}
                     onChange={e => { setConfirmPin(e.target.value.replace(/\D/g, "").slice(0,4)); setError(""); }}
                     placeholder="••••" maxLength={4}
@@ -183,8 +192,8 @@ export default function Login({ onLogin }) {
                 </div>
                 {error && <div style={{ color: "#f87171", fontSize: 13, textAlign: "center" }}>{error}</div>}
                 {success && <div style={{ color: "#4ade80", fontSize: 13, textAlign: "center" }}>{success}</div>}
-                <button onClick={resetPin} disabled={loading || newPin.length < 4 || confirmPin.length < 4}
-                  style={{ background: "linear-gradient(135deg,#d97706,#f59e0b)", border: "none", borderRadius: 10, padding: "14px", color: "#0d0f14", fontWeight: 700, cursor: "pointer", fontSize: 15, opacity: (newPin.length < 4) ? 0.6 : 1 }}>
+                <button onClick={resetPin} disabled={loading || oldPin.length < 4 || newPin.length < 4 || confirmPin.length < 4}
+                  style={{ background: "linear-gradient(135deg,#d97706,#f59e0b)", border: "none", borderRadius: 10, padding: "14px", color: "#0d0f14", fontWeight: 700, cursor: "pointer", fontSize: 15, opacity: (oldPin.length < 4 || newPin.length < 4) ? 0.6 : 1 }}>
                   {loading ? "Saving…" : "Set New PIN & Login"}
                 </button>
               </div>
