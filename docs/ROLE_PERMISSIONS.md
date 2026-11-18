@@ -14,6 +14,6 @@ Permissions are PostgreSQL row-level security policies plus security-definer fun
 
 Bank account rows and journal lines are limited to treasurer, committee admin, auditor, and platform admin. `bank_balances` returns the book balance without the account number.
 
-A public document in category `invoice` must be marked redacted. Originals go to the private `community-originals` bucket. Published files go to `community-published`. Storage policies, when the storage schema exists, follow the same split.
+A public document in category `invoice` must be marked redacted. Originals go to the private `community-originals` bucket. Published files go to `community-published`. `register_document` rejects a bucket that does not match the access class, and the storage path must start with the community id. Storage policies, when the storage schema exists, follow the same split. Residents see approved expenses. Drafts and payment references stay with the treasurer, committee, auditor, and platform admin. An auditor is elected. `grant_role` cannot assign `resident_auditor`. Certification waits until the voting end date, counts the second-place candidate rather than every other ballot, and supports one seat.
 
 Cross-community reads fail `private.is_member`. The SQL suite creates a second community and checks that isolation.

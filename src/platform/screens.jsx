@@ -138,6 +138,19 @@ export function FinanceScreen({ communityId, roles, focus }) {
               <Field label="Description"><input className={control} name="description" /></Field>
             </SaveForm>
           )}
+          {canPost && (
+            <SaveForm submitLabel="Reverse a posted entry" onSubmit={(data) => rpc("reverse_entry", {
+              p_entry: data.entry,
+              p_date: data.date,
+              p_narration: data.narration,
+              p_key: data.key || crypto.randomUUID(),
+            }).then(funds.reload)}>
+              <Field label="Original journal entry"><input className={control} name="entry" required /></Field>
+              <Field label="Reversal date"><input className={control} type="date" name="date" required /></Field>
+              <Field label="Narration"><input className={control} name="narration" required /></Field>
+              <Field label="Idempotency key"><input className={control} name="key" /></Field>
+            </SaveForm>
+          )}
         </div>
       )}
 
@@ -333,7 +346,12 @@ function Reconciliation({ communityId, banks, canPost }) {
                 <Field label="Statement line id"><input className={control} name="line" required /></Field>
                 <Field label="Journal entry id"><input className={control} name="entry" required /></Field>
               </SaveForm>
-              <SaveForm submitLabel="Complete reconciliation" onSubmit={() => rpc("complete_reconciliation", { p_reconciliation: row.id }).then(() => existing.reload())}>
+              <SaveForm submitLabel="Complete reconciliation" onSubmit={async () => {
+                const difference = await rpc("complete_reconciliation", { p_reconciliation: row.id });
+                existing.reload();
+                if (difference == null) throw new Error("Unmatched statement lines remain. The reconciliation stays open.");
+                if (Number(difference) !== 0) throw new Error(`The bank statement does not match the books (${difference}). The reconciliation stays open.`);
+              }}>
                 <p className="text-sm text-slate-400">Completion is refused while any line is unmatched or the statement and book balances differ.</p>
               </SaveForm>
             </>
@@ -416,8 +434,9 @@ function Statements({ communityId, canPost, canReview }) {
             <p>{statement.period_start} to {statement.period_end} · {statement.status} · due {statement.due_on}</p>
             <button type="button" className="mt-2 text-amber-300" onClick={() => window.print()}>Print this view</button>
             {canPost && statement.status === "draft" && <button type="button" className="ml-3 text-amber-300" onClick={() => rpc("submit_statement", { p_statement: statement.id }).then(query.reload)}>Submit for review</button>}
-            {canReview && <button type="button" className="ml-3 text-amber-300" onClick={() => rpc("review_statement", { p_statement: statement.id, p_status: "reconciled_and_reviewed", p_comments: "Reviewed in the app" }).then(query.reload)}>Record review</button>}
-            {canPost && <button type="button" className="ml-3 text-amber-300" onClick={() => rpc("publish_statement", { p_statement: statement.id, p_with_exceptions: false }).then(query.reload)}>Publish</button>}
+            {canReview && <button type="button" className="ml-3 text-amber-300" onClick={() => rpc("review_statement", { p_statement: statement.id, p_status: "verified", p_comments: "Reviewed in the app" }).then(query.reload)}>Record review</button>}
+            {canPost && statement.status === "reconciled_and_reviewed" && <button type="button" className="ml-3 text-amber-300" onClick={() => rpc("publish_statement", { p_statement: statement.id, p_with_exceptions: false }).then(query.reload)}>Publish</button>}
+            {canPost && (statement.status === "published" || statement.status === "published_with_exceptions") && <button type="button" className="ml-3 text-amber-300" onClick={() => rpc("append_statement_version", { p_statement: statement.id, p_with_exceptions: false }).then(query.reload)}>Publish a corrected version</button>}
           </li>
         ))}
       </ul>
@@ -551,7 +570,7 @@ export function DecisionsScreen({ communityId, roles }) {
 
 export function DocumentsScreen({ communityId, roles }) {
   const canUpload = roles.some((role) => ["treasurer", "committee_admin", "platform_admin"].includes(role));
-  const query = useLoad(() => rows(supabase.from("documents").select("id,name,category,description,access_class,redacted,storage_path,created_at").eq("community_id", communityId).order("created_at", { ascending: false })), [communityId]);
+  const query = useLoad(() => rows(supabase.from("documents").select("id,name,category,description,access_class,storage_bucket,redacted,storage_path,created_at").eq("community_id", communityId).order("created_at", { ascending: false })), [communityId]);
   return (
     <section>
       <h2 className="mb-1 text-xl font-semibold">Documents</h2>
@@ -572,7 +591,7 @@ export function DocumentsScreen({ communityId, roles }) {
 }
 
 async function openDocument(document) {
-  const bucket = document.access_class === "public" ? "community-published" : "community-originals";
+  const bucket = document.storage_bucket || (document.access_class === "public" ? "community-published" : "community-originals");
   const { data, error } = await supabase.storage.from(bucket).createSignedUrl(document.storage_path, 60);
   if (error || !data?.signedUrl) throw new Error(error?.message || "Could not open the file.");
   window.open(data.signedUrl, "_blank", "noopener");
@@ -597,6 +616,7 @@ function DocumentForm({ communityId, onSaved }) {
         p_description: data.description,
         p_access_class: data.access,
         p_redacted: data.redacted === "on",
+        p_storage_bucket: bucket,
         p_storage_path: path,
       });
       onSaved();

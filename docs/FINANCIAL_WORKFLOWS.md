@@ -25,12 +25,12 @@ Balances are posted, not typed. A retry uses the same idempotency key and return
 
 ## Reconciliation
 
-`start_reconciliation` stores the statement opening and closing. CSV lines have `date`, `description`, `direction` (`credit` or `debit`), and `amount`. `complete_reconciliation` raises when the difference is not zero or a line is unmatched, and it leaves the status open. The difference is statement closing minus statement opening minus the period's book movement.
+`start_reconciliation` stores the statement opening and closing, and only for a bank account in that community. CSV lines have `date`, `description`, `direction` (`credit` or `debit`), and `amount`. A matched journal entry must belong to the same community and touch that bank account. `complete_reconciliation` does not raise on a difference, because that would roll the stored difference back. It sets the difference to statement closing minus the bank's book balance for every entry on or before the period end. Status becomes `reconciled` only when that difference is zero and every imported line is matched. A non-zero difference or an unmatched line leaves the row open. The function returns the difference, or null while lines are still unmatched.
 
 ## Statements
 
 `statement_due_on` is the first day of the next month plus due-day minus one. A period ending 31 March with due day 10 is due 10 April.
 
-`close_month` opens a draft. `submit_statement` and `review_statement` move it forward. `publish_statement` refuses unless the review status is reconciled and reviewed, paid expenses in the period are verified or resolved, and reconciliations ending in the period are reconciled. It writes an immutable snapshot and notifies members. Nothing marks a statement verified automatically. Overdue statements remain readable by residents.
+`close_month` opens a draft. `submit_statement` and `review_statement` move it forward. `publish_statement` always requires status `reconciled_and_reviewed`. `p_with_exceptions` does not skip that review. It only allows publication while a paid expense is still unverified or a reconciliation ending in the period is still open, and then the status is `published_with_exceptions`. Publication writes an immutable snapshot and notifies members. A later auditor review of a published statement adds a review row and does not change the published status. `append_statement_version` adds the next snapshot after that new review. It does not update or delete the earlier version. A posted journal entry is corrected with `reverse_entry`, which posts the opposite lines and stores `reverses_entry_id`. A second reversal of the same entry is rejected. Nothing marks a statement verified automatically. Overdue statements remain readable by residents.
 
 Auditor verification is a review record. It is not a legal or commercial certification.

@@ -28,7 +28,7 @@ Closing balance for a fund is opening + receipts − payments + transfers in −
 
 ## Functions residents and officers call
 
-`create_community`, `grant_role`, `add_unit`, `add_occupancy`, `add_bank_account`, `open_fund`, `post_journal`, `account_balances`, `bank_balances`, `open_collection_period`, `record_collection`, `collection_summary`, `create_expense`, `decide_expense`, `pay_expense`, `review_subject`, `statement_due_on`, `start_reconciliation`, `import_statement_lines`, `match_statement_line`, `complete_reconciliation`, `close_month`, `submit_statement`, `review_statement`, `publish_statement`, `create_ticket`, `transition_ticket`, `create_meeting`, `record_minutes`, `propose_resolution`, `cast_vote`, `close_vote`, `open_auditor_election`, `cast_auditor_ballot`, `certify_auditor_election`, `register_document`, `resident_dashboard`.
+`create_community`, `grant_role`, `add_unit`, `add_occupancy`, `add_bank_account`, `open_fund`, `post_journal`, `reverse_entry`, `account_balances`, `bank_balances`, `open_collection_period`, `record_collection`, `collection_summary`, `create_expense`, `decide_expense`, `pay_expense`, `review_subject`, `statement_due_on`, `start_reconciliation`, `import_statement_lines`, `match_statement_line`, `complete_reconciliation`, `close_month`, `submit_statement`, `review_statement`, `publish_statement`, `append_statement_version`, `create_ticket`, `transition_ticket`, `create_meeting`, `record_minutes`, `propose_resolution`, `cast_vote`, `close_vote`, `open_auditor_election`, `cast_auditor_ballot`, `certify_auditor_election`, `register_document`, `resident_dashboard`.
 
 `add_bank_account` returns the bank ledger account id.
 

@@ -176,7 +176,8 @@ CREATE TABLE public.expense_approvals (
   decision text NOT NULL CHECK (decision IN ('approved', 'rejected')),
   comments text,
   amount numeric(14,2) NOT NULL,
-  decided_at timestamptz NOT NULL DEFAULT now()
+  decided_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (expense_id, approver_id)
 );
 
 CREATE TABLE public.collection_periods (
@@ -425,6 +426,7 @@ CREATE TABLE public.documents (
   related_type text,
   related_id uuid,
   access_class text NOT NULL CHECK (access_class IN ('public', 'committee', 'private_unit')),
+  storage_bucket text NOT NULL CHECK (storage_bucket IN ('community-originals', 'community-published')),
   redacted boolean NOT NULL DEFAULT false,
   unit_id uuid REFERENCES public.units(id),
   storage_path text NOT NULL,
@@ -615,6 +617,9 @@ DECLARE
   v_amount numeric(14,2);
   v_direction text;
   v_account uuid;
+  v_account_type text;
+  v_saw_bank boolean := false;
+  v_saw_fund boolean := false;
 BEGIN
   IF auth.uid() IS NULL THEN
     RAISE EXCEPTION 'not authenticated';
@@ -632,7 +637,19 @@ BEGIN
     RAISE EXCEPTION 'journal entry must have at least two lines';
   END IF;
 
-  v_hash := md5(p_type || '|' || p_date::text || '|' || p_narration || '|' || p_lines::text);
+  IF p_type = 'reversal' AND p_reverses IS NULL THEN
+    RAISE EXCEPTION 'a reversal must reference the original entry';
+  END IF;
+  IF p_type <> 'reversal' AND p_reverses IS NOT NULL THEN
+    RAISE EXCEPTION 'only a reversal can reference another entry';
+  END IF;
+  IF p_reverses IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM public.journal_entries WHERE id = p_reverses AND community_id = p_community
+  ) THEN
+    RAISE EXCEPTION 'the original entry is not in this community';
+  END IF;
+
+  v_hash := md5(p_type || '|' || COALESCE(p_reverses::text, '') || '|' || p_date::text || '|' || p_narration || '|' || p_lines::text);
   SELECT id, request_hash INTO v_existing, v_stored
   FROM public.journal_entries
   WHERE community_id = p_community AND idempotency_key = p_key;
@@ -653,9 +670,28 @@ BEGIN
     IF v_amount IS NULL OR v_amount <= 0 THEN
       RAISE EXCEPTION 'amount must be positive';
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM public.accounts WHERE id = v_account AND community_id = p_community) THEN
+    SELECT account_type INTO v_account_type
+    FROM public.accounts WHERE id = v_account AND community_id = p_community;
+    IF v_account_type IS NULL THEN
       RAISE EXCEPTION 'account is not in this community';
     END IF;
+    IF p_type = 'transfer' AND v_account_type <> 'fund' THEN
+      RAISE EXCEPTION 'a transfer can only move money between funds';
+    END IF;
+    IF p_type = 'receipt' AND (
+      (v_account_type = 'bank' AND v_direction <> 'debit')
+      OR (v_account_type = 'fund' AND v_direction <> 'credit')
+    ) THEN
+      RAISE EXCEPTION 'a receipt debits the bank and credits a fund';
+    END IF;
+    IF p_type = 'payment' AND (
+      (v_account_type = 'bank' AND v_direction <> 'credit')
+      OR (v_account_type = 'fund' AND v_direction <> 'debit')
+    ) THEN
+      RAISE EXCEPTION 'a payment debits a fund and credits the bank';
+    END IF;
+    v_saw_bank := v_saw_bank OR v_account_type = 'bank';
+    v_saw_fund := v_saw_fund OR v_account_type = 'fund';
     IF v_direction = 'debit' THEN
       v_debit := v_debit + v_amount;
     ELSE
@@ -666,12 +702,28 @@ BEGIN
   IF v_debit <> v_credit THEN
     RAISE EXCEPTION 'journal entry is not balanced';
   END IF;
+  IF p_type IN ('receipt', 'payment') AND NOT (v_saw_bank AND v_saw_fund) THEN
+    RAISE EXCEPTION 'a receipt or payment must include both a bank account and a fund';
+  END IF;
 
-  INSERT INTO public.journal_entries (
-    community_id, entry_type, occurred_on, narration, idempotency_key, request_hash, reverses_entry_id, created_by
-  ) VALUES (
-    p_community, p_type, p_date, p_narration, p_key, v_hash, p_reverses, auth.uid()
-  ) RETURNING id INTO v_id;
+  BEGIN
+    INSERT INTO public.journal_entries (
+      community_id, entry_type, occurred_on, narration, idempotency_key, request_hash, reverses_entry_id, created_by
+    ) VALUES (
+      p_community, p_type, p_date, p_narration, p_key, v_hash, p_reverses, auth.uid()
+    ) RETURNING id INTO v_id;
+  EXCEPTION WHEN unique_violation THEN
+    SELECT id, request_hash INTO v_existing, v_stored
+    FROM public.journal_entries
+    WHERE community_id = p_community AND idempotency_key = p_key;
+    IF v_existing IS NULL THEN
+      RAISE EXCEPTION 'idempotency key conflict could not be resolved';
+    END IF;
+    IF v_stored IS DISTINCT FROM v_hash THEN
+      RAISE EXCEPTION 'idempotency key reused with a different payload';
+    END IF;
+    RETURN v_existing;
+  END;
 
   FOR v_line IN SELECT value FROM jsonb_array_elements(p_lines) LOOP
     INSERT INTO public.journal_lines (entry_id, account_id, direction, amount)
@@ -691,10 +743,42 @@ CREATE OR REPLACE FUNCTION public.post_journal(
   p_lines jsonb
 ) RETURNS uuid
 LANGUAGE sql
-SECURITY INVOKER
+SECURITY DEFINER
 SET search_path = public
 AS $$
   SELECT private.post_journal(p_community, p_type, p_date, p_narration, p_key, p_lines, NULL);
+$$;
+
+CREATE OR REPLACE FUNCTION public.reverse_entry(
+  p_entry uuid,
+  p_date date,
+  p_narration text,
+  p_key text
+) RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_entry public.journal_entries%ROWTYPE;
+  v_lines jsonb;
+BEGIN
+  SELECT * INTO v_entry FROM public.journal_entries WHERE id = p_entry;
+  IF v_entry.id IS NULL THEN
+    RAISE EXCEPTION 'entry not found';
+  END IF;
+  IF EXISTS (SELECT 1 FROM public.journal_entries WHERE reverses_entry_id = p_entry) THEN
+    RAISE EXCEPTION 'this entry has already been reversed';
+  END IF;
+  SELECT jsonb_agg(jsonb_build_object(
+    'account_id', l.account_id,
+    'direction', CASE l.direction WHEN 'debit' THEN 'credit' ELSE 'debit' END,
+    'amount', l.amount
+  ) ORDER BY l.id) INTO v_lines
+  FROM public.journal_lines l
+  WHERE l.entry_id = p_entry;
+  RETURN private.post_journal(v_entry.community_id, 'reversal', p_date, p_narration, p_key, v_lines, p_entry);
+END;
 $$;
 
 CREATE OR REPLACE FUNCTION public.account_balances(p_community uuid)
@@ -734,10 +818,10 @@ BEGIN
     COALESCE(SUM(CASE WHEN e.entry_type = 'transfer' AND l.direction = 'credit' THEN l.amount ELSE 0 END), 0)::numeric(14,2),
     COALESCE(SUM(CASE WHEN e.entry_type = 'transfer' AND l.direction = 'debit' THEN l.amount ELSE 0 END), 0)::numeric(14,2),
     COALESCE(SUM(CASE WHEN e.entry_type IN ('adjustment', 'reversal') AND l.direction = 'credit' THEN l.amount WHEN e.entry_type IN ('adjustment', 'reversal') AND l.direction = 'debit' THEN -l.amount ELSE 0 END), 0)::numeric(14,2),
-    COALESCE(SUM(CASE WHEN l.direction = 'credit' THEN l.amount ELSE -l.amount END), 0)::numeric(14,2)
+    COALESCE(SUM(CASE WHEN e.id IS NULL THEN 0 WHEN l.direction = 'credit' THEN l.amount ELSE -l.amount END), 0)::numeric(14,2)
   FROM public.accounts a
   LEFT JOIN public.journal_lines l ON l.account_id = a.id
-  LEFT JOIN public.journal_entries e ON e.id = l.entry_id
+  LEFT JOIN public.journal_entries e ON e.id = l.entry_id AND e.community_id = a.community_id
   WHERE a.community_id = p_community
     AND a.account_type = 'fund'
   GROUP BY a.id, a.code, a.name, a.account_type, a.fund_kind;
@@ -758,9 +842,10 @@ BEGIN
   END IF;
   RETURN QUERY
   SELECT a.id, a.name,
-    COALESCE(SUM(CASE WHEN l.direction = 'debit' THEN l.amount ELSE -l.amount END), 0)::numeric(14,2)
+    COALESCE(SUM(CASE WHEN e.id IS NULL THEN 0 WHEN l.direction = 'debit' THEN l.amount ELSE -l.amount END), 0)::numeric(14,2)
   FROM public.accounts a
   LEFT JOIN public.journal_lines l ON l.account_id = a.id
+  LEFT JOIN public.journal_entries e ON e.id = l.entry_id AND e.community_id = a.community_id
   WHERE a.community_id = p_community AND a.account_type = 'bank'
   GROUP BY a.id, a.name;
 END;
@@ -1052,16 +1137,15 @@ DECLARE
   v_id uuid;
   v_outstanding numeric(14,2);
 BEGIN
-  SELECT * INTO v_demand FROM public.maintenance_demands WHERE id = p_demand;
+  SELECT * INTO v_demand FROM public.maintenance_demands WHERE id = p_demand FOR UPDATE;
   IF v_demand.id IS NULL THEN
     RAISE EXCEPTION 'demand not found';
   END IF;
   IF NOT private.has_role(v_demand.community_id, ARRAY['treasurer']) THEN
     RAISE EXCEPTION 'not authorized';
   END IF;
-  SELECT v_demand.expected_amount + v_demand.additional_amount - COALESCE(SUM(amount), 0)
-  INTO v_outstanding
-  FROM public.collections WHERE demand_id = p_demand;
+  SELECT COALESCE(SUM(amount), 0) INTO v_outstanding FROM public.collections WHERE demand_id = p_demand;
+  v_outstanding := v_demand.expected_amount + v_demand.additional_amount - v_outstanding;
   IF p_amount > v_outstanding THEN
     RAISE EXCEPTION 'collection exceeds the outstanding demand';
   END IF;
@@ -1209,6 +1293,12 @@ BEGIN
   IF v_expense.id IS NULL THEN
     RAISE EXCEPTION 'expense not found';
   END IF;
+  IF EXISTS (
+    SELECT 1 FROM public.expense_approvals
+    WHERE expense_id = p_expense AND approver_id = auth.uid()
+  ) THEN
+    RAISE EXCEPTION 'this approver has already recorded a decision';
+  END IF;
   IF v_expense.approval_status <> 'pending' THEN
     RAISE EXCEPTION 'expense is not awaiting approval';
   END IF;
@@ -1241,8 +1331,12 @@ BEGIN
     END IF;
   END IF;
 
-  INSERT INTO public.expense_approvals (expense_id, approver_id, decision, comments, amount)
-  VALUES (p_expense, auth.uid(), p_decision, NULLIF(p_comments, ''), v_expense.amount);
+  BEGIN
+    INSERT INTO public.expense_approvals (expense_id, approver_id, decision, comments, amount)
+    VALUES (p_expense, auth.uid(), p_decision, NULLIF(p_comments, ''), v_expense.amount);
+  EXCEPTION WHEN unique_violation THEN
+    RAISE EXCEPTION 'this approver has already recorded a decision';
+  END;
 
   IF p_decision = 'rejected' OR v_expense.amount <= v_settings.treasurer_approval_limit THEN
     UPDATE public.expenses SET approval_status = p_decision WHERE id = p_expense;
@@ -1344,6 +1438,20 @@ BEGIN
       RAISE EXCEPTION 'auditors cannot review their own financial entries';
     END IF;
     UPDATE public.expenses SET auditor_status = p_status WHERE id = p_subject_id;
+  ELSIF p_subject_type = 'bank_reconciliation' THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM public.bank_reconciliations WHERE id = p_subject_id AND community_id = p_community
+    ) THEN
+      RAISE EXCEPTION 'reconciliation not found';
+    END IF;
+  ELSIF p_subject_type = 'financial_statement' THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM public.financial_statements WHERE id = p_subject_id AND community_id = p_community
+    ) THEN
+      RAISE EXCEPTION 'statement not found';
+    END IF;
+  ELSE
+    RAISE EXCEPTION 'unknown review subject';
   END IF;
   INSERT INTO public.audit_reviews (community_id, subject_type, subject_id, reviewer_id, status, comments)
   VALUES (p_community, p_subject_type, p_subject_id, auth.uid(), p_status, NULLIF(p_comments, ''))
@@ -1381,6 +1489,12 @@ DECLARE
 BEGIN
   IF NOT private.has_role(p_community, ARRAY['treasurer']) THEN
     RAISE EXCEPTION 'not authorized';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.accounts
+    WHERE id = p_bank_account AND community_id = p_community AND account_type = 'bank'
+  ) THEN
+    RAISE EXCEPTION 'bank account is not in this community';
   END IF;
   INSERT INTO public.bank_reconciliations (
     community_id, bank_account_id, period_start, period_end, opening_balance, closing_balance, created_by
@@ -1440,6 +1554,16 @@ BEGIN
   IF NOT private.has_role(v_community, ARRAY['treasurer', 'resident_auditor']) THEN
     RAISE EXCEPTION 'not authorized';
   END IF;
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.bank_statement_lines l
+    JOIN public.bank_reconciliations r ON r.id = l.reconciliation_id
+    JOIN public.journal_entries e ON e.id = p_entry AND e.community_id = r.community_id
+    JOIN public.journal_lines jl ON jl.entry_id = e.id AND jl.account_id = r.bank_account_id
+    WHERE l.id = p_line AND r.status = 'open'
+  ) THEN
+    RAISE EXCEPTION 'that journal entry is not on this bank account';
+  END IF;
   UPDATE public.bank_statement_lines SET matched_entry_id = p_entry WHERE id = p_line;
 END;
 $$;
@@ -1468,17 +1592,18 @@ BEGIN
   FROM public.journal_lines l
   JOIN public.journal_entries e ON e.id = l.entry_id
   WHERE l.account_id = v_row.bank_account_id
-    AND e.occurred_on BETWEEN v_row.period_start AND v_row.period_end;
+    AND e.community_id = v_row.community_id
+    AND e.occurred_on <= v_row.period_end;
   SELECT COUNT(*) INTO v_unmatched
   FROM public.bank_statement_lines
   WHERE reconciliation_id = p_reconciliation AND matched_entry_id IS NULL;
-  v_difference := v_row.closing_balance - (v_row.opening_balance + v_book);
+  v_difference := v_row.closing_balance - v_book;
   UPDATE public.bank_reconciliations
   SET difference = v_difference,
       status = CASE WHEN v_difference = 0 AND v_unmatched = 0 THEN 'reconciled' ELSE 'open' END
   WHERE id = p_reconciliation;
-  IF v_difference <> 0 OR v_unmatched <> 0 THEN
-    RAISE EXCEPTION 'reconciliation difference remains unexplained';
+  IF v_unmatched <> 0 THEN
+    RETURN NULL;
   END IF;
   RETURN v_difference;
 END;
@@ -1571,6 +1696,11 @@ BEGIN
   IF v_next IS NULL THEN
     RAISE EXCEPTION 'invalid review status';
   END IF;
+  IF v_row.status IN ('published', 'published_with_exceptions') THEN
+    INSERT INTO public.audit_reviews (community_id, subject_type, subject_id, reviewer_id, status, comments)
+    VALUES (v_row.community_id, 'financial_statement', p_statement, auth.uid(), p_status, NULLIF(p_comments, ''));
+    RETURN;
+  END IF;
   UPDATE public.financial_statements SET status = v_next WHERE id = p_statement;
   INSERT INTO public.audit_reviews (community_id, subject_type, subject_id, reviewer_id, status, comments)
   VALUES (v_row.community_id, 'financial_statement', p_statement, auth.uid(), p_status, NULLIF(p_comments, ''));
@@ -1596,7 +1726,7 @@ BEGIN
   IF NOT private.has_role(v_row.community_id, ARRAY['treasurer', 'committee_admin']) THEN
     RAISE EXCEPTION 'not authorized';
   END IF;
-  IF v_row.status <> 'reconciled_and_reviewed' AND NOT p_with_exceptions THEN
+  IF v_row.status <> 'reconciled_and_reviewed' THEN
     RAISE EXCEPTION 'statement has not been reviewed';
   END IF;
   SELECT COUNT(*) INTO v_open_expenses
@@ -1630,6 +1760,67 @@ BEGIN
     'Financial statement published',
     'The statement for ' || v_row.period_start::text || ' is available.'
   );
+  RETURN v_version;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.append_statement_version(
+  p_statement uuid,
+  p_with_exceptions boolean DEFAULT false
+) RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_row public.financial_statements%ROWTYPE;
+  v_version integer;
+  v_open_expenses integer;
+  v_open_recon integer;
+  v_latest timestamptz;
+BEGIN
+  SELECT * INTO v_row FROM public.financial_statements WHERE id = p_statement;
+  IF v_row.status NOT IN ('published', 'published_with_exceptions') THEN
+    RAISE EXCEPTION 'only a published statement can be corrected';
+  END IF;
+  IF NOT private.has_role(v_row.community_id, ARRAY['treasurer']) THEN
+    RAISE EXCEPTION 'not authorized';
+  END IF;
+  SELECT MAX(published_at) INTO v_latest
+  FROM public.financial_statement_versions WHERE statement_id = p_statement;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.audit_reviews
+    WHERE subject_type = 'financial_statement'
+      AND subject_id = p_statement
+      AND created_at > v_latest
+  ) THEN
+    RAISE EXCEPTION 'a published correction needs a new auditor review';
+  END IF;
+  SELECT COUNT(*) INTO v_open_expenses
+  FROM public.expenses
+  WHERE community_id = v_row.community_id
+    AND occurred_on BETWEEN v_row.period_start AND v_row.period_end
+    AND payment_status = 'paid'
+    AND auditor_status NOT IN ('verified', 'resolved');
+  SELECT COUNT(*) INTO v_open_recon
+  FROM public.bank_reconciliations
+  WHERE community_id = v_row.community_id
+    AND period_end BETWEEN v_row.period_start AND v_row.period_end
+    AND status <> 'reconciled';
+  IF NOT p_with_exceptions AND (v_open_expenses > 0 OR v_open_recon > 0) THEN
+    RAISE EXCEPTION 'the correction still has unverified expenses or an open reconciliation';
+  END IF;
+  SELECT COALESCE(MAX(version_number), 0) + 1 INTO v_version
+  FROM public.financial_statement_versions WHERE statement_id = p_statement;
+  INSERT INTO public.financial_statement_versions (statement_id, version_number, snapshot, published_by)
+  VALUES (
+    p_statement, v_version,
+    private.statement_snapshot(v_row.community_id, v_row.period_start, v_row.period_end),
+    auth.uid()
+  );
+  UPDATE public.financial_statements
+  SET status = CASE WHEN p_with_exceptions THEN 'published_with_exceptions' ELSE 'published' END
+  WHERE id = p_statement;
   RETURN v_version;
 END;
 $$;
@@ -1814,6 +2005,11 @@ BEGIN
   IF NOT private.has_role(p_community, ARRAY['committee_admin', 'resident']) THEN
     RAISE EXCEPTION 'not authorized';
   END IF;
+  IF p_meeting IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM public.meetings WHERE id = p_meeting AND community_id = p_community
+  ) THEN
+    RAISE EXCEPTION 'meeting is not in this community';
+  END IF;
   INSERT INTO public.resolutions (
     community_id, meeting_id, title, description, proposed_by, status, voting_starts_at, voting_ends_at
   ) VALUES (
@@ -1878,7 +2074,9 @@ BEGIN
     RAISE EXCEPTION 'not authorized';
   END IF;
   SELECT * INTO v_settings FROM public.community_settings WHERE community_id = v_resolution.community_id;
-  SELECT COUNT(*) INTO v_units FROM public.units WHERE community_id = v_resolution.community_id;
+  SELECT COUNT(DISTINCT unit_id) INTO v_units
+  FROM public.unit_occupancies
+  WHERE community_id = v_resolution.community_id AND ended_on IS NULL;
   SELECT COUNT(*), COUNT(*) FILTER (WHERE vote = 'yes'), COUNT(*) FILTER (WHERE vote = 'no')
   INTO v_ballots, v_yes, v_no
   FROM public.resolution_votes WHERE resolution_id = p_resolution;
@@ -1949,6 +2147,12 @@ BEGIN
   IF v_unit IS NULL THEN
     RAISE EXCEPTION 'not authorized';
   END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.community_memberships
+    WHERE community_id = v_election.community_id AND profile_id = p_candidate AND status = 'active'
+  ) THEN
+    RAISE EXCEPTION 'candidate is not a member of this community';
+  END IF;
   INSERT INTO public.auditor_ballots (election_id, unit_id, candidate_id, cast_by)
   VALUES (p_election, v_unit, p_candidate, auth.uid());
 END;
@@ -1974,6 +2178,12 @@ BEGIN
   IF v_election.id IS NULL THEN
     RAISE EXCEPTION 'election is not open';
   END IF;
+  IF CURRENT_DATE < v_election.voting_ends_on THEN
+    RAISE EXCEPTION 'voting is still open';
+  END IF;
+  IF v_election.seats <> 1 THEN
+    RAISE EXCEPTION 'certifying more than one auditor seat is not supported yet';
+  END IF;
   IF NOT private.is_member(v_election.community_id) THEN
     RAISE EXCEPTION 'not authorized';
   END IF;
@@ -1994,9 +2204,22 @@ BEGIN
     ORDER BY COUNT(*) DESC, candidate_id
   ) ranked
   LIMIT 1;
-  SELECT COUNT(*) INTO v_second FROM public.auditor_ballots
-  WHERE election_id = p_election AND candidate_id <> v_winner;
-  IF v_second >= v_top THEN
+  SELECT COUNT(*) INTO v_second
+  FROM public.auditor_ballots
+  WHERE election_id = p_election AND candidate_id = (
+    SELECT candidate_id FROM public.auditor_ballots
+    WHERE election_id = p_election AND candidate_id <> v_winner
+    GROUP BY candidate_id
+    ORDER BY COUNT(*) DESC
+    LIMIT 1
+  );
+  IF NOT EXISTS (
+    SELECT 1 FROM public.community_memberships
+    WHERE community_id = v_election.community_id AND profile_id = v_winner AND status = 'active'
+  ) THEN
+    RAISE EXCEPTION 'candidate is not a member of this community';
+  END IF;
+  IF COALESCE(v_second, 0) >= v_top THEN
     UPDATE public.auditor_elections SET status = 'failed' WHERE id = p_election;
     RAISE EXCEPTION 'election did not produce a clear winner';
   END IF;
@@ -2022,6 +2245,7 @@ CREATE OR REPLACE FUNCTION public.register_document(
   p_description text,
   p_access_class text,
   p_redacted boolean,
+  p_storage_bucket text,
   p_storage_path text,
   p_related_type text DEFAULT NULL,
   p_related_id uuid DEFAULT NULL,
@@ -2043,11 +2267,23 @@ BEGIN
   IF p_category = 'invoice' AND p_access_class = 'public' AND NOT p_redacted THEN
     RAISE EXCEPTION 'a public invoice must be a redacted file';
   END IF;
+  IF p_storage_bucket NOT IN ('community-originals', 'community-published') THEN
+    RAISE EXCEPTION 'unknown storage bucket';
+  END IF;
+  IF p_access_class = 'public' AND p_storage_bucket <> 'community-published' THEN
+    RAISE EXCEPTION 'a public document must be stored in the published bucket';
+  END IF;
+  IF p_access_class <> 'public' AND p_storage_bucket <> 'community-originals' THEN
+    RAISE EXCEPTION 'a restricted document must stay in the originals bucket';
+  END IF;
+  IF split_part(p_storage_path, '/', 1) <> p_community::text THEN
+    RAISE EXCEPTION 'the file must be stored under this community';
+  END IF;
   INSERT INTO public.documents (
-    community_id, name, category, description, access_class, redacted, storage_path,
+    community_id, name, category, description, access_class, storage_bucket, redacted, storage_path,
     related_type, related_id, unit_id, uploaded_by
   ) VALUES (
-    p_community, btrim(p_name), p_category, p_description, p_access_class, COALESCE(p_redacted, false), p_storage_path,
+    p_community, btrim(p_name), p_category, p_description, p_access_class, p_storage_bucket, COALESCE(p_redacted, false), p_storage_path,
     p_related_type, p_related_id, p_unit_id, auth.uid()
   ) RETURNING id INTO v_id;
   INSERT INTO public.document_versions (document_id, version_number, storage_path, redacted, uploaded_by)
@@ -2195,7 +2431,10 @@ USING (
 CREATE POLICY categories_read ON public.expense_categories FOR SELECT TO authenticated
 USING (private.is_member(community_id));
 CREATE POLICY expenses_read ON public.expenses FOR SELECT TO authenticated
-USING (private.is_member(community_id));
+USING (
+  private.has_role(community_id, ARRAY['treasurer', 'committee_admin', 'resident_auditor', 'platform_admin'])
+  OR (private.is_member(community_id) AND approval_status = 'approved')
+);
 CREATE POLICY approvals_read ON public.expense_approvals FOR SELECT TO authenticated
 USING (
   EXISTS (
@@ -2327,6 +2566,18 @@ WITH CHECK (recipient_id = auth.uid());
 CREATE POLICY audit_logs_read ON public.audit_logs FOR SELECT TO authenticated
 USING (community_id IS NOT NULL AND private.has_role(community_id, ARRAY['committee_admin', 'resident_auditor', 'platform_admin', 'treasurer']));
 
+CREATE OR REPLACE FUNCTION public.storage_community(p_name text)
+RETURNS uuid
+LANGUAGE sql
+IMMUTABLE
+AS $$
+  SELECT CASE
+    WHEN split_part(p_name, '/', 1) ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+      THEN split_part(p_name, '/', 1)::uuid
+    ELSE NULL
+  END;
+$$;
+
 GRANT USAGE ON SCHEMA public TO anon, authenticated;
 GRANT USAGE ON SCHEMA private TO authenticated;
 
@@ -2337,9 +2588,13 @@ REVOKE INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public FROM authenticated,
 GRANT UPDATE (read_at) ON public.notifications TO authenticated;
 
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO authenticated;
-GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA private TO authenticated;
+REVOKE ALL ON ALL FUNCTIONS IN SCHEMA private FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION
+  private.has_role(uuid, text[]),
+  private.is_member(uuid),
+  private.occupies(uuid)
+TO authenticated;
 REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA public FROM anon, PUBLIC;
-REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA private FROM anon, PUBLIC;
 
 -- Storage policies apply only when this migration runs inside Supabase.
 DO $$
@@ -2359,23 +2614,24 @@ BEGIN
     CREATE POLICY originals_read ON storage.objects FOR SELECT TO authenticated
     USING (
       bucket_id = 'community-originals'
-      AND private.has_role(((storage.foldername(name))[1])::uuid, ARRAY['treasurer', 'committee_admin', 'resident_auditor', 'platform_admin'])
+      AND private.has_role(public.storage_community(name), ARRAY['treasurer', 'committee_admin', 'resident_auditor', 'platform_admin'])
     );
     CREATE POLICY originals_write ON storage.objects FOR INSERT TO authenticated
     WITH CHECK (
       bucket_id = 'community-originals'
-      AND private.has_role(((storage.foldername(name))[1])::uuid, ARRAY['treasurer', 'committee_admin', 'platform_admin'])
+      AND private.has_role(public.storage_community(name), ARRAY['treasurer', 'committee_admin', 'platform_admin'])
     );
     CREATE POLICY published_read ON storage.objects FOR SELECT TO authenticated
     USING (
       bucket_id = 'community-published'
-      AND private.is_member(((storage.foldername(name))[1])::uuid)
+      AND private.is_member(public.storage_community(name))
       AND (
-        private.has_role(((storage.foldername(name))[1])::uuid, ARRAY['treasurer', 'committee_admin', 'resident_auditor', 'platform_admin'])
+        private.has_role(public.storage_community(name), ARRAY['treasurer', 'committee_admin', 'resident_auditor', 'platform_admin'])
         OR EXISTS (
           SELECT 1 FROM public.documents d
-          WHERE d.community_id = ((storage.foldername(name))[1])::uuid
+          WHERE d.community_id = public.storage_community(name)
             AND d.storage_path = name
+            AND d.storage_bucket = 'community-published'
             AND d.access_class = 'public'
             AND (d.category <> 'invoice' OR d.redacted)
         )
@@ -2384,7 +2640,7 @@ BEGIN
     CREATE POLICY published_write ON storage.objects FOR INSERT TO authenticated
     WITH CHECK (
       bucket_id = 'community-published'
-      AND private.has_role(((storage.foldername(name))[1])::uuid, ARRAY['treasurer', 'committee_admin', 'platform_admin'])
+      AND private.has_role(public.storage_community(name), ARRAY['treasurer', 'committee_admin', 'platform_admin'])
     );
   END IF;
 END $$;

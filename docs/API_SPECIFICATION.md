@@ -29,11 +29,13 @@ Authenticated users can execute the public functions. Anonymous users cannot. Th
 - `start_reconciliation(community, bank_account, start, end, opening, closing) -> id`
 - `import_statement_lines(reconciliation, lines) -> count`
 - `match_statement_line(line, entry)`
-- `complete_reconciliation(reconciliation) -> difference or an error that leaves it open`
+- `complete_reconciliation(reconciliation) -> difference, or null while lines are unmatched. Status stays open unless the difference is zero and every line is matched`
 - `close_month(community, start, end) -> statement id`
 - `submit_statement(statement)`
 - `review_statement(statement, status, comments)`
-- `publish_statement(statement, with_exceptions = false)`
+- `publish_statement(statement, with_exceptions = false) -> version`. Requires `reconciled_and_reviewed` even when exceptions are allowed
+- `append_statement_version(statement, with_exceptions = false) -> next version`
+- `reverse_entry(entry, date, narration, idempotency_key) -> reversal entry id`
 - `resident_dashboard(community) -> jsonb`
 
 ## Concerns, governance, documents
@@ -46,7 +48,7 @@ Authenticated users can execute the public functions. Anonymous users cannot. Th
 - `cast_vote(resolution, vote)`
 - `close_vote(resolution) -> result`
 - `open_auditor_election(...)`, `cast_auditor_ballot(election, candidate)`, `certify_auditor_election(election)`
-- `register_document(...) -> id` — a public invoice with `redacted = false` is rejected
+- `register_document(..., storage_bucket, storage_path) -> id` — a public invoice with `redacted = false` is rejected. A public file must use `community-published`. Any other access class must use `community-originals`. The path's first segment must be the community id
 
 Direct table updates from the browser are revoked except `notifications.read_at`.
 
