@@ -1,6 +1,8 @@
 // src/components/Dashboard.jsx
 import { useState, useEffect } from "react";
 import { supabase, SOCIETY_ID } from "../lib/supabase";
+import QueryStatus from "./QueryStatus.jsx";
+import { raiseOnError } from "../lib/async.js";
 
 const Modal = ({ open, onClose, title, children }) => {
   if (!open) return null;
@@ -20,10 +22,13 @@ const Modal = ({ open, onClose, title, children }) => {
 export default function Dashboard({ onNavigate }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [showHealthModal, setShowHealthModal] = useState(false);
 
   const load = async () => {
     setLoading(true);
+    setLoadError("");
+    try {
     const currentMonth = new Date().toISOString().slice(0, 7);
 
     const [soc, comp, inv, maint, polls, visitors, deliveries, notices, vol] = await Promise.all([
@@ -37,6 +42,7 @@ export default function Dashboard({ onNavigate }) {
       supabase.from("notices").select("id,title,type,created_at,pinned").eq("society_id", SOCIETY_ID).eq("pinned", true),
       supabase.from("volunteers").select("id,hero_points,residents(name,flat_number)").eq("society_id", SOCIETY_ID).order("hero_points", { ascending: false }).limit(3),
     ]);
+    [soc, comp, inv, maint, polls, visitors, deliveries, notices, vol].forEach(raiseOnError);
 
     const complaints = comp.data || [];
     const invoices = inv.data || [];
@@ -44,18 +50,18 @@ export default function Dashboard({ onNavigate }) {
 
     const openComplaints = complaints.filter(c => c.status === "open").length;
     const paidInvoices = invoices.filter(i => i.status === "paid").length;
-    const totalInvoices = invoices.length || 1;
-    const collectionRate = Math.round((paidInvoices / totalInvoices) * 100);
+    const totalInvoices = invoices.length;
+    const collectionRate = totalInvoices ? Math.round((paidInvoices / totalInvoices) * 100) : null;
     const openTasks = tasks.filter(t => t.status !== "completed").length;
     const totalCollected = invoices.reduce((s, i) => s + Number(i.amount_paid || 0), 0);
     const totalPending = invoices.reduce((s, i) => s + Number(i.balance_due || 0), 0);
 
     // Health score calculation
-    const score = Math.min(100, Math.max(0,
-      collectionRate * 0.4 +
-      Math.max(0, 30 - openComplaints * 5) +
-      Math.max(0, 30 - openTasks * 3)
-    ));
+    const complaintPart = Math.max(0, 30 - openComplaints * 5);
+    const taskPart = Math.max(0, 30 - openTasks * 3);
+    const score = collectionRate == null
+      ? Math.round(((complaintPart + taskPart) / 60) * 100)
+      : Math.min(100, Math.round(collectionRate * 0.4 + complaintPart + taskPart));
 
     // Activity feed from real data
     const activities = [
@@ -82,7 +88,7 @@ export default function Dashboard({ onNavigate }) {
       topVolunteers: vol.data || [],
       activities,
       healthBreakdown: [
-        { label: "Fee collection", value: `${collectionRate}%`, detail: `${paidInvoices}/${invoices.length} flats paid`, color: "#4ade80", nav: "finances" },
+        { label: "Fee collection", value: collectionRate == null ? "—" : `${collectionRate}%`, detail: totalInvoices ? `${paidInvoices}/${totalInvoices} flats paid` : "No invoices this month", color: "#4ade80", nav: "finances" },
         { label: "Open complaints", value: openComplaints, detail: "Needs resolution", color: "#f87171", nav: "conflicts" },
         { label: "Maintenance backlog", value: openTasks, detail: "Pending tasks", color: "#fbbf24", nav: "maintenance" },
         { label: "Active polls", value: polls.data?.length || 0, detail: "Awaiting votes", color: "#818cf8", nav: "voting" },
@@ -90,7 +96,11 @@ export default function Dashboard({ onNavigate }) {
         { label: "Pending deliveries", value: deliveries.data?.length || 0, detail: "Awaiting collection", color: "#fb923c", nav: "staff" },
       ],
     });
-    setLoading(false);
+    } catch (e) {
+      setLoadError(e?.message || "Could not load data");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, []);
@@ -110,6 +120,8 @@ export default function Dashboard({ onNavigate }) {
       Loading dashboard…
     </div>
   );
+  if (loadError) return <QueryStatus error={loadError} onRetry={load} />;
+  if (!data?.society) return <QueryStatus empty title="No community record yet" body="Fund balances and activity will appear here after the community is set up." />;
 
   return (
     <div style={{ fontFamily: "'DM Sans',system-ui,sans-serif", color: "#e2e8f0" }}>
@@ -131,13 +143,13 @@ export default function Dashboard({ onNavigate }) {
             <div style={{ color: "#e2e8f0", fontSize: 18, fontWeight: 700, marginBottom: 3 }}>
               {data.score >= 80 ? "Excellent" : data.score >= 60 ? "Moderate — Needs Attention" : "Poor — Immediate Action Needed"}
             </div>
-            <div style={{ color: "#64748b", fontSize: 12 }}>{data.collectionRate}% fee collection · {data.openComplaints} open complaints · {data.openTasks} pending tasks</div>
+            <div style={{ color: "#64748b", fontSize: 12 }}>{data.collectionRate == null ? "No invoices this month" : `${data.collectionRate}% fee collection`} · {data.openComplaints} open complaints · {data.openTasks} pending tasks</div>
           </div>
           <div style={{ color: "#64748b", fontSize: 18 }}>›</div>
         </div>
         <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
           {[
-            { v: `${data.collectionRate}%`, l: "Collection", c: "#4ade80" },
+            { v: data.collectionRate == null ? "—" : `${data.collectionRate}%`, l: "Collection", c: "#4ade80" },
             { v: data.openComplaints, l: "Open Issues", c: "#f87171" },
             { v: data.openTasks, l: "Maintenance", c: "#fbbf24" },
           ].map((x, i) => (

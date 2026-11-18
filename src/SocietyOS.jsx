@@ -1,24 +1,25 @@
-import { useState, useEffect } from "react";
-import { supabase, SOCIETY_ID } from "./lib/supabase.js";
+import { useState, useEffect, lazy, Suspense } from "react";
+import { supabase } from "./lib/supabase.js";
+import { callAuth } from "./lib/authApi.js";
 import Login from "./components/Login.jsx";
-import DashboardReal from "./components/Dashboard.jsx";
-import ComplaintsReal from "./components/Complaints.jsx";
-import FinancesReal from "./components/Finances.jsx";
-import ResidentsReal from "./components/Residents.jsx";
-import GateReal from "./components/Gate.jsx";
-import NoticesReal from "./components/Notices.jsx";
-import PollsReal from "./components/Polls.jsx";
-import MeetingsReal from "./components/Meetings.jsx";
-import AmenitiesReal from "./components/Amenities.jsx";
-import VolunteersReal from "./components/Volunteers.jsx";
-import MaintenanceReal from "./components/Maintenance.jsx";
-import CommitteeReal from "./components/Committee.jsx";
-import WhatsAppCentreReal from "./components/WhatsAppCentre.jsx";
-import AIAssistantReal from "./components/AIAssistant.jsx";
-import SuperAdminReal from "./components/SuperAdmin.jsx";
-import ResidentPortal from "./components/ResidentPortal.jsx";
+import QueryStatus from "./components/QueryStatus.jsx";
 
-const AUTH_URL = "https://wzchqxwwezklxsxmjvyt.supabase.co/functions/v1/auth-login";
+const DashboardReal = lazy(() => import("./components/Dashboard.jsx"));
+const ComplaintsReal = lazy(() => import("./components/Complaints.jsx"));
+const FinancesReal = lazy(() => import("./components/Finances.jsx"));
+const ResidentsReal = lazy(() => import("./components/Residents.jsx"));
+const GateReal = lazy(() => import("./components/Gate.jsx"));
+const NoticesReal = lazy(() => import("./components/Notices.jsx"));
+const PollsReal = lazy(() => import("./components/Polls.jsx"));
+const MeetingsReal = lazy(() => import("./components/Meetings.jsx"));
+const AmenitiesReal = lazy(() => import("./components/Amenities.jsx"));
+const VolunteersReal = lazy(() => import("./components/Volunteers.jsx"));
+const MaintenanceReal = lazy(() => import("./components/Maintenance.jsx"));
+const CommitteeReal = lazy(() => import("./components/Committee.jsx"));
+const WhatsAppCentreReal = lazy(() => import("./components/WhatsAppCentre.jsx"));
+const AIAssistantReal = lazy(() => import("./components/AIAssistant.jsx"));
+const SuperAdminReal = lazy(() => import("./components/SuperAdmin.jsx"));
+const ResidentPortal = lazy(() => import("./components/ResidentPortal.jsx"));
 
 const ROLE_NAV = {
   super_admin: [
@@ -27,15 +28,10 @@ const ROLE_NAV = {
     { id: "finances",    label: "Finances",     icon: "💰" },
     { id: "maintenance", label: "Maintenance",  icon: "🔧" },
     { id: "residents",   label: "Residents",    icon: "👥" },
-    { id: "staff",       label: "Gate & Staff", icon: "🚦" },
     { id: "notices",     label: "Notices",      icon: "📢" },
     { id: "voting",      label: "Polls",        icon: "🗳️" },
     { id: "meetings",    label: "Meetings",     icon: "📅" },
-    { id: "amenities",   label: "Amenities",    icon: "🏊" },
-    { id: "volunteers",  label: "Volunteers",   icon: "🤝" },
     { id: "committee",   label: "Committee",    icon: "🏛️" },
-    { id: "whatsapp",    label: "WhatsApp",     icon: "📱" },
-    { id: "ai",          label: "AI Assistant", icon: "✨" },
     { id: "admin",       label: "Super Admin",  icon: "⚙️" },
   ],
   president: [
@@ -48,26 +44,19 @@ const ROLE_NAV = {
     { id: "voting",      label: "Polls",        icon: "🗳️" },
     { id: "meetings",    label: "Meetings",     icon: "📅" },
     { id: "committee",   label: "Committee",    icon: "🏛️" },
-    { id: "volunteers",  label: "Volunteers",   icon: "🤝" },
-    { id: "whatsapp",    label: "WhatsApp",     icon: "📱" },
-    { id: "ai",          label: "AI Assistant", icon: "✨" },
   ],
   secretary: [
     { id: "dashboard",   label: "Dashboard",    icon: "🏠" },
     { id: "conflicts",   label: "Complaints",   icon: "⚖️" },
     { id: "maintenance", label: "Maintenance",  icon: "🔧" },
     { id: "residents",   label: "Residents",    icon: "👥" },
-    { id: "staff",       label: "Gate & Staff", icon: "🚦" },
     { id: "notices",     label: "Notices",      icon: "📢" },
     { id: "meetings",    label: "Meetings",     icon: "📅" },
-    { id: "volunteers",  label: "Volunteers",   icon: "🤝" },
-    { id: "ai",          label: "AI Assistant", icon: "✨" },
   ],
   treasurer: [
     { id: "finances",    label: "Finances",     icon: "💰" },
     { id: "dashboard",   label: "Dashboard",    icon: "🏠" },
     { id: "residents",   label: "Residents",    icon: "👥" },
-    { id: "whatsapp",    label: "WhatsApp",     icon: "📱" },
   ],
   committee: [
     { id: "dashboard",   label: "Dashboard",    icon: "🏠" },
@@ -119,8 +108,13 @@ export default function SocietyOS() {
 
   const loadSocietyName = async (societyId) => {
     if (!societyId) return;
-    const { data } = await supabase.from("societies").select("name").eq("id", societyId).single();
-    if (data?.name) setSocietyName(data.name);
+    try {
+      const { data, error } = await supabase.from("societies").select("name").eq("id", societyId).single();
+      if (error || !data?.name) setSocietyName("Community name unavailable");
+      else setSocietyName(data.name);
+    } catch {
+      setSocietyName("Community name unavailable");
+    }
   };
 
   const handleLogin = async (authData) => {
@@ -142,12 +136,7 @@ export default function SocietyOS() {
     if (newPin.length !== 4) { setPinMsg("PIN must be 4 digits"); return; }
     if (newPin !== confirmPin) { setPinMsg("PINs do not match"); return; }
     setChangingPin(true);
-    const res = await fetch(AUTH_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "set_pin", resident_id: auth.resident.id, new_pin: newPin }),
-    });
-    const result = await res.json();
+    const result = await callAuth({ action: "set_pin", resident_id: auth.resident.id, new_pin: newPin });
     setChangingPin(false);
     if (result.error) { setPinMsg(result.error); return; }
     const updated = { ...auth, resident: { ...auth.resident, pin_changed: true } };
@@ -178,7 +167,9 @@ export default function SocietyOS() {
           <button onClick={handleLogout} style={{ background: "#1e2535", border: "1px solid #2a2f45", borderRadius: 8, padding: "5px 12px", color: "#64748b", cursor: "pointer", fontSize: 11 }}>Logout</button>
         </div>
         <div style={{ padding: "16px 16px 100px" }}>
-          <ResidentPortal flatNumber={resident.flat_number} residentId={resident.id} onExitResidentView={null} />
+          <Suspense fallback={<QueryStatus loading label="Loading your portal…" />}>
+            <ResidentPortal flatNumber={resident.flat_number} residentId={resident.id} onExitResidentView={null} />
+          </Suspense>
         </div>
       </div>
     );
@@ -189,6 +180,7 @@ export default function SocietyOS() {
   const moreNav = navItems.slice(8);
 
   const renderTab = () => {
+    const screen = (() => {
     if (residentView) return <ResidentPortal flatNumber={residentView} onExitResidentView={() => setResidentView(null)} />;
     switch(tab) {
       case "dashboard":   return <DashboardReal onNavigate={setTab} />;
@@ -208,6 +200,8 @@ export default function SocietyOS() {
       case "admin":       return <SuperAdminReal />;
       default:            return <DashboardReal onNavigate={setTab} />;
     }
+    })();
+    return <Suspense fallback={<QueryStatus loading label="Loading…" />}>{screen}</Suspense>;
   };
 
   return (

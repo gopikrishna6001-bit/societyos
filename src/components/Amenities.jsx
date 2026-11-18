@@ -1,6 +1,8 @@
 // src/components/Amenities.jsx
 import { useState, useEffect } from "react";
 import { supabase, SOCIETY_ID } from "../lib/supabase";
+import QueryStatus from "./QueryStatus.jsx";
+import { raiseOnError } from "../lib/async.js";
 
 const inp = { width: "100%", background: "#0d1117", border: "1px solid #2a2f45", borderRadius: 8, padding: "10px 12px", color: "#e2e8f0", fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit" };
 const lbl = { color: "#94a3b8", fontSize: 11, fontWeight: 600, letterSpacing: "0.5px", textTransform: "uppercase", marginBottom: 5, display: "block" };
@@ -34,6 +36,7 @@ export default function Amenities() {
   const [amenities, setAmenities] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [selected, setSelected] = useState(null);
   const [showBook, setShowBook] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
@@ -49,13 +52,19 @@ export default function Amenities() {
 
   const load = async () => {
     setLoading(true);
+    setLoadError("");
+    try {
     const [am, bk] = await Promise.all([
       supabase.from("amenities").select("*").eq("society_id", SOCIETY_ID),
       supabase.from("amenity_bookings").select("*, amenities(name,icon)").eq("society_id", SOCIETY_ID).gte("date", viewDate).order("date"),
     ]);
     setAmenities(am.data || []);
     setBookings(bk.data || []);
-    setLoading(false);
+    } catch (e) {
+      setLoadError(e?.message || "Could not load data");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const seedAmenities = async () => {
@@ -143,7 +152,7 @@ export default function Amenities() {
       </div>
 
       {/* Amenity cards */}
-      {loading ? <div style={{ textAlign: "center", padding: 40, color: "#64748b" }}>Loading…</div> : (
+      {loading ? <div style={{ textAlign: "center", padding: 40, color: "#64748b" }}>Loading…</div> : loadError ? <QueryStatus error={loadError} onRetry={load} /> : (
         <>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 12, marginBottom: 24 }}>
             {amenities.map(a => {

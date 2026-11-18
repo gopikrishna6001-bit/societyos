@@ -7,8 +7,26 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 export const SOCIETY_ID = import.meta.env.VITE_SOCIETY_ID || 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+export const isSupabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+const REQUEST_TIMEOUT_MS = 12000;
+
+function fetchWithTimeout(input, init = {}) {
+  if (!isSupabaseConfigured) {
+    return Promise.reject(new Error("Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY."));
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  if (init.signal) {
+    if (init.signal.aborted) controller.abort();
+    else init.signal.addEventListener("abort", () => controller.abort(), { once: true });
+  }
+  return fetch(input, { ...init, signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
+export const supabase = createClient(SUPABASE_URL || "http://127.0.0.1", SUPABASE_ANON_KEY || "public-anon-key", {
+  global: { fetch: fetchWithTimeout },
+  auth: { persistSession: true, autoRefreshToken: true },
   realtime: { params: { eventsPerSecond: 10 } }
 });
 

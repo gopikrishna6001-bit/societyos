@@ -1,6 +1,8 @@
 // src/components/Complaints.jsx
 import { useState, useEffect } from "react";
 import { supabase, SOCIETY_ID } from "../lib/supabase";
+import QueryStatus from "./QueryStatus.jsx";
+import { raiseOnError } from "../lib/async.js";
 
 const fmt = (d) => d ? new Date(d).toLocaleDateString("en-IN") : "—";
 const elapsed = (d) => {
@@ -44,6 +46,7 @@ const CATEGORIES = ["Noise", "Parking", "Water", "Electrical", "Hygiene", "Secur
 export default function Complaints() {
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [filter, setFilter] = useState("all");
   const [selected, setSelected] = useState(null);
   const [detail, setDetail] = useState(null);
@@ -67,13 +70,20 @@ export default function Complaints() {
   // ── Load ──────────────────────────────────────────────────────────────────
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase
+    setLoadError("");
+    try {
+    const result = await supabase
       .from("complaints")
       .select("*")
       .eq("society_id", SOCIETY_ID)
       .order("created_at", { ascending: false });
-    setComplaints(data || []);
-    setLoading(false);
+    raiseOnError(result);
+    setComplaints(result.data || []);
+    } catch (e) {
+      setLoadError(e?.message || "Could not load data");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, []);
@@ -273,7 +283,7 @@ export default function Complaints() {
       {/* Complaints list */}
       {loading ? (
         <div style={{ textAlign: "center", padding: 40, color: "#64748b" }}>Loading complaints…</div>
-      ) : filtered.length === 0 ? (
+      ) : loadError ? <QueryStatus error={loadError} onRetry={load} /> : filtered.length === 0 ? (
         <div style={{ background: "#161b27", border: "1px solid #2a2f45", borderRadius: 12, padding: 40, textAlign: "center", color: "#475569" }}>
           No complaints found. {filter === "all" && "Click '+ Raise Complaint' to add one."}
         </div>

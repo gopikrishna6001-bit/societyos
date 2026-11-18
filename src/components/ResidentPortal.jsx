@@ -2,6 +2,8 @@
 // Simplified view for residents - only what they need
 import { useState, useEffect } from "react";
 import { supabase, SOCIETY_ID } from "../lib/supabase";
+import QueryStatus from "./QueryStatus.jsx";
+import { raiseOnError } from "../lib/async.js";
 
 const btnPrimary = { background: "linear-gradient(135deg,#d97706,#f59e0b)", border: "none", borderRadius: 8, padding: "10px 18px", color: "#0d0f14", fontWeight: 700, cursor: "pointer", fontSize: 14 };
 const inp = { width: "100%", background: "#0d1117", border: "1px solid #2a2f45", borderRadius: 8, padding: "10px 12px", color: "#e2e8f0", fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit" };
@@ -26,6 +28,7 @@ export default function ResidentPortal({ flatNumber, onExitResidentView }) {
   const [tab, setTab] = useState("home");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [msg, setMsg] = useState(null);
   const [saving, setSaving] = useState(false);
   const [showComplaint, setShowComplaint] = useState(false);
@@ -35,6 +38,8 @@ export default function ResidentPortal({ flatNumber, onExitResidentView }) {
 
   const load = async () => {
     setLoading(true);
+    setLoadError("");
+    try {
     const flat = flatNumber || "101";
     const [res, inv, comp, notices, polls, amenities, bookings] = await Promise.all([
       supabase.from("residents").select("*").eq("society_id", SOCIETY_ID).eq("flat_number", flat).eq("status", "active").single(),
@@ -54,7 +59,11 @@ export default function ResidentPortal({ flatNumber, onExitResidentView }) {
       amenities: amenities.data || [],
       bookings: bookings.data || [],
     });
-    setLoading(false);
+    } catch (e) {
+      setLoadError(e?.message || "Could not load data");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, [flatNumber]);
@@ -87,7 +96,8 @@ export default function ResidentPortal({ flatNumber, onExitResidentView }) {
 
   const TYPE_ICON = { urgent: "🚨", info: "ℹ️", event: "🎉", compliance: "📋", alert: "⚠️" };
 
-  if (loading) return <div style={{ textAlign: "center", padding: 60, color: "#64748b" }}>Loading your portal…</div>;
+  if (loading) return <QueryStatus loading label="Loading your portal…" />;
+  if (loadError) return <QueryStatus error={loadError} onRetry={load} />;
 
   return (
     <div style={{ fontFamily: "'DM Sans',system-ui,sans-serif", color: "#e2e8f0" }}>

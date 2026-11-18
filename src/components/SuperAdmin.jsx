@@ -1,6 +1,8 @@
 // src/components/SuperAdmin.jsx
 import { useState, useEffect } from "react";
 import { supabase, SOCIETY_ID } from "../lib/supabase";
+import QueryStatus from "./QueryStatus.jsx";
+import { raiseOnError } from "../lib/async.js";
 
 const inp = { width: "100%", background: "#0d1117", border: "1px solid #2a2f45", borderRadius: 8, padding: "10px 12px", color: "#e2e8f0", fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit" };
 const lbl = { color: "#94a3b8", fontSize: 11, fontWeight: 600, letterSpacing: "0.5px", textTransform: "uppercase", marginBottom: 5, display: "block" };
@@ -31,6 +33,7 @@ export default function SuperAdmin() {
   const [residents, setResidents] = useState([]);
   const [features, setFeatures] = useState({});
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState(null);
   const [editSociety, setEditSociety] = useState({});
@@ -53,6 +56,8 @@ export default function SuperAdmin() {
 
   const load = async () => {
     setLoading(true);
+    setLoadError("");
+    try {
     const [s, b, f, r, m, res] = await Promise.all([
       supabase.from("societies").select("*").eq("id", SOCIETY_ID).single(),
       supabase.from("blocks").select("*").eq("society_id", SOCIETY_ID),
@@ -68,7 +73,11 @@ export default function SuperAdmin() {
     setRoles(r.data || []);
     setModels(m.data || []);
     setResidents(res.data || []);
-    setLoading(false);
+    } catch (e) {
+      setLoadError(e?.message || "Could not load data");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -220,7 +229,7 @@ export default function SuperAdmin() {
         ))}
       </div>
 
-      {loading ? <div style={{ textAlign: "center", padding: 40, color: "#64748b" }}>Loading…</div> : (
+      {loading ? <div style={{ textAlign: "center", padding: 40, color: "#64748b" }}>Loading…</div> : loadError ? <QueryStatus error={loadError} onRetry={load} /> : (
         <>
           {/* OVERVIEW */}
           {tab === "overview" && (
@@ -474,6 +483,8 @@ export default function SuperAdmin() {
               </div>
             </div>
           )}
+
+          {tab === "settings" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <div style={{ background: "#2d1b1b", border: "1px solid #f8717133", borderRadius: 12, padding: 16 }}>
                 <div style={{ color: "#f87171", fontSize: 14, fontWeight: 700, marginBottom: 4 }}>⚠ Danger Zone</div>
@@ -489,7 +500,7 @@ export default function SuperAdmin() {
               </div>
               <div style={{ background: "#161b27", border: "1px solid #2a2f45", borderRadius: 12, padding: 16 }}>
                 <div style={{ color: "#e2e8f0", fontSize: 14, fontWeight: 700, marginBottom: 4 }}>Supabase Project</div>
-                <div style={{ background: "#0d1117", borderRadius: 8, padding: "10px 14px", color: "#64748b", fontSize: 12, fontFamily: "monospace" }}>wzchqxwwezklxsxmjvyt.supabase.co</div>
+                <div style={{ background: "#0d1117", borderRadius: 8, padding: "10px 14px", color: "#64748b", fontSize: 12, fontFamily: "monospace" }}>{import.meta.env.VITE_SUPABASE_URL || "Not configured"}</div>
               </div>
             </div>
           )}

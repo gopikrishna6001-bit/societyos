@@ -1,6 +1,8 @@
 // src/components/Maintenance.jsx
 import { useState, useEffect } from "react";
 import { supabase, SOCIETY_ID } from "../lib/supabase";
+import QueryStatus from "./QueryStatus.jsx";
+import { raiseOnError } from "../lib/async.js";
 
 const inp = { width: "100%", background: "#0d1117", border: "1px solid #2a2f45", borderRadius: 8, padding: "10px 12px", color: "#e2e8f0", fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit" };
 const lbl = { color: "#94a3b8", fontSize: 11, fontWeight: 600, letterSpacing: "0.5px", textTransform: "uppercase", marginBottom: 5, display: "block" };
@@ -41,6 +43,7 @@ export default function Maintenance() {
   const [vendors, setVendors] = useState([]);
   const [schedule, setSchedule] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState(null);
 
@@ -59,6 +62,8 @@ export default function Maintenance() {
 
   const load = async () => {
     setLoading(true);
+    setLoadError("");
+    try {
     const [tsk, ast, vnd, sch] = await Promise.all([
       supabase.from("maintenance_tasks").select("*").eq("society_id", SOCIETY_ID).order("created_at", { ascending: false }),
       supabase.from("assets").select("*").eq("society_id", SOCIETY_ID).order("created_at", { ascending: false }),
@@ -69,7 +74,11 @@ export default function Maintenance() {
     setAssets(ast.data || []);
     setVendors(vnd.data || []);
     setSchedule(sch.data || []);
-    setLoading(false);
+    } catch (e) {
+      setLoadError(e?.message || "Could not load data");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, []);
@@ -177,7 +186,7 @@ export default function Maintenance() {
         ))}
       </div>
 
-      {loading ? <div style={{ textAlign: "center", padding: 40, color: "#64748b" }}>Loading…</div> : (
+      {loading ? <div style={{ textAlign: "center", padding: 40, color: "#64748b" }}>Loading…</div> : loadError ? <QueryStatus error={loadError} onRetry={load} /> : (
         <>
           {/* TASKS */}
           {tab === "tasks" && (

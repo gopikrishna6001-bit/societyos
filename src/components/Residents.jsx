@@ -1,6 +1,8 @@
 // src/components/Residents.jsx
 import { useState, useEffect } from "react";
 import { supabase, SOCIETY_ID } from "../lib/supabase";
+import QueryStatus from "./QueryStatus.jsx";
+import { raiseOnError } from "../lib/async.js";
 
 const inp = { width: "100%", background: "#0d1117", border: "1px solid #2a2f45", borderRadius: 8, padding: "10px 12px", color: "#e2e8f0", fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit" };
 const lbl = { color: "#94a3b8", fontSize: 11, fontWeight: 600, letterSpacing: "0.5px", textTransform: "uppercase", marginBottom: 5, display: "block" };
@@ -39,6 +41,7 @@ export default function Residents() {
   const [userRoles, setUserRoles] = useState([]);
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [msg, setMsg] = useState(null);
@@ -62,6 +65,8 @@ export default function Residents() {
 
   const load = async () => {
     setLoading(true);
+    setLoadError("");
+    try {
     const [res, inv, comp, rl, ur, veh] = await Promise.all([
       supabase.from("residents").select("*").eq("society_id", SOCIETY_ID).eq("status", "active").order("flat_number"),
       supabase.from("invoices").select("flat_number,status,balance_due,month").eq("society_id", SOCIETY_ID),
@@ -76,7 +81,11 @@ export default function Residents() {
     setRoles(rl.data || []);
     setUserRoles(ur.data || []);
     setVehicles(veh.data || []);
-    setLoading(false);
+    } catch (e) {
+      setLoadError(e?.message || "Could not load data");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, []);
@@ -223,7 +232,7 @@ export default function Residents() {
       {/* Residents grid */}
       {loading ? (
         <div style={{ textAlign: "center", padding: 40, color: "#64748b" }}>Loading residents…</div>
-      ) : (
+      ) : loadError ? <QueryStatus error={loadError} onRetry={load} /> : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 12 }}>
           {filtered.map(r => {
             const harmony = calcHarmony(r, invoices, complaints);

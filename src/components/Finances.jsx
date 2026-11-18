@@ -3,6 +3,8 @@
 
 import { useState, useEffect } from "react";
 import { supabase, SOCIETY_ID } from "../lib/supabase";
+import QueryStatus from "./QueryStatus.jsx";
+import { raiseOnError } from "../lib/async.js";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const fmt = (n) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
@@ -69,6 +71,7 @@ export default function Finances() {
   const [chargeHeads, setChargeHeads] = useState([]);
   const [residents, setResidents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState(null);
 
@@ -92,6 +95,8 @@ export default function Finances() {
   // ─── Load data ──────────────────────────────────────────────────────────────
   const loadAll = async () => {
     setLoading(true);
+    setLoadError("");
+    try {
     const [soc, inv, exp, ch, res] = await Promise.all([
       supabase.from("societies").select("*").eq("id", SOCIETY_ID).single(),
       supabase.from("invoices").select("*, payments(id,amount,method,paid_at,reference,status)").eq("society_id", SOCIETY_ID).eq("month", month).order("flat_number"),
@@ -99,12 +104,17 @@ export default function Finances() {
       supabase.from("charge_heads").select("*").eq("society_id", SOCIETY_ID).eq("active", true),
       supabase.from("residents").select("id,name,flat_number,phone").eq("society_id", SOCIETY_ID).eq("status", "active"),
     ]);
+    [soc, inv, exp, ch, res].forEach(raiseOnError);
     setSociety(soc.data);
     setInvoices(inv.data || []);
     setExpenses(exp.data || []);
     setChargeHeads(ch.data || []);
     setResidents(res.data || []);
-    setLoading(false);
+    } catch (e) {
+      setLoadError(e?.message || "Could not load data");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { loadAll(); }, [month]);
@@ -266,6 +276,7 @@ export default function Finances() {
       Loading financial data…
     </div>
   );
+  if (loadError) return <QueryStatus error={loadError} onRetry={loadAll} />;
 
   return (
     <div style={{ fontFamily: "'DM Sans', system-ui, sans-serif", color: "#e2e8f0" }}>

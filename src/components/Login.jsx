@@ -1,13 +1,8 @@
 import { useState, useEffect } from "react";
 import { supabase, SOCIETY_ID } from "../lib/supabase";
+import { callAuth } from "../lib/authApi";
 
-const AUTH_URL = "https://wzchqxwwezklxsxmjvyt.supabase.co/functions/v1/auth-login";
 const inp = { width: "100%", background: "#0d1117", border: "1px solid #2a2f45", borderRadius: 10, padding: "14px 16px", color: "#e2e8f0", fontSize: 28, outline: "none", boxSizing: "border-box", fontFamily: "inherit", textAlign: "center", letterSpacing: "12px" };
-
-async function callAuth(body) {
-  const res = await fetch(AUTH_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  return res.json();
-}
 
 export default function Login({ onLogin }) {
   const [step, setStep] = useState("phone");
@@ -22,42 +17,63 @@ export default function Login({ onLogin }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [societyStatus, setSocietyStatus] = useState("loading");
 
   useEffect(() => {
-    supabase.from("societies").select("name, city").eq("id", SOCIETY_ID).single().then(({ data }) => setSociety(data));
+    let cancelled = false;
+    supabase.from("societies").select("name, city").eq("id", SOCIETY_ID).single()
+      .then(({ data, error: queryError }) => {
+        if (cancelled) return;
+        if (queryError || !data) setSocietyStatus("unavailable");
+        else { setSociety(data); setSocietyStatus("ready"); }
+      })
+      .catch(() => { if (!cancelled) setSocietyStatus("unavailable"); });
+    return () => { cancelled = true; };
   }, []);
 
   const findByPhone = async () => {
     const cleaned = phone.replace(/\D/g, "").slice(-10);
     if (cleaned.length < 10) { setError("Enter a valid 10-digit phone number"); return; }
     setLoading(true); setError("");
-    const result = await callAuth({ action: "lookup", phone: cleaned });
-    if (result.error) { setError(result.error); setLoading(false); return; }
-    if (result.multiple) { setMultipleFlats(result.residents); setStep("select_flat"); }
-    else { setResident(result.resident); setStep("pin"); }
-    setLoading(false);
+    try {
+      const result = await callAuth({ action: "lookup", phone: cleaned });
+      if (result.error) { setError(result.error); return; }
+      if (result.multiple) { setMultipleFlats(result.residents); setStep("select_flat"); }
+      else { setResident(result.resident); setStep("pin"); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const verifyPin = async () => {
     if (pin.length < 4) { setError("Enter your 4-digit PIN"); return; }
     setLoading(true); setError("");
-    const result = await callAuth({ action: "login", phone, pin, resident_id: resident.id });
-    if (result.error) { setError(result.error); setPin(""); setLoading(false); return; }
-    await supabase.auth.setSession({ access_token: result.session.access_token, refresh_token: result.session.refresh_token });
-    if (result.first_login) { setSessionData(result); setStep("set_new_pin"); setLoading(false); return; }
-    onLogin({ resident: result.resident, role: result.role });
-    setLoading(false);
+    try {
+      const result = await callAuth({ action: "login", phone, pin, resident_id: resident.id });
+      if (result.error) { setError(result.error); setPin(""); return; }
+      if (!result.session?.access_token) { setError("The server did not return a session."); return; }
+      await supabase.auth.setSession({ access_token: result.session.access_token, refresh_token: result.session.refresh_token });
+      if (result.first_login) { setSessionData(result); setStep("set_new_pin"); return; }
+      onLogin({ resident: result.resident, role: result.role });
+    } catch (e) {
+      setError(e?.message || "Could not start the session.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const setFirstPin = async () => {
     if (newPin.length !== 4) { setError("PIN must be 4 digits"); return; }
     if (newPin !== confirmPin) { setError("PINs do not match"); return; }
     setLoading(true); setError("");
-    const result = await callAuth({ action: "set_pin", resident_id: sessionData.resident.id, new_pin: newPin });
-    if (result.error) { setError(result.error); setLoading(false); return; }
-    setSuccess("PIN set! Entering app...");
-    setTimeout(() => onLogin({ resident: { ...sessionData.resident, pin_changed: true }, role: sessionData.role }), 1000);
-    setLoading(false);
+    try {
+      const result = await callAuth({ action: "set_pin", resident_id: sessionData.resident.id, new_pin: newPin });
+      if (result.error) { setError(result.error); return; }
+      setSuccess("PIN set! Entering app...");
+      setTimeout(() => onLogin({ resident: { ...sessionData.resident, pin_changed: true }, role: sessionData.role }), 1000);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const phoneInp = { width: "100%", background: "#0d1117", border: "1px solid #2a2f45", borderRadius: 10, padding: "14px 16px", color: "#e2e8f0", fontSize: 20, outline: "none", boxSizing: "border-box", fontFamily: "inherit", textAlign: "center", letterSpacing: "2px" };
@@ -71,7 +87,7 @@ export default function Login({ onLogin }) {
         <div style={{ textAlign: "center", marginBottom: 36 }}>
           <div style={{ width: 64, height: 64, borderRadius: 18, background: "linear-gradient(135deg,#d97706,#f59e0b)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px", fontSize: 28 }}>☮</div>
           <h1 style={{ color: "#e2e8f0", fontSize: 26, fontFamily: "'Playfair Display',serif", margin: "0 0 4px" }}>SocietyOS</h1>
-          <p style={{ color: "#475569", fontSize: 13, margin: 0 }}>{society ? `${society.name}, ${society.city}` : "Loading…"}</p>
+          <p style={{ color: "#475569", fontSize: 13, margin: 0 }}>{societyStatus === "ready" ? `${society.name}, ${society.city}` : societyStatus === "unavailable" ? "Community name unavailable" : "Loading…"}</p>
         </div>
 
         <div style={{ background: "#161b27", border: "1px solid #2a2f45", borderRadius: 20, padding: 28 }}>
