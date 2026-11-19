@@ -15,7 +15,7 @@ Both must be set or the platform shows a configuration message and makes no fina
 
 `VITE_AUTH_URL` is optional and only used by the legacy phone lookup. `VITE_SOCIETY_ID` is only used by the legacy screens.
 
-The value `https://wzchqxwwezklxsxmjvyt.supabase.co` does not resolve. Do not restore it.
+`https://wzchqxwwezklxsxmjvyt.supabase.co` is the Society OS project. It was resumed on 19 November 2026. Auth answers. The foundation migration is not applied there yet.
 
 ## Database tests
 

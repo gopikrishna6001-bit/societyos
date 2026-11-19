@@ -1,6 +1,5 @@
 import { describe, expect, test } from "vitest";
 import { errorMessage } from "../lib/async.js";
-import { unreachableProjectMessage } from "../lib/supabase.js";
 import { inr, toCsv } from "./money.js";
 
 describe("money", () => {
@@ -25,10 +24,5 @@ describe("error messages", () => {
 
   test("turns a network failure into a connection message", () => {
     expect(errorMessage(new TypeError("Failed to fetch"))).toMatch(/Could not reach the server/);
-  });
-
-  test("names the unresolved project instead of asking for another try", () => {
-    expect(unreachableProjectMessage("https://wzchqxwwezklxsxmjvyt.supabase.co/auth/v1/token")).toMatch(/does not resolve/);
-    expect(unreachableProjectMessage("https://example.supabase.co")).toBe("");
   });
 });
