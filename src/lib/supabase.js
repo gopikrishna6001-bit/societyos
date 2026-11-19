@@ -11,10 +11,20 @@ export const isSupabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
 const REQUEST_TIMEOUT_MS = 12000;
 
+export function unreachableProjectMessage(target) {
+  const value = typeof target === "string" ? target : target?.url || "";
+  if (value.includes("wzchqxwwezklxsxmjvyt.supabase.co")) {
+    return "This Supabase project does not resolve, so the DEMO accounts cannot sign in yet. The Yasvik organization is at its free-project limit.";
+  }
+  return "";
+}
+
 function fetchWithTimeout(input, init = {}) {
   if (!isSupabaseConfigured) {
     return Promise.reject(new Error("Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY."));
   }
+  const blocked = unreachableProjectMessage(typeof input === "string" ? input : input?.url || SUPABASE_URL);
+  if (blocked) return Promise.reject(new Error(blocked));
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   if (init.signal) {

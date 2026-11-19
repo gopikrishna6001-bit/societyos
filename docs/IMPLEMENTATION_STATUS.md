@@ -126,7 +126,7 @@ The Pages site opens, and sign-in cannot succeed. No demo accounts were created 
 - The only project visible in this session is the live Yasvik store. It contains products, orders, customers, and tax records. The SocietyOS migration was not applied there, and that project was not paused or deleted.
 - This environment has no Cloudflare API token. The Pages environment variables were not changed. `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` still have to be set on the Pages project, followed by a rebuild, after an empty Supabase project exists. The service-role key must not be added as a `VITE_` variable.
 - DEMO role logins are defined, and they have not been created on a hosted project. The sign-in page lists them. `npm run seed:demo` creates them on an empty project when `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set. It refuses the live Yasvik store and the unreachable host. The shared password is `Sabha-Demo-2026`. The community name is `DEMO · Palm Court`. No ledger entries are posted.
-- A new empty project in the Yasvik organization is quoted at $0 per month. It was not created, because that still needs an explicit cost confirmation. The live store was not modified.
+- A new empty project in the Yasvik organization is quoted at $0 per month. Creating it was refused because the account is at its two active free projects. The live store was not modified. The unreachable project `wzchqxwwezklxsxmjvyt` still exists and this session cannot open or pause it. Sign-in against that host now fails immediately with that explanation instead of waiting and saying the request timed out.
 
 ## Outstanding
 
