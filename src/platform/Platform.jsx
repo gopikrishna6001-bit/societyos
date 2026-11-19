@@ -82,25 +82,25 @@ function AuthScreen() {
     }
   };
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-10">
-      <div className="flex items-center gap-3 text-[#0878E8]">
-        <Mark size={40} />
-        <h1 className="text-4xl font-semibold tracking-[0.14em] text-slate-100">{brand.name}</h1>
+    <main className="auth-screen">
+      <div className="auth-lockup">
+        <Mark size={44} />
+        <h1>{brand.name}</h1>
       </div>
-      <p className="mt-4 text-lg">{brand.tagline}</p>
-      <p className="mt-2 text-sm text-slate-400">{brand.loginLead}</p>
-      <form className="mt-6 grid gap-3 border border-slate-800 bg-white p-4" onSubmit={submit}>
+      <p className="auth-tagline">{brand.tagline}</p>
+      <p className="auth-lead">{brand.loginLead}</p>
+      <form className="auth-form" onSubmit={submit}>
         <Field label="Email"><input className={control} type="email" name="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} required /></Field>
         <Field label="Password"><input className={control} type="password" name="password" autoComplete="current-password" minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} required /></Field>
-        <input name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" className="absolute -left-[9999px]" />
-        {error && <p role="alert" className="text-sm text-red-300">{error}</p>}
-        <button disabled={pending} className="min-h-12 bg-amber-500 px-3 py-3 font-semibold text-white disabled:opacity-60" type="submit">
+        <input name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" className="auth-honeypot" />
+        {error && <p role="alert" className="auth-error">{error}</p>}
+        <button disabled={pending} type="submit">
           {pending ? "Please wait…" : "Sign in"}
         </button>
       </form>
       <DemoAccounts onPick={(account) => { setEmail(account.email); setPassword(account.password); }} />
-      <p className="mt-4 text-sm"><Link className="font-semibold text-amber-300" to="/reset">Forgot password</Link></p>
-      <p className="mt-4 text-sm text-slate-400">Sign in with the email your community issued. This form does not ask for a phone number or a PIN, and it does not create accounts.</p>
+      <p className="auth-forgot"><Link to="/reset">Forgot password</Link></p>
+      <p className="auth-note">Sign in with the email your community issued. This form does not ask for a phone number or a PIN, and it does not create accounts.</p>
     </main>
   );
 }
