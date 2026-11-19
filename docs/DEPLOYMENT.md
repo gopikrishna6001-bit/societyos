@@ -2,6 +2,8 @@
 
 SABHA is deployed as a responsive web application and PWA. It is not packaged as a native Android or iOS app.
 
+> **19 Nov 2026.** Hosted project `wzchqxwwezklxsxmjvyt` already contains the SABHA tables and the renamed SocietyOS tables. Do not replay `20261118120000_platform_foundation.sql` there, and do not apply it to the Yasvik store project. The steps below that say "create a new project" are for a disposable database only.
+
 ## Target
 
 Cloudflare Pages can host the Vite build. The current Pages hostname still contains `societyos` because that is the existing project name. Supabase hosts Auth, Postgres, Storage, and later Edge Functions.

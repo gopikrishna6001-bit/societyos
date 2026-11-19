@@ -352,7 +352,7 @@ async function handleAction(to: string, action: string, resident: Record<string,
       break;
     }
     case "approve_expense": {
-      const { data: exp } = await supabase.from("expenses").select("description,amount").eq("society_id", SOCIETY_ID).eq("status", "pending").limit(5);
+      const { data: exp } = await supabase.from("legacy_expenses").select("description,amount").eq("society_id", SOCIETY_ID).eq("status", "pending").limit(5);
       if (!exp?.length) { await send(to, `✅ No expenses pending.\n\nType MENU to go back.`); return; }
       let msg = `⏳ *Pending Approvals*\n\n`;
       exp.forEach((e,i) => { msg += `${i+1}. ${e.description} — ₹${Number(e.amount).toLocaleString("en-IN")}\n`; });
@@ -443,7 +443,7 @@ async function handleSession(to: string, text: string, resident: Record<string, 
     case "awaiting_expense_amount": {
       const amount = Number(text.replace(/[^0-9]/g, ""));
       if (!amount) { await send(to, `Invalid. Numbers only:`); return true; }
-      await supabase.from("expenses").insert({ society_id: SOCIETY_ID, description: session.data.desc, amount, net_amount: amount, category: "General", expense_date: new Date().toISOString().slice(0,10), status: "pending", created_by: name });
+      await supabase.from("legacy_expenses").insert({ society_id: SOCIETY_ID, description: session.data.desc, amount, net_amount: amount, category: "General", expense_date: new Date().toISOString().slice(0,10), status: "pending", created_by: name });
       delete sessions[to];
       await send(to, `✅ Expense added: ${session.data.desc} — ₹${amount.toLocaleString("en-IN")}\nStatus: Pending approval\n\nType MENU for more.`);
       return true;

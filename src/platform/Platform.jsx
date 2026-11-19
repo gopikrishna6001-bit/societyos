@@ -9,7 +9,6 @@ import {
 import { Field, PageStatus, control } from "./ui.jsx";
 import { brand } from "../brand.js";
 import { Mark, Wordmark } from "../brand/Mark.jsx";
-import { demoAccounts, demoPassword } from "../demoAccounts.js";
 
 export default function Platform() {
   if (!isSupabaseConfigured) return <ConfigRequired />;
@@ -91,24 +90,43 @@ function AuthScreen() {
           {pending ? "Please wait…" : "Sign in"}
         </button>
       </form>
-      <section className="mt-4 border border-slate-800 bg-white p-4">
-        <h2 className="font-display text-lg font-semibold">DEMO accounts</h2>
-        <p className="mt-1 text-sm text-slate-400">One community, labelled DEMO · Palm Court. No sample balances are posted. Shared password: {demoPassword}. These accounts work after the demo seed runs on an empty project.</p>
-        <div className="mt-3 grid gap-2">
-          {demoAccounts.map((account) => (
-            <button
-              key={account.email}
-              type="button"
-              className="min-h-12 border border-slate-800 px-3 text-left text-sm"
-              onClick={() => { setEmail(account.email); setPassword(account.password); }}
-            >
-              {account.role}<span className="mt-0.5 block text-slate-400">{account.email}</span>
-            </button>
-          ))}
-        </div>
-      </section>
+      <DemoAccounts onPick={(account) => { setEmail(account.email); setPassword(account.password); }} />
       <p className="mt-4 text-sm text-slate-400">Sign in with the email your community issued. This form does not ask for a mobile number and does not send an OTP. A new password is issued by your community administrator.</p>
     </main>
+  );
+}
+
+function DemoAccounts({ onPick }) {
+  const [accounts, setAccounts] = useState(null);
+  const [sharedPassword, setSharedPassword] = useState("");
+  useEffect(() => {
+    if (import.meta.env.VITE_ENABLE_DEMO_LOGIN !== "true") return undefined;
+    let live = true;
+    import("../demoAccounts.js").then((mod) => {
+      if (!live) return;
+      setAccounts(mod.demoAccounts);
+      setSharedPassword(mod.demoPassword);
+    });
+    return () => { live = false; };
+  }, []);
+  if (!accounts) return null;
+  return (
+    <section className="mt-4 border border-slate-800 bg-white p-4">
+      <h2 className="font-display text-lg font-semibold">DEMO accounts</h2>
+      <p className="mt-1 text-sm text-slate-400">One community, labelled DEMO · Palm Court. No sample balances are posted. Shared password: {sharedPassword}. These accounts work after the demo seed runs on an empty project.</p>
+      <div className="mt-3 grid gap-2">
+        {accounts.map((account) => (
+          <button
+            key={account.email}
+            type="button"
+            className="min-h-12 border border-slate-800 px-3 text-left text-sm"
+            onClick={() => onPick(account)}
+          >
+            {account.role}<span className="mt-0.5 block text-slate-400">{account.email}</span>
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }
 

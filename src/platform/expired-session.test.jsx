@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import Platform from "./Platform.jsx";
+import { demoPassword } from "../demoAccounts.js";
 
 const { signOut } = vi.hoisted(() => ({ signOut: vi.fn().mockResolvedValue({ error: null }) }));
 
@@ -21,5 +22,7 @@ test("a failed saved session opens the sign-in form", async () => {
   render(<Platform />);
   expect(await screen.findByRole("button", { name: "Sign in" })).toBeInTheDocument();
   expect(screen.queryByText(/timed out/i)).not.toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "DEMO accounts" })).not.toBeInTheDocument();
+  expect(screen.queryByText(demoPassword)).not.toBeInTheDocument();
   expect(signOut).toHaveBeenCalledWith({ scope: "local" });
 });

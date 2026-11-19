@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase, SOCIETY_ID } from "../lib/supabase";
+import { LEGACY_EXPENSES } from "../lib/legacyTables.js";
 import { maskPhone } from "../lib/privacy";
 import QueryStatus from "./QueryStatus.jsx";
 import { raiseOnError } from "../lib/async.js";
@@ -101,7 +102,7 @@ export default function Finances() {
     const [soc, inv, exp, ch, res] = await Promise.all([
       supabase.from("societies").select("*").eq("id", SOCIETY_ID).single(),
       supabase.from("invoices").select("*, payments(id,amount,method,paid_at,reference,status)").eq("society_id", SOCIETY_ID).eq("month", month).order("flat_number"),
-      supabase.from("expenses").select("*").eq("society_id", SOCIETY_ID).order("expense_date", { ascending: false }),
+      supabase.from(LEGACY_EXPENSES).select("*").eq("society_id", SOCIETY_ID).order("expense_date", { ascending: false }),
       supabase.from("charge_heads").select("*").eq("society_id", SOCIETY_ID).eq("active", true),
       supabase.from("residents").select("id,name,flat_number,phone").eq("society_id", SOCIETY_ID).eq("status", "active"),
     ]);
@@ -196,7 +197,7 @@ export default function Finances() {
   const addExpense = async () => {
     if (!expForm.description || !expForm.amount) return;
     setSaving(true);
-    const { error } = await supabase.from("expenses").insert({
+    const { error } = await supabase.from(LEGACY_EXPENSES).insert({
       ...expForm,
       society_id: SOCIETY_ID,
       amount: Number(expForm.amount),
@@ -211,7 +212,7 @@ export default function Finances() {
 
   // ─── Approve / reject expense ─────────────────────────────────────────────────
   const approveExpense = async (id) => {
-    await supabase.from("expenses").update({ status: "approved", approved_by: "Treasurer", approved_at: new Date().toISOString() }).eq("id", id);
+    await supabase.from(LEGACY_EXPENSES).update({ status: "approved", approved_by: "Treasurer", approved_at: new Date().toISOString() }).eq("id", id);
     const exp = expenses.find(e => e.id === id);
     if (exp && society) await supabase.from("societies").update({ balance: (society.balance || 0) - Number(exp.amount) }).eq("id", SOCIETY_ID);
     showMsg("✓ Expense approved");
@@ -219,7 +220,7 @@ export default function Finances() {
   };
 
   const rejectExpense = async (id) => {
-    await supabase.from("expenses").update({ status: "rejected" }).eq("id", id);
+    await supabase.from(LEGACY_EXPENSES).update({ status: "rejected" }).eq("id", id);
     showMsg("Expense rejected", "#f87171");
     await loadAll();
   };

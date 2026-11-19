@@ -126,8 +126,8 @@ A saved session whose access token is inside the refresh window is removed local
 - Preview: `https://cursor-transparency-platform.societyos.pages.dev`. The built client embeds `https://wzchqxwwezklxsxmjvyt.supabase.co`, and that host answers.
 - The Yasvik store was not modified. Society OS is a separate project in the SocietyOS organization.
 - Cloudflare Pages environment variables were already present. They were not changed in this session.
-- The five DEMO accounts exist on Society OS for `DEMO · Palm Court`. The shared password is `Sabha-Demo-2026`. No ledger entries were posted.
-- On 19 November 2026 the SocietyOS organization was connected and the SABHA tables, row security, home dashboard functions, and five DEMO accounts were created on Society OS. A resident sign-in on `https://cursor-transparency-platform.societyos.pages.dev` opens Home. The shared password is `Sabha-Demo-2026`. Write actions such as opening a fund, recording an expense, and raising a concern still need the remaining database functions from the foundation migration.
+- The five DEMO accounts exist on Society OS for `DEMO · Palm Court`. The shared password is not repeated here. No ledger entries were posted.
+- On 19 November 2026 the SocietyOS organization was connected and the SABHA tables, row security, home dashboard functions, and five DEMO accounts were created on Society OS. A resident sign-in on `https://cursor-transparency-platform.societyos.pages.dev` opens Home. The shared demo password stays in `src/demoAccounts.js` and is shown only when `VITE_ENABLE_DEMO_LOGIN=true`. Leave that variable unset on production. Write actions such as opening a fund, recording an expense, and raising a concern still need the remaining database functions from the foundation migration. Do not replay the whole migration on the hosted project.
 
 ## Outstanding
 

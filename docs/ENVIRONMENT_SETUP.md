@@ -15,7 +15,7 @@ Both must be set or the platform shows a configuration message and makes no fina
 
 `VITE_AUTH_URL` is optional and only used by the legacy phone lookup. `VITE_SOCIETY_ID` is only used by the legacy screens.
 
-`https://wzchqxwwezklxsxmjvyt.supabase.co` is the Society OS project. It was resumed on 19 November 2026. Auth answers. The foundation migration is not applied there yet.
+`https://wzchqxwwezklxsxmjvyt.supabase.co` is the Society OS project. It was resumed on 19 November 2026. Auth answers. A read-only check on 19 November 2026 found the SABHA tables and the six `legacy_*` tables already present. Do not replay `supabase/migrations/20261118120000_platform_foundation.sql` on this project. Several write functions from that file are still absent; install only a reviewed diff. See `docs/PHASE_0_SAFETY_AND_RECOVERY.md`.
 
 ## Database tests
 

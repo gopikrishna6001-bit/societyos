@@ -3,6 +3,7 @@
 // Every UI component imports from here — never writes SQL directly
 
 import { createClient } from '@supabase/supabase-js';
+import { LEGACY_EXPENSES, LEGACY_MEETINGS, LEGACY_NOTIFICATIONS } from './legacyTables.js';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -178,16 +179,16 @@ export const Financials = {
 
   // Expenses
   getExpenses: ({ status, category, month } = {}) => {
-    let q = supabase.from('expenses').select('*, vendors(name)').eq('society_id', sid());
+    let q = supabase.from(LEGACY_EXPENSES).select('*').eq('society_id', sid());
     if (status) q = q.eq('status', status);
     if (category) q = q.eq('category_id', category);
     return q.order('expense_date', { ascending: false });
   },
-  createExpense: (data) => supabase.from('expenses').insert({ ...data, society_id: sid() }).select().single(),
+  createExpense: (data) => supabase.from(LEGACY_EXPENSES).insert({ ...data, society_id: sid() }).select().single(),
   approveExpense: (id, approvedBy) =>
-    supabase.from('expenses').update({ status: 'approved', approved_by: approvedBy, approved_at: new Date().toISOString() }).eq('id', id),
+    supabase.from(LEGACY_EXPENSES).update({ status: 'approved', approved_by: approvedBy, approved_at: new Date().toISOString() }).eq('id', id),
   rejectExpense: (id, reason) =>
-    supabase.from('expenses').update({ status: 'rejected', rejected_reason: reason }).eq('id', id),
+    supabase.from(LEGACY_EXPENSES).update({ status: 'rejected', rejected_reason: reason }).eq('id', id),
 
   // Budget
   getBudget: (fy) => supabase.from('budget').select('*').eq('society_id', sid()).eq('fy', fy),
@@ -206,7 +207,7 @@ export const Financials = {
   getIncomeStatement: async (fromMonth, toMonth) => {
     const [{ data: invoices }, { data: expenses }] = await Promise.all([
       supabase.from('invoices').select('month, total_amount, amount_paid, status').eq('society_id', sid()).gte('month', fromMonth).lte('month', toMonth),
-      supabase.from('expenses').select('expense_date, amount, status').eq('society_id', sid()).eq('status', 'paid').gte('expense_date', `${fromMonth}-01`).lte('expense_date', `${toMonth}-31`),
+      supabase.from(LEGACY_EXPENSES).select('expense_date, amount, status').eq('society_id', sid()).eq('status', 'paid').gte('expense_date', `${fromMonth}-01`).lte('expense_date', `${toMonth}-31`),
     ]);
     return { invoices, expenses };
   },
@@ -364,12 +365,12 @@ export const Staff = {
 
 // ─── MODULE 9: MEETINGS ───────────────────────────────────────────────────────
 export const Meetings = {
-  getAll: () => supabase.from('meetings').select('*').eq('society_id', sid()).order('date', { ascending: false }),
-  getById: (id) => supabase.from('meetings').select('*, meeting_rsvps(*), motions(*)').eq('id', id).single(),
-  create: (data) => supabase.from('meetings').insert({ ...data, society_id: sid() }).select().single(),
-  update: (id, data) => supabase.from('meetings').update(data).eq('id', id),
+  getAll: () => supabase.from(LEGACY_MEETINGS).select('*').eq('society_id', sid()).order('date', { ascending: false }),
+  getById: (id) => supabase.from(LEGACY_MEETINGS).select('*, meeting_rsvps(*), motions(*)').eq('id', id).single(),
+  create: (data) => supabase.from(LEGACY_MEETINGS).insert({ ...data, society_id: sid() }).select().single(),
+  update: (id, data) => supabase.from(LEGACY_MEETINGS).update(data).eq('id', id),
   saveMinutes: (id, minutes, isFinal = false) =>
-    supabase.from('meetings').update(isFinal ? { minutes_final: minutes, status: 'completed' } : { minutes_draft: minutes }).eq('id', id),
+    supabase.from(LEGACY_MEETINGS).update(isFinal ? { minutes_final: minutes, status: 'completed' } : { minutes_draft: minutes }).eq('id', id),
   rsvp: (meetingId, residentId, response) =>
     supabase.from('meeting_rsvps').upsert({ meeting_id: meetingId, resident_id: residentId, response }),
 
@@ -508,9 +509,9 @@ export const Reports = {
 
   // Notifications
   getNotifications: (residentId) =>
-    supabase.from('notifications').select('*').eq('resident_id', residentId).eq('read', false).order('created_at', { ascending: false }),
-  markNotificationRead: (id) => supabase.from('notifications').update({ read: true }).eq('id', id),
-  markAllRead: (residentId) => supabase.from('notifications').update({ read: true }).eq('resident_id', residentId),
+    supabase.from(LEGACY_NOTIFICATIONS).select('*').eq('resident_id', residentId).eq('read', false).order('created_at', { ascending: false }),
+  markNotificationRead: (id) => supabase.from(LEGACY_NOTIFICATIONS).update({ read: true }).eq('id', id),
+  markAllRead: (residentId) => supabase.from(LEGACY_NOTIFICATIONS).update({ read: true }).eq('resident_id', residentId),
 };
 
 // ─── REALTIME SUBSCRIPTIONS ───────────────────────────────────────────────────

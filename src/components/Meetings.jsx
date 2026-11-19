@@ -1,6 +1,7 @@
 // src/components/Meetings.jsx
 import { useState, useEffect } from "react";
 import { supabase, SOCIETY_ID } from "../lib/supabase";
+import { LEGACY_MEETINGS } from "../lib/legacyTables.js";
 import QueryStatus from "./QueryStatus.jsx";
 import { raiseOnError } from "../lib/async.js";
 
@@ -48,7 +49,7 @@ export default function Meetings() {
     setLoading(true);
     setLoadError("");
     try {
-    const { data } = await supabase.from("meetings").select("*").eq("society_id", SOCIETY_ID).order("date", { ascending: false });
+    const { data } = await supabase.from(LEGACY_MEETINGS).select("*").eq("society_id", SOCIETY_ID).order("date", { ascending: false });
     setMeetings(data || []);
     } catch (e) {
       setLoadError(e?.message || "Could not load data");
@@ -63,7 +64,7 @@ export default function Meetings() {
     if (!form.title || !form.date) { toast("Title and date required", "#f87171"); return; }
     setSaving(true);
     const validAgenda = agendaItems.filter(a => a.item.trim());
-    const { error } = await supabase.from("meetings").insert({
+    const { error } = await supabase.from(LEGACY_MEETINGS).insert({
       ...form,
       society_id: SOCIETY_ID,
       agenda: validAgenda,
@@ -84,7 +85,7 @@ export default function Meetings() {
   const rsvp = async (meetingId, response) => {
     const m = meetings.find(x => x.id === meetingId);
     const newRsvp = { ...m.rsvp, [response]: (m.rsvp?.[response] || 0) + 1 };
-    await supabase.from("meetings").update({ rsvp: newRsvp }).eq("id", meetingId);
+    await supabase.from(LEGACY_MEETINGS).update({ rsvp: newRsvp }).eq("id", meetingId);
     setMeetings(p => p.map(x => x.id === meetingId ? { ...x, rsvp: newRsvp } : x));
     toast(`✓ RSVP: ${response}`);
   };
@@ -98,7 +99,7 @@ export default function Meetings() {
     if (actionItems.filter(a => a.item.trim()).length > 0) {
       updates.action_items = actionItems.filter(a => a.item.trim());
     }
-    await supabase.from("meetings").update(updates).eq("id", showMinutes.id);
+    await supabase.from(LEGACY_MEETINGS).update(updates).eq("id", showMinutes.id);
     setMeetings(p => p.map(x => x.id === showMinutes.id ? { ...x, ...updates } : x));
     toast(isFinal ? "✓ Minutes finalised" : "✓ Draft saved");
     setSaving(false);
@@ -135,7 +136,7 @@ export default function Meetings() {
   };
 
   const cancelMeeting = async (id) => {
-    await supabase.from("meetings").update({ status: "cancelled" }).eq("id", id);
+    await supabase.from(LEGACY_MEETINGS).update({ status: "cancelled" }).eq("id", id);
     setMeetings(p => p.map(x => x.id === id ? { ...x, status: "cancelled" } : x));
     toast("Meeting cancelled");
   };
