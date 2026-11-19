@@ -121,7 +121,7 @@ Society OS (`wzchqxwwezklxsxmjvyt`) is active in the SocietyOS organization. The
 
 The Pages site signs in. All five DEMO accounts reach `DEMO · Palm Court`. Home and Funds render with empty ledger totals. No sample rupees were posted.
 
-A saved session whose access token is inside the refresh window is removed locally before Auth is asked to refresh it. An invalid refresh was taking about a minute on Society OS and the client aborted at 30 seconds, which replaced the sign-in form with “The request timed out. Try again.” Token calls are no longer aborted, so a real Auth rejection can clear the stored session. A failed session check returns to the sign-in form.
+A saved session whose access token is inside the refresh window is removed locally before Auth is asked to refresh it. The phone could use `https://societyos.pages.dev/`, the original SocietyOS client on the same project, because that client does not abort requests. SABHA was aborting them at 30 seconds, and the phone showed “Could not reach the server. Check your connection and try again.” SABHA now uses the browser fetch, as that site does. A failed session check returns to the sign-in form.
 
 - Preview: `https://cursor-transparency-platform.societyos.pages.dev`. The built client embeds `https://wzchqxwwezklxsxmjvyt.supabase.co`, and that host answers.
 - The Yasvik store was not modified. Society OS is a separate project in the SocietyOS organization.

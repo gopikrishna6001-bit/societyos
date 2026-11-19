@@ -9,17 +9,7 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 export const SOCIETY_ID = import.meta.env.VITE_SOCIETY_ID || 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
 export const isSupabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
-const REQUEST_TIMEOUT_MS = 30000;
 const SESSION_REFRESH_MARGIN_MS = 90_000;
-
-function requestUrl(input) {
-  if (typeof input === "string") return input;
-  return input?.url || "";
-}
-
-function isAuthTokenRequest(input) {
-  return requestUrl(input).includes("/auth/v1/token");
-}
 
 export function sessionStillValid(raw, now = Date.now()) {
   if (!raw) return false;
@@ -40,31 +30,11 @@ export function readStoredSession(storage, key) {
   return raw;
 }
 
-function fetchWithTimeout(input, init = {}, attempt = 0) {
+function configuredFetch(input, init) {
   if (!isSupabaseConfigured) {
     return Promise.reject(new Error("Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY."));
   }
-  // Aborting a token call becomes a retryable auth error, so a dead refresh
-  // token stays stored and the next visit waits on it again. Let Auth answer.
-  if (isAuthTokenRequest(input)) return fetch(input, init);
-  const method = (init.method || "GET").toUpperCase();
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-  if (init.signal) {
-    if (init.signal.aborted) controller.abort();
-    else init.signal.addEventListener("abort", () => controller.abort(), { once: true });
-  }
-  return fetch(input, { ...init, signal: controller.signal }).then((response) => {
-    clearTimeout(timer);
-    return response;
-  }, (error) => {
-    clearTimeout(timer);
-    const cancelledByCaller = Boolean(init.signal?.aborted);
-    if (!cancelledByCaller && error?.name === "AbortError" && attempt === 0 && (method === "GET" || method === "HEAD")) {
-      return fetchWithTimeout(input, init, attempt + 1);
-    }
-    throw error;
-  });
+  return fetch(input, init);
 }
 
 function authStorage() {
@@ -77,7 +47,7 @@ function authStorage() {
 }
 
 export const supabase = createClient(SUPABASE_URL || "http://127.0.0.1", SUPABASE_ANON_KEY || "public-anon-key", {
-  global: { fetch: fetchWithTimeout },
+  global: { fetch: configuredFetch },
   auth: { persistSession: true, autoRefreshToken: true, storage: authStorage() },
   realtime: { params: { eventsPerSecond: 10 } }
 });
