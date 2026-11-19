@@ -36,18 +36,25 @@ export function HomeScreen({ communityId, roles = [], onOpen }) {
       )}
       {dash && (
         <div className="mt-4 border border-slate-800 bg-white">
-          <div className="border-b border-slate-800 px-3 py-3">
+          <button type="button" className="block w-full border-b border-slate-800 px-3 py-3 text-left" onClick={() => onOpen?.("finance")}>
             <p className="text-sm text-slate-400">Latest statement</p>
             <p className="font-semibold">{statement ? `${statement.status} · due ${statement.due_on}` : "None published"}</p>
-          </div>
-          <div className="border-b border-slate-800 px-3 py-3">
+          </button>
+          <button type="button" className="block w-full border-b border-slate-800 px-3 py-3 text-left" onClick={() => onOpen?.("concerns")}>
             <p className="text-sm text-slate-400">Open public concerns</p>
             <p className="tabular font-semibold">{dash.open_public_concerns ?? 0}</p>
-          </div>
-          <div className="px-3 py-3">
+          </button>
+          <button type="button" className="block w-full px-3 py-3 text-left" onClick={() => onOpen?.("decisions")}>
             <p className="text-sm text-slate-400">Next meeting</p>
             <p className="font-semibold">{nextMeeting ? `${nextMeeting.title} · ${new Date(nextMeeting.held_on).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}` : "No upcoming meeting."}</p>
-          </div>
+          </button>
+        </div>
+      )}
+      {!!funds.length && (
+        <div className="mt-4 grid gap-2">
+          <button type="button" className="min-h-12 w-full border border-slate-800 bg-white px-3 text-left font-semibold" onClick={() => onOpen?.("funds")}>Open fund balances</button>
+          <button type="button" className="min-h-12 w-full border border-slate-800 bg-white px-3 text-left font-semibold" onClick={() => onOpen?.("collections")}>Open collections</button>
+          <button type="button" className="min-h-12 w-full border border-slate-800 bg-white px-3 text-left font-semibold" onClick={() => onOpen?.("expenses")}>Open expenses</button>
         </div>
       )}
       {dash && financial && statement && !["published", "published_with_exceptions"].includes(statement.status) && (

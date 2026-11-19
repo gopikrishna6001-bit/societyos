@@ -83,7 +83,10 @@ export function buildInvoices() {
   return flats().map((flat, index) => {
     const vacant = index >= community.occupied;
     if (vacant) return { id: `inv-${flat}`, flat, status: "Vacant", billed: 0, paid: 0, outstanding: 0 };
-    const partial = index >= 95 && index < 97;
+    // A-402 is the resident persona's flat. Keep one partial slot there so the
+    // demo payment workflow can be exercised without changing November totals:
+    // still 95 full + 2 partial + 11 unpaid = ₹4,32,000 collected.
+    const partial = flat === "A-402" || index === 96;
     const unpaid = index >= 97;
     const paid = partial ? 2250 : unpaid ? 0 : MAINTENANCE;
     return {
@@ -384,6 +387,9 @@ export function createDemoState() {
     polls: structuredClone(polls),
     bookings: structuredClone(bookings),
     visitors: structuredClone(visitors),
+    invoices: structuredClone(buildInvoices()),
     observation: statement.observation,
+    observationHistory: [],
+    invitations: [],
   };
 }

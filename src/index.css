@@ -657,6 +657,31 @@ textarea {
   box-shadow: 0 8px 20px rgba(3, 29, 39, 0.05);
 }
 
+button.metric {
+  display: block;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.demo-link-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.demo-link-list li + li {
+  margin-top: 8px;
+}
+
+button.demo-text-button {
+  display: block;
+  width: 100%;
+  text-align: left;
+}
+
 .metric span,
 .demo-secondary {
   color: var(--demo-secondary);

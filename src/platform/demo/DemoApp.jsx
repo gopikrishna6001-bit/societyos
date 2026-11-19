@@ -1,5 +1,5 @@
 import { useReducer, useState } from "react";
-import { NavLink, Outlet, Route, Routes } from "react-router-dom";
+import { NavLink, Outlet, Route, Routes, useNavigate } from "react-router-dom";
 import { Bell, Building2, Ellipsis, Home, Landmark, LifeBuoy } from "lucide-react";
 import { brand } from "../../brand.js";
 import { Mark } from "../../brand/Mark.jsx";
@@ -71,6 +71,80 @@ function reducer(state, action) {
         ...item,
         responses: [...item.responses, { at: "19 November 2026", by: action.by, text: action.text }],
       }),
+    };
+  }
+  if (action.type === "pay") {
+    return {
+      ...state,
+      notice: "Payment recorded in this demo. No bank or ledger was updated.",
+      invoices: state.invoices.map((row) => row.id !== action.id ? row : {
+        ...row,
+        status: "Paid",
+        paid: row.billed,
+        outstanding: 0,
+        receipt: `DEMO-RCPT-${row.flat}`,
+        paidOn: "19 November 2026",
+      }),
+    };
+  }
+  if (action.type === "raise") {
+    const id = `con-demo-${state.concerns.length + 1}`;
+    return {
+      ...state,
+      notice: "Concern saved in this demo. Nothing was written to a community ticket register.",
+      concerns: [{
+        id,
+        title: action.title,
+        description: action.description,
+        category: action.category,
+        visibility: action.visibility,
+        status: "Open",
+        priority: "Normal",
+        raisedOn: "19 November 2026",
+        raisedBy: action.by,
+        flat: action.flat,
+        assignee: "Unassigned",
+        responses: [],
+      }, ...state.concerns],
+    };
+  }
+  if (action.type === "expense") {
+    const id = `exp-demo-${state.expenses.length + 1}`;
+    return {
+      ...state,
+      notice: "Expense draft kept in this demo. The community ledger was not changed.",
+      expenses: [{
+        id,
+        date: "19 November 2026",
+        description: action.description,
+        category: action.category,
+        amount: action.amount,
+        approval: "Pending committee",
+        payment: "Awaiting payment",
+        document: action.document || "Demo attachment",
+        history: [{ id: `${id}-sub`, at: "2026-11-19", by: action.by, action: "Submitted in this demo" }],
+      }, ...state.expenses],
+    };
+  }
+  if (action.type === "observe") {
+    return {
+      ...state,
+      notice: "Audit observation saved in this demo.",
+      observation: action.text,
+      observationHistory: [...(state.observationHistory || []), { at: "19 November 2026", by: action.by, text: action.text }],
+    };
+  }
+  if (action.type === "invite") {
+    return {
+      ...state,
+      notice: "Invitation kept in this demo. No email was sent and no membership was created.",
+      invitations: [...(state.invitations || []), {
+        id: `inv-${(state.invitations || []).length + 1}`,
+        email: action.email,
+        role: action.role,
+        status: "Demo only",
+        createdOn: "19 November 2026",
+      }],
     };
   }
   return state;
@@ -164,10 +238,19 @@ function Shell() {
 
 function HomeScreen() {
   const { person, state } = useDemo();
-  const snapshot = collectionSnapshot();
+  const navigate = useNavigate();
+  const snapshot = collectionSnapshot(state.invoices);
   const month = months.find((item) => item.id === state.monthId) || months.at(-1);
-  const recent = state.expenses.slice(-5).reverse();
+  const recent = state.expenses.slice(0, 5);
   const meeting = meetings.find((item) => item.status === "Upcoming");
+  const openFinance = (tab, extra = {}) => {
+    const params = new URLSearchParams({ tab, ...extra });
+    navigate(`/finance?${params.toString()}`);
+  };
+  const openCommunity = (tab, extra = {}) => {
+    const params = new URLSearchParams({ tab, ...extra });
+    navigate(`/community?${params.toString()}`);
+  };
   return (
     <section className="dash">
       <header className="dash-welcome">
@@ -175,35 +258,62 @@ function HomeScreen() {
         <p>{community.name} · {community.city} · {month.label}</p>
       </header>
       <div className="metric-grid">
-        <article className="metric"><span>Collected</span><strong>{rupee(snapshot.collected)}</strong></article>
-        <article className="metric"><span>Outstanding</span><strong>{rupee(snapshot.outstanding)}</strong></article>
-        <article className="metric"><span>Expenses</span><strong>{rupee(month.expenses)}</strong></article>
-        <article className="metric"><span>Bank balance</span><strong>{rupee(funds.bank)}</strong></article>
-        <article className="metric"><span>Corpus</span><strong>{rupee(funds.corpus)}</strong></article>
-        <article className="metric"><span>Reserve</span><strong>{rupee(funds.reserve)}</strong></article>
+        <button type="button" className="metric" onClick={() => openFinance("Maintenance", { status: "Paid" })}>
+          <span>Collected</span><strong>{rupee(snapshot.collected)}</strong>
+        </button>
+        <button type="button" className="metric" onClick={() => openFinance("Maintenance", { status: "Due" })}>
+          <span>Outstanding</span><strong>{rupee(snapshot.outstanding)}</strong>
+        </button>
+        <button type="button" className="metric" onClick={() => openFinance("Transactions")}>
+          <span>Expenses</span><strong>{rupee(month.expenses)}</strong>
+        </button>
+        <button type="button" className="metric" onClick={() => openFinance("Overview")}>
+          <span>Bank balance</span><strong>{rupee(funds.bank)}</strong>
+        </button>
+        <button type="button" className="metric" onClick={() => openFinance("Reports")}>
+          <span>Corpus</span><strong>{rupee(funds.corpus)}</strong>
+        </button>
+        <button type="button" className="metric" onClick={() => openFinance("Reports")}>
+          <span>Reserve</span><strong>{rupee(funds.reserve)}</strong>
+        </button>
       </div>
       <div className="dash-grid">
         <article className="card">
           <h2>Collection progress</h2>
           <Meter value={snapshot.collected} max={snapshot.billed} label="November maintenance collection" />
           <p>{rupee(snapshot.collected)} of {rupee(snapshot.billed)} billed. Maintenance is {rupee(community.maintenancePerUnit)} per occupied unit.</p>
+          <button type="button" className="demo-text-button" onClick={() => openFinance("Maintenance")}>Open maintenance register</button>
         </article>
         <article className="card">
           <h2>Income and expenditure</h2>
           <MonthChart months={months} activeId={month.id} />
+          <button type="button" className="demo-text-button" onClick={() => openFinance("Reports")}>Open finance reports</button>
         </article>
       </div>
       <div className="dash-grid">
         <article className="card">
           <h2>Recent transactions</h2>
-          <ul>{recent.map((row) => <li key={row.id}>{row.date} · {row.description} · {rupee(row.amount)}</li>)}</ul>
+          <ul className="demo-link-list">
+            {recent.map((row) => (
+              <li key={row.id}>
+                <button type="button" className="demo-text-button" onClick={() => openFinance("Transactions", { expense: row.id })}>
+                  {row.date} · {row.description} · {rupee(row.amount)}
+                </button>
+              </li>
+            ))}
+          </ul>
         </article>
         <article className="card">
           <h2>Announcements</h2>
-          <p><strong>{notices[0].title}</strong></p>
-          <p>{notices[0].body}</p>
+          <button type="button" className="demo-text-button" onClick={() => openCommunity("Notices", { notice: notices[0].id })}>
+            <strong>{notices[0].title}</strong>
+            <span className="demo-secondary">{notices[0].body}</span>
+          </button>
           <h2>Upcoming meeting</h2>
-          <p>{meeting.title} · {meeting.when} · {meeting.venue}</p>
+          <button type="button" className="demo-text-button" onClick={() => openCommunity("Meetings", { meeting: meeting.id })}>
+            {meeting.title} · {meeting.when} · {meeting.venue}
+          </button>
+          <button type="button" className="demo-text-button" onClick={() => navigate("/concerns")}>Open concerns register</button>
         </article>
       </div>
     </section>
