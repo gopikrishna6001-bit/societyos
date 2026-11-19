@@ -18,7 +18,7 @@ export default function Platform() {
 function ConfigRequired() {
   return (
     <main className="mx-auto max-w-lg px-4 py-16">
-      <div className="flex items-center gap-3 text-[#0f6b56]">
+      <div className="flex items-center gap-3 text-[#A65F49]">
         <Mark size={36} />
         <h1 className="text-4xl font-semibold tracking-[0.14em] text-slate-100">{brand.name}</h1>
       </div>
@@ -76,7 +76,7 @@ function AuthScreen() {
   };
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-10">
-      <div className="flex items-center gap-3 text-[#0f6b56]">
+      <div className="flex items-center gap-3 text-[#A65F49]">
         <Mark size={40} />
         <h1 className="text-4xl font-semibold tracking-[0.14em] text-slate-100">{brand.name}</h1>
       </div>
@@ -159,48 +159,40 @@ function Setup({ onCreated }) {
   );
 }
 
-function navigation(roles) {
+function canSee(roles, id) {
   const committee = roles.includes("committee_admin") || roles.includes("platform_admin");
   const treasurer = roles.includes("treasurer");
-  if (committee || treasurer) {
-    return [
-      ["home", "Overview"],
-      ...(committee ? [["units", "Residents and Units"]] : []),
-      ["finance", "Finance"],
-      ["collections", "Collections"],
-      ["expenses", "Expenses"],
-      ["funds", "Funds"],
-      ["reconciliation", "Reconciliation"],
-      ["reviews", "Auditor Reviews"],
-      ["concerns", "Concerns"],
-      ["decisions", "Decisions"],
-      ["documents", "Documents"],
-      ["notifications", "Notifications"],
-      ["settings", "Settings"],
-      ["history", "Audit History"],
-      ["profile", "Profile"],
-    ];
-  }
-  if (roles.includes("resident_auditor")) {
-    return [
-      ["home", "Overview"],
-      ["finance", "Financial Statements"],
-      ["expenses", "Expense Reviews"],
-      ["reconciliation", "Reconciliation"],
-      ["reviews", "Disputes"],
-      ["documents", "Documents"],
-      ["history", "Audit History"],
-      ["profile", "Profile"],
-    ];
-  }
-  return [
-    ["home", "Home"],
-    ["finance", "Finance"],
-    ["concerns", "Concerns"],
-    ["decisions", "Decisions"],
-    ["documents", "Documents"],
-    ["profile", "Profile"],
-  ];
+  const auditor = roles.includes("resident_auditor");
+  const financeOps = committee || treasurer;
+  if (id === "units" || id === "settings") return committee;
+  if (id === "collections" || id === "funds") return financeOps;
+  if (id === "reconciliation" || id === "expenses" || id === "reviews" || id === "history") return financeOps || auditor;
+  return ["home", "finance", "concerns", "decisions", "documents", "notifications", "profile"].includes(id);
+}
+
+const PRIMARY = [
+  ["home", "Home"],
+  ["finance", "Finance"],
+  ["concerns", "Concerns"],
+  ["decisions", "Meetings"],
+];
+
+const MORE = [
+  ["documents", "Documents"],
+  ["notifications", "Notifications"],
+  ["profile", "Profile"],
+  ["collections", "Collections"],
+  ["expenses", "Expenses"],
+  ["funds", "Funds"],
+  ["reconciliation", "Reconciliation"],
+  ["reviews", "Reviews"],
+  ["units", "Residents and Units"],
+  ["settings", "Settings"],
+  ["history", "Audit History"],
+];
+
+function navigation(roles) {
+  return [...PRIMARY, ...MORE].filter(([id]) => canSee(roles, id));
 }
 
 function roleLabel(roles) {
@@ -216,32 +208,34 @@ function roleLabel(roles) {
 
 function Shell({ email, community, communities, communityId, onCommunity, roles, onSignOut }) {
   const items = navigation(roles);
+  const primary = PRIMARY.filter(([id]) => canSee(roles, id));
+  const overflow = MORE.filter(([id]) => canSee(roles, id));
   const [page, setPage] = useState(items[0][0]);
   const [moreOpen, setMoreOpen] = useState(false);
-  const primary = items.slice(0, 4);
-  const overflow = items.slice(4);
   const unique = [...new Map(communities.map((row) => [row.community_id, row])).values()];
   const openPage = (id) => { setPage(id); setMoreOpen(false); };
-  const itemClass = (id) => `min-h-12 rounded-lg px-3 py-2 text-left text-sm ${page === id ? "bg-[#d7efe8] font-semibold text-[#06281f]" : ""}`;
+  const itemClass = (id) => `min-h-12 w-full px-3 py-2 text-left text-sm ${page === id ? "bg-[#EAE6DE] font-semibold" : ""}`;
+  const current = page === "decisions" ? "decisions" : page;
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 md:grid md:grid-cols-[220px_minmax(0,1fr)]">
-      <nav className="hidden border-r border-slate-800 bg-slate-900 p-4 md:block" aria-label="Primary">
+    <div className="min-h-screen bg-slate-950 text-slate-100 lg:grid lg:grid-cols-[220px_minmax(0,1fr)]">
+      <nav className="hidden border-r border-slate-800 bg-white p-4 lg:block" aria-label="Primary">
         <Wordmark />
         <p className="mt-2 text-sm text-slate-400">{brand.tagline}</p>
-        <p className="mt-3 font-semibold">{community?.name}</p>
+        <p className="mt-3 font-display text-lg font-semibold">{community?.name}</p>
+        <p className="text-sm text-slate-400">{roleLabel(roles)}</p>
         <div className="mt-4 grid gap-1">
           {items.map(([id, label]) => (
-            <button key={id} type="button" className={itemClass(id)} onClick={() => openPage(id)}>{label}</button>
+            <button key={id} type="button" className={itemClass(id)} aria-current={page === id ? "page" : undefined} onClick={() => openPage(id)}>{label}</button>
           ))}
         </div>
       </nav>
-      <div className="pb-24 md:pb-8">
+      <div className="pb-[calc(4.75rem+env(safe-area-inset-bottom))] lg:pb-8">
         <header className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-slate-800 bg-slate-950 px-4 py-3">
           <div className="min-w-0">
             <p className="print:hidden"><Wordmark /></p>
             <p className="hidden text-sm font-semibold print:block">{brand.name} · {brand.promise}</p>
-            <p className="mt-1 truncate text-lg font-semibold leading-tight">{community?.name}</p>
-            <p className="truncate text-sm text-slate-400">{roleLabel(roles)}</p>
+            <p className="mt-1 truncate font-display text-lg font-semibold leading-tight">{community?.name}</p>
+            <p className="truncate text-sm text-slate-400">{roleLabel(roles)} · {email}</p>
           </div>
           {unique.length > 1 && (
             <select className={`${control} max-w-[46%]`} value={communityId} onChange={(event) => onCommunity(event.target.value)} aria-label="Community">
@@ -249,19 +243,19 @@ function Shell({ email, community, communities, communityId, onCommunity, roles,
             </select>
           )}
         </header>
-        <main className="mx-auto w-full max-w-5xl px-4 py-5">
-          <Screen page={page} communityId={communityId} roles={roles} email={email} onSignOut={onSignOut} />
+        <main className="mx-auto w-full max-w-3xl px-4 py-5 lg:max-w-5xl">
+          <Screen page={page} communityId={communityId} roles={roles} email={email} onSignOut={onSignOut} onOpen={openPage} />
         </main>
       </div>
-      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-800 bg-slate-900 pb-[env(safe-area-inset-bottom)] md:hidden" aria-label="Mobile">
+      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-800 bg-white pb-[env(safe-area-inset-bottom)] lg:hidden" aria-label="Mobile">
         <div className="grid grid-cols-5">
           {primary.map(([id, label]) => (
-            <button key={id} type="button" className={`min-h-14 px-1 py-2 text-center text-xs leading-tight ${page === id ? "bg-[#d7efe8] font-semibold text-[#06281f]" : ""}`} onClick={() => openPage(id)}>{label}</button>
+            <button key={id} type="button" aria-current={current === id ? "page" : undefined} className={`min-h-12 px-1 py-2 text-center text-xs leading-tight ${current === id ? "font-semibold text-[#8C4E3B]" : ""}`} onClick={() => openPage(id)}>{label}</button>
           ))}
-          <button type="button" className="min-h-14 px-1 py-2 text-center text-xs" aria-expanded={moreOpen} onClick={() => setMoreOpen((open) => !open)}>More</button>
+          <button type="button" className={`min-h-12 px-1 py-2 text-center text-xs ${moreOpen || overflow.some(([id]) => id === page) ? "font-semibold text-[#8C4E3B]" : ""}`} aria-expanded={moreOpen} onClick={() => setMoreOpen((open) => !open)}>More</button>
         </div>
         {moreOpen && (
-          <div className="absolute bottom-full right-2 mb-2 grid max-h-80 w-52 gap-1 overflow-auto rounded-xl border border-slate-800 bg-slate-900 p-2 shadow-card">
+          <div className="absolute bottom-full right-2 mb-2 grid max-h-80 w-56 gap-1 overflow-auto border border-slate-800 bg-white p-2">
             {overflow.map(([id, label]) => <button key={id} type="button" className={itemClass(id)} onClick={() => openPage(id)}>{label}</button>)}
           </div>
         )}
@@ -270,8 +264,8 @@ function Shell({ email, community, communities, communityId, onCommunity, roles,
   );
 }
 
-function Screen({ page, communityId, roles, email, onSignOut }) {
-  if (page === "home") return <HomeScreen communityId={communityId} />;
+function Screen({ page, communityId, roles, email, onSignOut, onOpen }) {
+  if (page === "home") return <HomeScreen communityId={communityId} roles={roles} onOpen={onOpen} />;
   if (["finance", "collections", "expenses", "funds", "reconciliation", "reviews"].includes(page)) {
     return <FinanceScreen communityId={communityId} roles={roles} focus={page} />;
   }

@@ -88,6 +88,20 @@ Authentication, role navigation, ledger functions, and row-level security were n
 
 Names kept on purpose: the npm package `societyos`, `src/SocietyOS.jsx`, the storage key `societyos_auth`, the synthetic address `@societyos.app`, the local database `societyos_test`, the Pages hostname `societyos.pages.dev`, environment variable names, database objects, migration filenames, and the WhatsApp verify-token default.
 
+## Mobile layout
+
+The resident, treasurer, and auditor shell is mobile-first. Below 1024px the primary bar is Home, Finance, Concerns, Meetings, and More. Documents, notifications, profile, and role-specific tools sit under More. A left sidebar appears from 1024px. The earlier Super Admin screens stay at `/legacy` and remain a desktop layout. They were not rebuilt.
+
+The palette is warm ivory, deep ink, stone, white, and terracotta. Forest green is removed. Secondary text uses `#5C5852` and small accent text uses `#8C4E3B` because the specified muted `#77736D` and terracotta `#A65F49` fall short of 4.5:1 on ivory. Terracotta remains the mark and the primary button colour. Headings use Manrope. Interface text uses Inter. Amounts use tabular numerals.
+
+Home shows the posted fund balance, posted receipts, and posted payments. Those figures are the authorised ledger totals. They are not labelled as this calendar month, because the dashboard function does not return a month slice and a resident cannot see every collection. Latest statement, next meeting, open public concerns, and notifications come from the same dashboard function. Empty communities still show “No fund balances yet” and no rupee amount.
+
+Finance uses one section at a time and fund rows instead of a wide table. Expenses can be searched and filtered. Publishing, paying, reversing, and closing a vote ask for confirmation. Concerns open with a Raise concern action and a public/private explanation. Documents label a resident copy separately from a restricted original and open through a signed URL.
+
+Offline caching of financial data was not added. The existing manifest and icons remain. There is no claim of offline use.
+
+Checked on 19 November 2026 at 320, 360, 390, 430, 768, 1024, and 1440px on the sign-in page and `/legacy`. No horizontal overflow and no page errors. A failed sign-in still shows an alert. Signed-in resident, treasurer, and auditor screens were not walked on a hosted project because the Supabase host does not resolve. Role navigation and sign-out remain covered by the session test. Private rows are still enforced by the unchanged row-level security policies.
+
 ## Branding verification
 
 - `npm test` — Vitest 2.1.9, 4 files, 12 tests, all passed. The unconfigured screen asserts the SABHA heading and the tagline, and asserts that SocietyOS is not shown.

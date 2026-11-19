@@ -1,6 +1,7 @@
-@import "@fontsource/source-sans-3/400.css";
-@import "@fontsource/source-sans-3/600.css";
-@import "@fontsource/source-sans-3/700.css";
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/manrope/600.css";
+@import "@fontsource/manrope/700.css";
 
 @tailwind base;
 @tailwind components;
@@ -8,28 +9,42 @@
 
 :root {
   color-scheme: light;
+  --ivory: #f7f5f0;
+  --ink: #252525;
+  --terracotta: #a65f49;
+  --terracotta-ink: #8c4e3b;
+  --stone: #eae6de;
+  --white: #ffffff;
+  --muted: #5c5852;
 }
 
 html {
-  background: #f7f4ee;
+  background: var(--ivory);
 }
 
 body {
   margin: 0;
-  background: #f7f4ee;
-  color: #1c1917;
-  font-family: "Source Sans 3", sans-serif;
+  background: var(--ivory);
+  color: var(--ink);
+  font-family: Inter, sans-serif;
   font-size: 16px;
   line-height: 1.5;
 }
 
+h1,
+h2,
+h3 {
+  font-family: Manrope, sans-serif;
+  text-wrap: balance;
+}
+
 ::selection {
-  background: #d7efe8;
-  color: #06281f;
+  background: var(--stone);
+  color: var(--ink);
 }
 
 :focus-visible {
-  outline: 2px solid #0f6b56;
+  outline: 2px solid var(--ink);
   outline-offset: 2px;
 }
 
@@ -40,23 +55,28 @@ textarea {
   font: inherit;
 }
 
-table {
+table,
+.tabular {
   font-variant-numeric: tabular-nums;
-}
-
-h1,
-h2 {
-  text-wrap: balance;
 }
 
 input,
 select,
 textarea {
-  background: #fffdf8;
-  color: #1c1917;
+  background: var(--white);
+  color: var(--ink);
 }
 
 ::placeholder {
-  color: #5c534a;
+  color: var(--muted);
   opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }

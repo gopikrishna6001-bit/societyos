@@ -13,8 +13,8 @@ export function Mark({ size = 28, title }) {
 export function Wordmark({ tone = "ink", markSize = 28 }) {
   const color = tone === "light" ? "#f7f4ee" : "#1c1917";
   return (
-    <span className="inline-flex items-center gap-2" style={{ color }}>
-      <Mark size={markSize} />
+    <span className="inline-flex items-center gap-2 font-display" style={{ color }}>
+      <span className="text-[#A65F49]"><Mark size={markSize} /></span>
       <span className="font-semibold tracking-[0.14em]">{brand.name}</span>
     </span>
   );

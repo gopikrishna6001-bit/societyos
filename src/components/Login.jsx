@@ -8,7 +8,7 @@ const mute = "#4f473f";
 const line = "#e6e0d6";
 const paper = "#f7f4ee";
 const card = "#fffdf8";
-const pine = "#0f6b56";
+const pine = "#A65F49";
 const inp = { width: "100%", background: "#fff", border: `1px solid ${line}`, borderRadius: 12, padding: "14px 16px", color: ink, fontSize: 28, outline: "none", boxSizing: "border-box", fontFamily: "inherit", textAlign: "center", letterSpacing: "12px" };
 
 export default function Login({ onLogin }) {
@@ -145,7 +145,7 @@ export default function Login({ onLogin }) {
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <button onClick={() => { setStep("phone"); setPin(""); setError(""); }} style={{ background: "none", border: "none", color: mute, cursor: "pointer", fontSize: 13, textAlign: "left" }}>← Back</button>
               <div style={{ textAlign: "center" }}>
-                <div style={{ width: 52, height: 52, borderRadius: 14, background: "#d7efe8", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px", fontSize: 18, fontWeight: 800, color: pine }}>
+                <div style={{ width: 52, height: 52, borderRadius: 2, background: "#EAE6DE", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px", fontSize: 18, fontWeight: 800, color: pine }}>
                   {resident?.name?.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()}
                 </div>
                 <div style={{ color: ink, fontSize: 16, fontWeight: 700 }}>{resident?.name}</div>

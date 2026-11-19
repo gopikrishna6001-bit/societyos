@@ -32,10 +32,17 @@ Avoid generic apartment-management slogans, decorative cultural motifs, a govern
 
 | Role | Value | Use |
 | --- | --- | --- |
-| Paper | `#f7f4ee` | Page background and PWA background |
-| Ink | `#1c1917` | Primary text and the wordmark on paper |
-| Pine | `#0f6b56` | The mark, primary buttons, and the theme colour |
-| Cream | `#f7f4ee` | The wordmark and mark on a dark surface |
+| Warm ivory | `#F7F5F0` | Page background and browser theme |
+| Deep ink | `#252525` | Primary text and the wordmark |
+| Terracotta | `#A65F49` | The mark and primary buttons. White text on this fill meets contrast for a button label. |
+| Terracotta ink | `#8C4E3B` | Small accent text. The candidate `#A65F49` is slightly under 4.5:1 on ivory, so links use this darker tone. |
+| Stone | `#EAE6DE` | Borders and selected navigation |
+| White | `#FFFFFF` | Form and list surfaces |
+| Muted | `#5C5852` | Secondary text. The candidate `#77736D` is under 4.5:1 on ivory, so body secondary text uses this darker stone. |
+
+Manrope is used for the wordmark and headings. Inter is used for interface text. Amounts use tabular numerals.
+
+Forest green is not part of the palette. A monochrome ink-and-ivory version was compared with terracotta. Terracotta is kept for the mark and primary actions because the ivory page would otherwise have no distinctive brand colour. It is not used for small body text.
 
 Do not introduce a second accent. Amounts stay in the same ink as the surrounding text so a colour is not doing the work of a number.
 

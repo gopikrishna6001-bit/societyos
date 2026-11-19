@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { rpc, rows, supabase } from "./api.js";
 import { downloadText, inr, toCsv } from "./money.js";
-import { Field, PageStatus, SaveForm, control, useLoad } from "./ui.jsx";
+import { Field, FilterSheet, PageStatus, SaveForm, control, useLoad } from "./ui.jsx";
 import { brand } from "../brand.js";
 
 const TICKET_CATEGORIES = ["Maintenance", "Water", "Electricity", "Security", "Housekeeping", "Lift and facilities", "Finance", "Governance", "General", "Other"];
@@ -11,39 +11,51 @@ function accountsOf(list, type) {
   return (list || []).filter((account) => account.account_type === type);
 }
 
-export function HomeScreen({ communityId }) {
+export function HomeScreen({ communityId, roles = [], onOpen }) {
   const query = useLoad(() => rpc("resident_dashboard", { p_community: communityId }), [communityId]);
   const dash = query.data;
   const funds = dash?.funds || [];
-  const closing = (kind) => funds.filter((fund) => fund.fund_kind === kind).reduce((sum, fund) => sum + Number(fund.closing || 0), 0);
+  const balance = funds.reduce((sum, fund) => sum + Number(fund.closing || 0), 0);
   const receipts = funds.reduce((sum, fund) => sum + Number(fund.receipts || 0), 0);
   const payments = funds.reduce((sum, fund) => sum + Number(fund.payments || 0), 0);
+  const nextMeeting = dash?.upcoming_meetings?.[0];
+  const statement = dash?.latest_statement;
+  const financial = roles.some((role) => ["treasurer", "resident_auditor", "committee_admin", "platform_admin"].includes(role));
   return (
     <section>
-      <h2 className="mb-1 text-xl font-semibold">Community funds</h2>
-      <p className="mb-4 text-sm text-slate-400">Balances come from posted ledger entries. Transfers between funds are not counted as income or spending.</p>
-      <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && funds.length === 0} title="No fund balances yet" body="The treasurer posts an opening balance before these cards show an amount." />
+      <h2 className="mb-1 font-display text-2xl font-semibold">Home</h2>
+      <p className="mb-4 text-sm text-slate-400">Balances come from posted ledger entries. Transfers between funds are not counted as income or spending. Receipts and payments are the full posted totals, not a separate calendar month.</p>
+      <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && funds.length === 0} title="No fund balances yet" body="The treasurer posts an opening balance before these rows show an amount." />
       {!!funds.length && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <Card label="All community funds" value={inr(funds.reduce((sum, fund) => sum + Number(fund.closing || 0), 0))} />
-          <Card label="Maintenance fund" value={inr(closing("maintenance"))} />
-          <Card label="Corpus fund" value={inr(closing("corpus"))} />
-          <Card label="Special contributions" value={inr(closing("special"))} />
-          <Card label="Receipts posted" value={inr(receipts)} />
-          <Card label="Payments posted" value={inr(payments)} />
-        </div>
+        <dl className="border border-slate-800 bg-white">
+          <Row term="Available balance" value={inr(balance)} />
+          <Row term="Receipts posted" value={inr(receipts)} />
+          <Row term="Payments posted" value={inr(payments)} />
+        </dl>
       )}
       {dash && (
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <Card label="Open public concerns" value={String(dash.open_public_concerns ?? 0)} />
-          <Card label="Latest statement" value={dash.latest_statement ? `${dash.latest_statement.status} · due ${dash.latest_statement.due_on}` : "None published"} />
+        <div className="mt-4 border border-slate-800 bg-white">
+          <div className="border-b border-slate-800 px-3 py-3">
+            <p className="text-sm text-slate-400">Latest statement</p>
+            <p className="font-semibold">{statement ? `${statement.status} · due ${statement.due_on}` : "None published"}</p>
+          </div>
+          <div className="border-b border-slate-800 px-3 py-3">
+            <p className="text-sm text-slate-400">Open public concerns</p>
+            <p className="tabular font-semibold">{dash.open_public_concerns ?? 0}</p>
+          </div>
+          <div className="px-3 py-3">
+            <p className="text-sm text-slate-400">Next meeting</p>
+            <p className="font-semibold">{nextMeeting ? `${nextMeeting.title} · ${new Date(nextMeeting.held_on).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}` : "No upcoming meeting."}</p>
+          </div>
         </div>
       )}
+      {dash && financial && statement && !["published", "published_with_exceptions"].includes(statement.status) && (
+        <button type="button" className="mt-4 min-h-12 w-full bg-[#252525] px-3 font-semibold text-white" onClick={() => onOpen?.("finance")}>Review the latest statement</button>
+      )}
       {dash && (
-        <div className="mt-6 grid gap-4 lg:grid-cols-2">
+        <div className="mt-6 grid gap-6">
+          <List title="Recent updates" items={dash.announcements} render={(item) => item.title} empty="No notifications yet." />
           <List title="Recently resolved concerns" items={dash.recently_resolved} render={(item) => `${item.number}: ${item.subject}`} empty="No resolved public concerns yet." />
-          <List title="Upcoming meetings" items={dash.upcoming_meetings} render={(item) => `${item.title} · ${new Date(item.held_on).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}`} empty="No upcoming meetings." />
-          <List title="Your notifications" items={dash.announcements} render={(item) => item.title} empty="No notifications yet." />
           <List title="Bank book balances" items={dash.banks} render={(item) => `${item.name}: ${inr(item.book_balance)}`} empty="No bank ledger has been opened." />
         </div>
       )}
@@ -51,11 +63,20 @@ export function HomeScreen({ communityId }) {
   );
 }
 
+function Row({ term, value }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4 border-b border-slate-800 px-3 py-3 last:border-b-0">
+      <dt className="text-sm text-slate-400">{term}</dt>
+      <dd className="tabular text-lg font-semibold">{value}</dd>
+    </div>
+  );
+}
+
 function Card({ label, value }) {
   return (
-    <article className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+    <article className="border border-slate-800 bg-white p-3">
       <p className="text-sm text-slate-400">{label}</p>
-      <p className="mt-2 text-2xl font-semibold">{value}</p>
+      <p className="tabular mt-1 text-xl font-semibold">{value}</p>
     </article>
   );
 }
@@ -64,7 +85,7 @@ function List({ title, items, render, empty }) {
   return (
     <div>
       <h3 className="mb-2 font-semibold">{title}</h3>
-      {items?.length ? <ul className="space-y-2 text-sm">{items.map((item, index) => <li key={index} className="rounded-lg border border-slate-800 px-3 py-2">{render(item)}</li>)}</ul> : <p className="text-sm text-slate-400">{empty}</p>}
+      {items?.length ? <ul className="border border-slate-800 bg-white text-sm">{items.map((item, index) => <li key={index} className="border-b border-slate-800 px-3 py-3 last:border-b-0">{render(item)}</li>)}</ul> : <p className="text-sm text-slate-400">{empty}</p>}
     </div>
   );
 }
@@ -86,7 +107,17 @@ export function FinanceScreen({ communityId, roles, focus }) {
     () => rows(supabase.from("collection_periods").select("id,financial_year,period_month,due_on").eq("community_id", communityId).order("period_month", { ascending: false })),
     [communityId],
   );
-  const show = (name) => focus === "finance" || focus === name;
+  const [section, setSection] = useState(focus === "finance" ? "funds" : focus);
+  useEffect(() => { setSection(focus === "finance" ? "funds" : focus); }, [focus]);
+  const show = (name) => section === name;
+  const sections = [
+    ["funds", "Funds"],
+    ["collections", "Collections"],
+    ["expenses", "Expenses"],
+    ...(canSeeRecon ? [["reconciliation", "Reconciliation"]] : []),
+    ["reviews", "Reviews"],
+    ["statements", "Statements"],
+  ];
 
   const exportBalances = () => {
     const data = funds.data || [];
@@ -105,6 +136,11 @@ export function FinanceScreen({ communityId, roles, focus }) {
 
   return (
     <section className="space-y-8">
+      <Field label="Section">
+        <select className={control} value={sections.some(([id]) => id === section) ? section : "funds"} onChange={(event) => setSection(event.target.value)} aria-label="Finance section">
+          {sections.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+        </select>
+      </Field>
       {show("funds") && (
         <div>
           <div className="mb-3 flex items-center justify-between gap-3">
@@ -112,20 +148,18 @@ export function FinanceScreen({ communityId, roles, focus }) {
             <button type="button" className="rounded-lg border border-slate-600 px-3 py-2 text-sm" onClick={exportBalances}>Export CSV</button>
           </div>
           <PageStatus loading={funds.loading} error={funds.error} onRetry={funds.reload} empty={!funds.loading && !funds.error && !(funds.data || []).length} title="No funds opened" body="Open a maintenance, corpus, special, emergency, or other fund before posting money." />
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-left text-sm">
-              <thead className="text-slate-400"><tr><th>Fund</th><th>Opening</th><th>Receipts</th><th>Payments</th><th>In</th><th>Out</th><th>Closing</th></tr></thead>
-              <tbody>
-                {(funds.data || []).map((row) => (
-                  <tr key={row.account_id} className="border-t border-slate-800">
-                    <td className="py-2">{row.name}</td>
-                    <td>{inr(row.opening)}</td><td>{inr(row.receipts)}</td><td>{inr(row.payments)}</td>
-                    <td>{inr(row.transfers_in)}</td><td>{inr(row.transfers_out)}</td><td>{inr(row.closing)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ul className="border border-slate-800 bg-white">
+            {(funds.data || []).map((row) => (
+              <li key={row.account_id} className="border-b border-slate-800 px-3 py-3 last:border-b-0">
+                <div className="flex items-baseline justify-between gap-3">
+                  <strong>{row.name}</strong>
+                  <span className="tabular">{inr(row.closing)}</span>
+                </div>
+                <p className="mt-1 text-sm text-slate-400">Opening {inr(row.opening)} · Receipts {inr(row.receipts)} · Payments {inr(row.payments)}</p>
+                <p className="text-sm text-slate-400">Transfers in {inr(row.transfers_in)} · out {inr(row.transfers_out)}</p>
+              </li>
+            ))}
+          </ul>
           <p className="mt-2 text-xs text-slate-500">Closing = opening + receipts − payments + transfers in − transfers out + adjustments. Individual flat dues are not shown here.</p>
           {canPost && (
             <SaveForm submitLabel="Open fund" onSubmit={(data) => rpc("open_fund", { p_community: communityId, p_code: data.code, p_name: data.name, p_kind: data.kind, p_description: data.description }).then(funds.reload)}>
@@ -140,7 +174,7 @@ export function FinanceScreen({ communityId, roles, focus }) {
             </SaveForm>
           )}
           {canPost && (
-            <SaveForm submitLabel="Reverse a posted entry" onSubmit={(data) => rpc("reverse_entry", {
+            <SaveForm confirmMessage="Reverse this posted entry? A reversal is permanent and does not delete the original." submitLabel="Reverse a posted entry" onSubmit={(data) => rpc("reverse_entry", {
               p_entry: data.entry,
               p_date: data.date,
               p_narration: data.narration,
@@ -165,7 +199,7 @@ export function FinanceScreen({ communityId, roles, focus }) {
 
       {show("reconciliation") && canSeeRecon && <Reconciliation communityId={communityId} banks={accountsOf(ledger.data, "bank")} canPost={canPost} />}
       {show("reviews") && <Reviews communityId={communityId} />}
-      {focus === "finance" && <Statements communityId={communityId} canPost={canPost} canReview={canReview} />}
+      {show("statements") && <Statements communityId={communityId} canPost={canPost} canReview={canReview} />}
     </section>
   );
 }
@@ -263,27 +297,50 @@ function AccountSelect({ label, name, accounts }) {
 }
 
 function Expenses({ communityId, canPost, canReview, expenses, funds, banks, onPosted }) {
+  const [queryText, setQueryText] = useState("");
+  const [status, setStatus] = useState("all");
+  const visible = (expenses.data || []).filter((expense) => {
+    const haystack = `${expense.description} ${expense.payee} ${expense.expense_number}`.toLowerCase();
+    const matchesText = haystack.includes(queryText.trim().toLowerCase());
+    const matchesStatus = status === "all" || expense.approval_status === status || expense.payment_status === status;
+    return matchesText && matchesStatus;
+  });
   return (
     <div>
-      <h2 className="mb-3 text-xl font-semibold">Expenses</h2>
+      <h2 className="mb-3 font-display text-xl font-semibold">Expenses</h2>
+      <div className="mb-3 grid gap-3">
+        <Field label="Search">
+          <input className={control} value={queryText} onChange={(event) => setQueryText(event.target.value)} placeholder="Description, payee, or number" />
+        </Field>
+        <FilterSheet label={status === "all" ? "Filter by status" : `Status: ${status}`}>
+          <Field label="Status">
+            <select className={control} value={status} onChange={(event) => setStatus(event.target.value)}>
+              <option value="all">All</option>
+              {["pending", "approved", "rejected", "paid", "unpaid"].map((value) => <option key={value} value={value}>{value}</option>)}
+            </select>
+          </Field>
+        </FilterSheet>
+      </div>
       <PageStatus loading={expenses.loading} error={expenses.error} onRetry={expenses.reload} empty={!expenses.loading && !expenses.error && !(expenses.data || []).length} title="No expenses recorded" body="Published expenses appear here with their approval and auditor status." />
-      <ul className="space-y-2">
-        {(expenses.data || []).map((expense) => (
-          <li key={expense.id} className="rounded-lg border border-slate-800 p-3 text-sm">
+      {!!(expenses.data || []).length && !visible.length && <p className="text-sm text-slate-400">No expenses match this search.</p>}
+      <ul className="border border-slate-800 bg-white">
+        {visible.map((expense) => (
+          <li key={expense.id} className="border-b border-slate-800 p-3 text-sm last:border-b-0">
             <div className="flex flex-wrap justify-between gap-2">
               <strong>{expense.expense_number}</strong>
-              <span>{inr(expense.amount)}</span>
+              <span className="tabular">{inr(expense.amount)}</span>
             </div>
             <p>{expense.description} · {expense.payee}</p>
-            <p className="text-slate-400">{expense.occurred_on} · {expense.expense_categories?.name} · approval {expense.approval_status} · auditor {expense.auditor_status} · {expense.payment_status}</p>
+            <p className="text-slate-400">{expense.occurred_on} · {expense.expense_categories?.name}</p>
+            <p className="mt-1 text-sm">Approval {expense.approval_status} · Auditor {expense.auditor_status} · Payment {expense.payment_status}</p>
             {canPost && expense.approval_status === "pending" && (
-              <SaveForm submitLabel="Record decision" onSubmit={(data) => rpc("decide_expense", { p_expense: expense.id, p_decision: data.decision, p_comments: data.comments }).then(expenses.reload)}>
+              <SaveForm confirmMessage="Record this expense decision?" submitLabel="Record decision" onSubmit={(data) => rpc("decide_expense", { p_expense: expense.id, p_decision: data.decision, p_comments: data.comments }).then(expenses.reload)}>
                 <Field label="Decision"><select className={control} name="decision"><option value="approved">approved</option><option value="rejected">rejected</option></select></Field>
                 <Field label="Comments"><input className={control} name="comments" /></Field>
               </SaveForm>
             )}
             {canPost && expense.approval_status === "approved" && expense.payment_status !== "paid" && (
-              <SaveForm submitLabel="Pay expense" onSubmit={(data) => rpc("pay_expense", { p_expense: expense.id, p_bank_account: data.bank, p_mode: data.mode, p_reference: data.reference, p_key: data.key || crypto.randomUUID() }).then(() => { expenses.reload(); onPosted(); })}>
+              <SaveForm confirmMessage="Pay this expense from the selected bank ledger?" submitLabel="Pay expense" onSubmit={(data) => rpc("pay_expense", { p_expense: expense.id, p_bank_account: data.bank, p_mode: data.mode, p_reference: data.reference, p_key: data.key || crypto.randomUUID() }).then(() => { expenses.reload(); onPosted(); })}>
                 <AccountSelect label="Bank ledger" name="bank" accounts={banks} />
                 <Field label="Mode"><input className={control} name="mode" required /></Field>
                 <Field label="Reference"><input className={control} name="reference" /></Field>
@@ -431,13 +488,16 @@ function Statements({ communityId, canPost, canReview }) {
       <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && !(query.data || []).length} title="No statement opened" body="Overdue statements stay visible. A statement is never marked reviewed on its own." />
       <ul className="space-y-2 text-sm">
         {(query.data || []).map((statement) => (
-          <li key={statement.id} className="rounded-lg border border-slate-800 p-3">
-            <p>{statement.period_start} to {statement.period_end} · {statement.status} · due {statement.due_on}</p>
-            <button type="button" className="mt-2 text-amber-300" onClick={() => window.print()}>Print this view</button>
-            {canPost && statement.status === "draft" && <button type="button" className="ml-3 text-amber-300" onClick={() => rpc("submit_statement", { p_statement: statement.id }).then(query.reload)}>Submit for review</button>}
-            {canReview && <button type="button" className="ml-3 text-amber-300" onClick={() => rpc("review_statement", { p_statement: statement.id, p_status: "verified", p_comments: "Reviewed in the app" }).then(query.reload)}>Record review</button>}
-            {canPost && statement.status === "reconciled_and_reviewed" && <button type="button" className="ml-3 text-amber-300" onClick={() => rpc("publish_statement", { p_statement: statement.id, p_with_exceptions: false }).then(query.reload)}>Publish</button>}
-            {canPost && (statement.status === "published" || statement.status === "published_with_exceptions") && <button type="button" className="ml-3 text-amber-300" onClick={() => rpc("append_statement_version", { p_statement: statement.id, p_with_exceptions: false }).then(query.reload)}>Publish a corrected version</button>}
+          <li key={statement.id} className="border border-slate-800 bg-white p-3">
+            <p className="font-semibold">{statement.status}</p>
+            <p className="text-sm text-slate-400">{statement.period_start} to {statement.period_end} · due {statement.due_on}</p>
+            <div className="mt-3 grid gap-2">
+              <button type="button" className="min-h-12 border border-slate-800 bg-white px-3" onClick={() => window.print()}>Print this view</button>
+              {canPost && statement.status === "draft" && <button type="button" className="min-h-12 bg-[#252525] px-3 font-semibold text-white" onClick={() => { if (window.confirm("Submit this statement for auditor review?")) rpc("submit_statement", { p_statement: statement.id }).then(query.reload); }}>Submit for review</button>}
+              {canReview && <button type="button" className="min-h-12 border border-slate-800 bg-white px-3" onClick={() => { if (window.confirm("Record this statement as verified?")) rpc("review_statement", { p_statement: statement.id, p_status: "verified", p_comments: "Reviewed in the app" }).then(query.reload); }}>Record review</button>}
+              {canPost && statement.status === "reconciled_and_reviewed" && <button type="button" className="min-h-12 bg-[#A65F49] px-3 font-semibold text-white" onClick={() => { if (window.confirm("Publish this statement? Residents will be able to read it.")) rpc("publish_statement", { p_statement: statement.id, p_with_exceptions: false }).then(query.reload); }}>Publish</button>}
+              {canPost && (statement.status === "published" || statement.status === "published_with_exceptions") && <button type="button" className="min-h-12 border border-slate-800 bg-white px-3" onClick={() => { if (window.confirm("Publish a corrected version? Older versions stay on record.")) rpc("append_statement_version", { p_statement: statement.id, p_with_exceptions: false }).then(query.reload); }}>Publish a corrected version</button>}
+            </div>
           </li>
         ))}
       </ul>
@@ -453,18 +513,60 @@ function Statements({ communityId, canPost, canReview }) {
 
 export function ConcernsScreen({ communityId, roles }) {
   const committee = roles.includes("committee_admin") || roles.includes("platform_admin");
-  const query = useLoad(() => rows(supabase.from("tickets").select("id,ticket_number,subject,category,visibility,status,priority,created_at").eq("community_id", communityId).order("created_at", { ascending: false })), [communityId]);
+  const [raising, setRaising] = useState(false);
+  const [openId, setOpenId] = useState("");
+  const query = useLoad(() => rows(supabase.from("tickets").select("id,ticket_number,subject,category,visibility,status,priority,created_at,updated_at").eq("community_id", communityId).order("created_at", { ascending: false })), [communityId]);
+  const updates = useLoad(
+    () => openId ? rows(supabase.from("ticket_updates").select("id,body,created_at").eq("ticket_id", openId).order("created_at")) : Promise.resolve([]),
+    [openId],
+  );
   return (
     <section>
-      <h2 className="mb-1 text-xl font-semibold">Concerns</h2>
-      <p className="mb-4 text-sm text-slate-400">Public concerns are visible to residents. Private concerns stay with you and the committee.</p>
+      <h2 className="mb-1 font-display text-xl font-semibold">Concerns</h2>
+      <p className="mb-4 text-sm text-slate-400">A public concern can be read by residents. A private concern stays with you and the committee.</p>
+      <button type="button" className="min-h-12 w-full bg-[#A65F49] px-3 font-semibold text-white" onClick={() => setRaising((open) => !open)}>{raising ? "Close the form" : "Raise concern"}</button>
+      {raising && (
+      <SaveForm submitLabel="Submit concern" onSubmit={(data) => rpc("create_ticket", {
+        p_community: communityId,
+        p_subject: data.subject,
+        p_category: data.category,
+        p_description: data.description,
+        p_visibility: data.visibility,
+        p_unit_number: data.unit || null,
+        p_priority: data.priority,
+      }).then(() => { setRaising(false); query.reload(); })}>
+        <Field label="Subject"><input className={control} name="subject" required /></Field>
+        <Field label="Category"><select className={control} name="category">{TICKET_CATEGORIES.map((category) => <option key={category}>{category}</option>)}</select></Field>
+        <Field label="Who can read it">
+          <select className={control} name="visibility" defaultValue="public">
+            <option value="public">Public — every resident can read this</option>
+            <option value="private">Private — only you and the committee</option>
+          </select>
+        </Field>
+        <Field label="Unit number, if it applies"><input className={control} name="unit" inputMode="text" /></Field>
+        <Field label="Priority"><select className={control} name="priority" defaultValue="medium"><option>low</option><option>medium</option><option>high</option></select></Field>
+        <Field label="Description"><textarea className={control} name="description" rows={4} required /></Field>
+      </SaveForm>
+      )}
+      <div className="mt-4">
       <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && !(query.data || []).length} title="No concerns yet" body="Raise a public or private concern and it receives a SOC-YYYY-XXXXX number." />
-      <ul className="mb-4 space-y-2 text-sm">
+      <ul className="space-y-2 text-sm">
         {(query.data || []).map((ticket) => (
-          <li key={ticket.id} className="rounded-lg border border-slate-800 p-3">
-            <strong>{ticket.ticket_number}</strong> · {ticket.visibility} · {ticket.status}
-            <p>{ticket.subject}</p>
-            <p className="text-slate-400">{ticket.category} · {ticket.priority}</p>
+          <li key={ticket.id} className="border border-slate-800 bg-white p-3">
+            <div className="flex items-baseline justify-between gap-3">
+              <strong>{ticket.ticket_number}</strong>
+              <span>{ticket.status}</span>
+            </div>
+            <p className="mt-1">{ticket.subject}</p>
+            <p className="text-slate-400">{ticket.visibility === "private" ? "Private" : "Public"} · {ticket.category} · {ticket.priority}</p>
+            <p className="text-sm text-slate-400">Updated {ticket.updated_at ? new Date(ticket.updated_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) : "when recorded"}</p>
+            <button type="button" className="mt-2 min-h-12 w-full border border-slate-800" onClick={() => setOpenId(openId === ticket.id ? "" : ticket.id)}>{openId === ticket.id ? "Hide updates" : "Show updates"}</button>
+            {openId === ticket.id && (
+              <div className="mt-2">
+                <PageStatus loading={updates.loading} error={updates.error} onRetry={updates.reload} empty={!updates.loading && !updates.error && !(updates.data || []).length} title="No written updates yet" body="Status changes from the committee appear as notes on the concern." />
+                <ul className="space-y-2">{(updates.data || []).map((update) => <li key={update.id} className="border-t border-slate-800 pt-2">{update.body}<p className="text-slate-400">{new Date(update.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</p></li>)}</ul>
+              </div>
+            )}
             {committee && (
               <SaveForm submitLabel="Update status" onSubmit={(data) => rpc("transition_ticket", { p_ticket: ticket.id, p_status: data.status, p_note: data.note }).then(query.reload)}>
                 <Field label="Status">
@@ -476,35 +578,15 @@ export function ConcernsScreen({ communityId, roles }) {
               </SaveForm>
             )}
             {ticket.status === "resolved" && (
-              <div className="mt-2 flex gap-2">
-                <button type="button" className="rounded-lg border border-slate-600 px-3 py-1" onClick={() => rpc("transition_ticket", { p_ticket: ticket.id, p_status: "closed", p_note: "Resident confirmed" }).then(query.reload)}>Confirm</button>
-                <button type="button" className="rounded-lg border border-slate-600 px-3 py-1" onClick={() => rpc("transition_ticket", { p_ticket: ticket.id, p_status: "reopened", p_note: "Resident reopened" }).then(query.reload)}>Reopen</button>
+              <div className="mt-2 grid gap-2">
+                <button type="button" className="min-h-12 border border-slate-800" onClick={() => rpc("transition_ticket", { p_ticket: ticket.id, p_status: "closed", p_note: "Resident confirmed" }).then(query.reload)}>Confirm</button>
+                <button type="button" className="min-h-12 border border-slate-800" onClick={() => rpc("transition_ticket", { p_ticket: ticket.id, p_status: "reopened", p_note: "Resident reopened" }).then(query.reload)}>Reopen</button>
               </div>
             )}
           </li>
         ))}
       </ul>
-      <SaveForm submitLabel="Raise concern" onSubmit={(data) => rpc("create_ticket", {
-        p_community: communityId,
-        p_subject: data.subject,
-        p_category: data.category,
-        p_description: data.description,
-        p_visibility: data.visibility,
-        p_unit_number: data.unit || null,
-        p_priority: data.priority,
-      }).then(query.reload)}>
-        <Field label="Subject"><input className={control} name="subject" required /></Field>
-        <Field label="Category"><select className={control} name="category">{TICKET_CATEGORIES.map((category) => <option key={category}>{category}</option>)}</select></Field>
-        <Field label="Visibility">
-          <select className={control} name="visibility" defaultValue="public">
-            <option value="public">Public — every resident can read this</option>
-            <option value="private">Private — only you and the committee</option>
-          </select>
-        </Field>
-        <Field label="Unit number, if it applies"><input className={control} name="unit" /></Field>
-        <Field label="Priority"><select className={control} name="priority" defaultValue="medium"><option>low</option><option>medium</option><option>high</option></select></Field>
-        <Field label="Description"><textarea className={control} name="description" rows={4} required /></Field>
-      </SaveForm>
+      </div>
     </section>
   );
 }
@@ -518,7 +600,10 @@ export function DecisionsScreen({ communityId, roles }) {
       <div>
         <h2 className="mb-3 text-xl font-semibold">Meetings</h2>
         <PageStatus loading={meetings.loading} error={meetings.error} onRetry={meetings.reload} empty={!meetings.loading && !meetings.error && !(meetings.data || []).length} title="No meetings recorded" body="Committee, general body, emergency, and special meetings are listed after they are scheduled." />
-        <ul className="space-y-2 text-sm">{(meetings.data || []).map((meeting) => <li key={meeting.id} className="rounded-lg border border-slate-800 p-3"><strong>{meeting.title}</strong><p className="text-slate-400">{meeting.meeting_type} · {new Date(meeting.held_on).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} · {meeting.venue}</p>{meeting.minutes && <p className="mt-2">{meeting.minutes}</p>}</li>)}</ul>
+        <ul className="space-y-2 text-sm">{(meetings.data || []).map((meeting) => {
+          const upcoming = new Date(meeting.held_on).getTime() >= Date.now();
+          return <li key={meeting.id} className="border border-slate-800 bg-white p-3"><p className="text-sm text-slate-400">{upcoming ? "Upcoming" : "Past"} · {meeting.meeting_type}</p><strong>{meeting.title}</strong><p className="text-slate-400">{new Date(meeting.held_on).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} · {meeting.venue || "Venue not recorded"}</p>{meeting.minutes && <p className="mt-2">{meeting.minutes}</p>}</li>;
+        })}</ul>
         {committee && (
           <SaveForm submitLabel="Schedule meeting" onSubmit={(data) => rpc("create_meeting", { p_community: communityId, p_type: data.type, p_title: data.title, p_held_on: new Date(data.when).toISOString(), p_venue: data.venue }).then(meetings.reload)}>
             <Field label="Type"><select className={control} name="type">{["committee", "general_body", "emergency", "special"].map((type) => <option key={type}>{type}</option>)}</select></Field>
@@ -536,9 +621,9 @@ export function DecisionsScreen({ communityId, roles }) {
             <li key={resolution.id} className="rounded-lg border border-slate-800 p-3">
               <strong>{resolution.title}</strong> · {resolution.status}
               <p>{resolution.description}</p>
-              <div className="mt-2 flex gap-2">
-                {["yes", "no", "abstain"].map((vote) => <button key={vote} type="button" className="rounded-lg border border-slate-600 px-3 py-1" onClick={() => rpc("cast_vote", { p_resolution: resolution.id, p_vote: vote }).then(resolutions.reload)}>{vote}</button>)}
-                {committee && <button type="button" className="rounded-lg border border-slate-600 px-3 py-1" onClick={() => rpc("close_vote", { p_resolution: resolution.id }).then(resolutions.reload)}>Close vote</button>}
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                {["yes", "no", "abstain"].map((vote) => <button key={vote} type="button" className="min-h-12 border border-slate-800 bg-white" onClick={() => rpc("cast_vote", { p_resolution: resolution.id, p_vote: vote }).then(resolutions.reload)}>{vote}</button>)}
+                {committee && <button type="button" className="col-span-3 min-h-12 border border-slate-800" onClick={() => { if (window.confirm("Close this vote?")) rpc("close_vote", { p_resolution: resolution.id }).then(resolutions.reload); }}>Close vote</button>}
               </div>
             </li>
           ))}
@@ -580,9 +665,10 @@ export function DocumentsScreen({ communityId, roles }) {
       <ul className="mb-4 space-y-2 text-sm">
         {(query.data || []).map((document) => (
           <li key={document.id} className="rounded-lg border border-slate-800 p-3">
-            <strong>{document.name}</strong> · {document.category} · {document.access_class}{document.redacted ? " · redacted" : ""}
+            <strong>{document.name}</strong>
+            <p className="text-slate-400">{document.category} · {document.access_class === "public" ? (document.redacted ? "Resident copy, sensitive details removed" : "Resident visible") : "Restricted original"}</p>
             <p className="text-slate-400">{document.description}</p>
-            <button type="button" className="mt-2 text-amber-300" onClick={() => openDocument(document)}>Open</button>
+            <button type="button" className="mt-2 min-h-12 w-full border border-slate-800" onClick={() => openDocument(document).catch((error) => window.alert(error.message))}>Open</button>
           </li>
         ))}
       </ul>
@@ -657,7 +743,7 @@ export function UnitsScreen({ communityId }) {
         {!!preview.rows.length && <p className="mt-2 text-sm text-slate-400">{preview.rows.length} units ready.</p>}
         <button
           type="button"
-          className="mt-3 rounded-lg bg-amber-500 px-3 py-2 font-semibold text-slate-950 disabled:opacity-60"
+          className="mt-3 min-h-12 w-full bg-amber-500 px-3 py-2 font-semibold text-white disabled:opacity-60"
           disabled={!preview.rows.length || preview.errors.length > 0}
           onClick={async () => {
             for (const row of preview.rows) await rpc("add_unit", { p_community: communityId, p_block: row.block, p_number: row.number });
@@ -694,7 +780,8 @@ export function NotificationsScreen({ communityId }) {
       <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && !(query.data || []).length} title="No notifications" body="Statement publication, meetings, and concern updates appear here. Email and WhatsApp are not sent yet." />
       <ul className="space-y-2 text-sm">
         {(query.data || []).map((note) => (
-          <li key={note.id} className="rounded-lg border border-slate-800 p-3">
+          <li key={note.id} className="border border-slate-800 bg-white p-3">
+            <p className="text-sm text-slate-400">{["statement_published", "meeting_scheduled", "resolution_proposed", "ticket_updated"].includes(note.event_type) ? "Governance" : "Notice"} · {new Date(note.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</p>
             <strong>{note.title}</strong>
             <p>{note.body}</p>
             {!note.read_at && <button type="button" className="mt-2 text-amber-300" onClick={() => supabase.from("notifications").update({ read_at: new Date().toISOString() }).eq("id", note.id).then(query.reload)}>Mark read</button>}
