@@ -84,9 +84,20 @@ Production build succeeds.
 
 Not connected as a verified hosted project. The previously configured host `wzchqxwwezklxsxmjvyt.supabase.co` does not resolve. This environment currently injects `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`; requests to that host fail and the UI surfaces the failure. Do not treat that as a working backend.
 
+## Hosted demo attempt (19 November 2026)
+
+The Pages site opens, and sign-in cannot succeed. No demo accounts were created and no resident, treasurer, or auditor workflow was run against a hosted database.
+
+- Preview: `https://cursor-transparency-platform.societyos.pages.dev`. The built client embeds `https://wzchqxwwezklxsxmjvyt.supabase.co`. That host does not resolve.
+- The Yasvik organization is on the free plan. Creating a separate project named SocietyOS Demo was rejected because the account has reached its limit of two active free projects. The quoted cost of another project was $0 per month, and the limit still blocked it.
+- The only project visible in this session is the live Yasvik store. It contains products, orders, customers, and tax records. The SocietyOS migration was not applied there, and that project was not paused or deleted.
+- This environment has no Cloudflare API token. The Pages environment variables were not changed. `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` still have to be set on the Pages project, followed by a rebuild, after an empty Supabase project exists. The service-role key must not be added as a `VITE_` variable.
+- No demo passwords exist. Do not invent them.
+
 ## Outstanding
 
-- Create a new Supabase project, apply the migration, and set the two `VITE_` variables. Do not apply `supabase/schema.sql` beside it.
+- Free a Supabase project slot or upgrade the organization, create an empty project, and apply only `supabase/migrations/20261118120000_platform_foundation.sql`. Do not apply `supabase/schema.sql` beside it. Do not reuse the Yasvik store project.
+- Set the two `VITE_` variables on Cloudflare Pages and rebuild.
 - Walk the complete resident, treasurer, and auditor workflows on that project before calling the application production-ready.
 - The legacy `auth-login` function still compares a PIN. The new platform does not use it. Production sign-in is Supabase Auth email and password.
 - Redaction is a second uploaded file. There is no PDF redaction engine. A file marked redacted can still contain sensitive bytes.
@@ -99,7 +110,8 @@ Not connected as a verified hosted project. The previously configured host `wzch
 
 ## Next
 
-1. Provision Supabase and apply the migration.
-2. Create the first community through the setup screen, add units, open funds, and post opening balances with `post_journal`.
-3. Walk the treasurer, auditor, and resident paths against that project.
-4. Replace the legacy PIN function before any production login.
+1. Free a Supabase project slot or upgrade the Yasvik organization, then create an empty project and apply the foundation migration.
+2. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` on Cloudflare Pages and rebuild.
+3. Create labelled demo accounts for resident, treasurer, elected auditor, committee administrator, and platform administrator. Keep the service-role key off the frontend.
+4. Walk those accounts through the published-statement, collection, expense, reconciliation, reversal, and cross-community checks.
+5. Replace the legacy PIN function before any production login.

@@ -15,6 +15,7 @@ Cloudflare Pages can host the Vite build. Supabase hosts Auth, Postgres, Storage
 
 ## What this build does not do
 
+- The current Pages deployment does not have a working Supabase project. Its client is built with `https://wzchqxwwezklxsxmjvyt.supabase.co`, and that host does not resolve. A replacement project could not be created on 19 November 2026 because the free organization has reached its two-project limit. The existing Yasvik store project must not receive this migration.
 - It does not connect to a live project by itself.
 - It does not send email or WhatsApp.
 - It does not redact a PDF. Officers upload the redacted file separately.
