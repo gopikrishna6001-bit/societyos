@@ -32,28 +32,26 @@ function ConfigRequired() {
 
 function SignedInApp() {
   const [session, setSession] = useState(undefined);
-  const [authError, setAuthError] = useState("");
   useEffect(() => {
     let live = true;
+    const finish = (next) => { if (live) setSession(next); };
     supabase.auth.getSession()
       .then(({ data, error }) => {
-        if (!live) return;
-        if (error) { setAuthError(error.message); setSession(null); return; }
-        setSession(data.session);
+        if (error) {
+          supabase.auth.signOut({ scope: "local" });
+          finish(null);
+          return;
+        }
+        finish(data.session ?? null);
       })
-      .catch((error) => { if (live) { setAuthError(explain(error)); setSession(null); } });
-    const { data } = supabase.auth.onAuthStateChange((_event, next) => { if (live) setSession(next); });
+      .catch(() => {
+        supabase.auth.signOut({ scope: "local" });
+        finish(null);
+      });
+    const { data } = supabase.auth.onAuthStateChange((_event, next) => finish(next));
     return () => { live = false; data.subscription.unsubscribe(); };
   }, []);
   if (session === undefined) return <p className="p-6 text-slate-400">Checking your session…</p>;
-  if (authError && !session) {
-    return (
-      <main className="mx-auto max-w-lg p-6">
-        <p role="alert" className="text-red-300">{authError}</p>
-        <button type="button" className="mt-3 rounded-lg border border-slate-600 px-3 py-2" onClick={() => window.location.reload()}>Retry</button>
-      </main>
-    );
-  }
   if (!session) return <AuthScreen />;
   return <CommunityApp session={session} />;
 }

@@ -10,22 +10,44 @@ export const SOCIETY_ID = import.meta.env.VITE_SOCIETY_ID || 'a1b2c3d4-e5f6-7890
 export const isSupabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
 const REQUEST_TIMEOUT_MS = 30000;
+const SESSION_REFRESH_MARGIN_MS = 90_000;
 
 function requestUrl(input) {
   if (typeof input === "string") return input;
   return input?.url || "";
 }
 
-function canRetry(input, init) {
-  const method = (init.method || "GET").toUpperCase();
-  if (method === "GET" || method === "HEAD") return true;
+function isAuthTokenRequest(input) {
   return requestUrl(input).includes("/auth/v1/token");
+}
+
+export function sessionStillValid(raw, now = Date.now()) {
+  if (!raw) return false;
+  try {
+    const expiresAt = JSON.parse(raw)?.expires_at;
+    return typeof expiresAt === "number" && expiresAt * 1000 - now > SESSION_REFRESH_MARGIN_MS;
+  } catch {
+    return false;
+  }
+}
+
+export function readStoredSession(storage, key) {
+  const raw = storage.getItem(key);
+  if (typeof key === "string" && key.endsWith("-auth-token") && raw && !sessionStillValid(raw)) {
+    storage.removeItem(key);
+    return null;
+  }
+  return raw;
 }
 
 function fetchWithTimeout(input, init = {}, attempt = 0) {
   if (!isSupabaseConfigured) {
     return Promise.reject(new Error("Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY."));
   }
+  // Aborting a token call becomes a retryable auth error, so a dead refresh
+  // token stays stored and the next visit waits on it again. Let Auth answer.
+  if (isAuthTokenRequest(input)) return fetch(input, init);
+  const method = (init.method || "GET").toUpperCase();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   if (init.signal) {
@@ -38,16 +60,25 @@ function fetchWithTimeout(input, init = {}, attempt = 0) {
   }, (error) => {
     clearTimeout(timer);
     const cancelledByCaller = Boolean(init.signal?.aborted);
-    if (!cancelledByCaller && error?.name === "AbortError" && attempt === 0 && canRetry(input, init)) {
+    if (!cancelledByCaller && error?.name === "AbortError" && attempt === 0 && (method === "GET" || method === "HEAD")) {
       return fetchWithTimeout(input, init, attempt + 1);
     }
     throw error;
   });
 }
 
+function authStorage() {
+  if (typeof window === "undefined" || !window.localStorage) return undefined;
+  return {
+    getItem: (key) => readStoredSession(window.localStorage, key),
+    setItem: (key, value) => window.localStorage.setItem(key, value),
+    removeItem: (key) => window.localStorage.removeItem(key),
+  };
+}
+
 export const supabase = createClient(SUPABASE_URL || "http://127.0.0.1", SUPABASE_ANON_KEY || "public-anon-key", {
   global: { fetch: fetchWithTimeout },
-  auth: { persistSession: true, autoRefreshToken: true },
+  auth: { persistSession: true, autoRefreshToken: true, storage: authStorage() },
   realtime: { params: { eventsPerSecond: 10 } }
 });
 
