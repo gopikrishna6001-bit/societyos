@@ -6,14 +6,14 @@ import { demoAccounts, demoPassword } from "../src/demoAccounts.js";
 
 const url = process.env.SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const blocked = ["cpksnpuavywbmhrzglyh", "wzchqxwwezklxsxmjvyt"];
+const blocked = ["cpksnpuavywbmhrzglyh"];
 
 if (!url || !serviceKey) {
   console.error("Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY. Do not put the service-role key in a VITE_ variable.");
   process.exit(1);
 }
 if (blocked.some((id) => url.includes(id))) {
-  console.error("Refusing to seed this project. Use a new empty project, not the live store.");
+  console.error("Refusing to seed the live Yasvik store. Point SUPABASE_URL at the Society OS project.");
   process.exit(1);
 }
 
