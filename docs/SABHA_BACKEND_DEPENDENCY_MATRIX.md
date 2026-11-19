@@ -4,6 +4,8 @@ Maps every screen/feature to its data source from repository code. Migrations in
 
 Statuses: **PASS** / **FAIL** / **BLOCKED** / **NOT TESTED** / **DEMO ONLY** — aligned with `docs/IMPLEMENTATION_STATUS.md` hosted notes and code isolation rules.
 
+Updated after the deep route/API inventory pass on this branch (additional edge and legacy hardcoding findings).
+
 ---
 
 ## 1. Isolation rules (code)
@@ -159,7 +161,18 @@ Status: **BLOCKED** for live invite flow until applied and function deployed wit
 | `auth-login` | `supabase/functions/auth-login` | None (legacy PIN retired) | Returns 410 JSON error | **FAIL** for PIN login (by design) |
 | `send-whatsapp` | `supabase/functions/send-whatsapp` | Legacy `WhatsAppCentre.jsx` (hardcoded project URL) | `whatsapp_log`, WA Graph API env | **NOT TESTED** / product says not delivered |
 | `whatsapp-bot` | `supabase/functions/whatsapp-bot` | WhatsApp webhook (not Platform UI) | WA + optional Gemini; legacy `SOCIETY_ID` | **NOT TESTED** |
-| `ai-proxy` | `supabase/functions/ai-proxy` | Not referenced by Platform/Demo; legacy AI uses Anthropic/`VITE_AI_ENDPOINT` | `GEMINI_API_KEY` | **NOT TESTED** / unused by current live shell |
+| `ai-proxy` | `supabase/functions/ai-proxy` | Not referenced by Platform/Demo; legacy AI uses Anthropic/`VITE_AI_ENDPOINT` | `GEMINI_API_KEY` | **FAIL** if publicly reachable — source has CORS `*` and **no user JWT check** (open Gemini proxy). Hosted `verify_jwt` not re-read in this audit |
+
+### Hardcoded / unsafe client constants (legacy)
+
+| Item | Location | Risk | Status |
+| --- | --- | --- | --- |
+| UPI payee `societyfund@upi`, display name `Sunrise+Residency` | `ResidentPortal.jsx` payment link | Wrong brand / wrong VPA if used on SABHA societies | **FAIL** for SABHA branding; legacy-only surface |
+| Hardcoded Pages project function URL | `WhatsAppCentre.jsx` → `…/functions/v1/send-whatsapp` | Not env-driven; ties UI to one project | **FAIL** for portability |
+| Default `SOCIETY_ID` fallback UUID | `lib/supabase.js` | Wrong society if env missing | **FAIL** if env unset in a deploy |
+| `send-whatsapp` / `whatsapp-bot` auth posture | Edge sources | Service-role paths; caller auth gaps noted in Phase 0 | **NOT TESTED** hosted; treat as unsafe until reviewed |
+
+Foundation RPCs defined in SQL but **not wired in the live Platform UI** (still exist for future/admin use): `post_journal`, `bank_balances`, `grant_role`, `add_bank_account`, `record_minutes`, `open_auditor_election`, `cast_auditor_ballot`, `certify_auditor_election`.
 
 ---
 

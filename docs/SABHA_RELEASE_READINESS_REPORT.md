@@ -82,6 +82,10 @@ Statuses: **PASS** / **FAIL** / **BLOCKED** / **NOT TESTED** / **DEMO ONLY**.
 | Nav hiding ≠ authorization | Documented; hosted RLS walk **NOT TESTED** |
 | Phone/PIN auth-login returns 410 | Intentional retirement |
 | No fake success on demo actions | **PASS** (explicit demo-only copy) |
+| `ai-proxy` has no user check and CORS `*` | **FAIL** if the function is publicly exposed (Gemini key proxy). Confirm hosted `verify_jwt` or disable |
+| Legacy ResidentPortal UPI string still says Sunrise Residency | **FAIL** on that legacy surface (hardcoded VPA/brand) |
+| WhatsApp centre hardcodes one project function URL | **FAIL** for multi-env safety |
+| Default `SOCIETY_ID` fallback when env missing | **FAIL** if a deploy omits `VITE_SOCIETY_ID` |
 
 ## Fixed in this audit branch
 
@@ -97,7 +101,8 @@ Statuses: **PASS** / **FAIL** / **BLOCKED** / **NOT TESTED** / **DEMO ONLY**.
 3. Complete invitation email + `/join` activation test.
 4. Smoke legacy modules or formally defer them behind `/legacy` with product sign-off.
 5. Replace legacy emoji nav if `/legacy` remains user-facing.
-6. Do **not** treat CI green or demo screenshots as production financial readiness.
+6. Disable or JWT-gate `ai-proxy`; remove hardcoded Sunrise UPI and WhatsApp function URL from legacy clients.
+7. Do **not** treat CI green or demo screenshots as production financial readiness.
 
 ## Production readiness assessment
 
