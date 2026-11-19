@@ -10,6 +10,8 @@ import { Field, PageStatus, control } from "./ui.jsx";
 import { brand } from "../brand.js";
 import { passwordRule, signInMessage } from "../lib/authPolicy.js";
 import { Mark, Wordmark } from "../brand/Mark.jsx";
+import { DemoApp } from "./demo/DemoApp.jsx";
+import { isDemoEmail } from "./demo/data.js";
 
 export default function Platform() {
   if (!isSupabaseConfigured) return <ConfigRequired />;
@@ -120,7 +122,7 @@ function DemoAccounts({ onPick }) {
   return (
     <section className="mt-4 border border-slate-800 bg-white p-4">
       <h2 className="font-display text-lg font-semibold">DEMO accounts</h2>
-      <p className="mt-1 text-sm text-slate-400">One community, labelled DEMO · Palm Court. No sample balances are posted. Shared password: {sharedPassword}. These accounts work after the demo seed runs on an empty project.</p>
+      <p className="mt-1 text-sm text-slate-400">Palm Court opens as a demo on this device. Its figures are not posted to a community ledger. Shared password: {sharedPassword}.</p>
       <div className="mt-3 grid gap-2">
         {accounts.map((account) => (
           <button
@@ -138,6 +140,13 @@ function DemoAccounts({ onPick }) {
 }
 
 function CommunityApp({ session }) {
+  if (isDemoEmail(session.user.email)) {
+    return <DemoApp email={session.user.email} onSignOut={() => supabase.auth.signOut()} />;
+  }
+  return <LiveCommunity session={session} />;
+}
+
+function LiveCommunity({ session }) {
   const [memberships, setMemberships] = useState(undefined);
   const [error, setError] = useState("");
   const [communityId, setCommunityId] = useState("");
