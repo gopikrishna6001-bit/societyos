@@ -115,18 +115,17 @@ Production build succeeds.
 
 ## Supabase
 
-Not connected as a verified hosted project. The previously configured host `wzchqxwwezklxsxmjvyt.supabase.co` does not resolve. This environment currently injects `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`; requests to that host fail and the UI surfaces the failure. Do not treat that as a working backend.
+Society OS (`wzchqxwwezklxsxmjvyt`) is active in the SocietyOS organization. The Pages app signs in there. The older society tables were renamed with a `legacy_` prefix where the names clashed, and their rows were kept. The Yasvik store was not changed.
 
 ## Hosted demo attempt (19 November 2026)
 
-The Pages site opens, and sign-in cannot succeed. No demo accounts were created and no resident, treasurer, or auditor workflow was run against a hosted database.
+The Pages site signs in. All five DEMO accounts reach `DEMO · Palm Court`. Home and Funds render with empty ledger totals. No sample rupees were posted.
 
-- Preview: `https://cursor-transparency-platform.societyos.pages.dev`. The built client embeds `https://wzchqxwwezklxsxmjvyt.supabase.co`. That host does not resolve.
-- The Yasvik organization is on the free plan. Creating a separate project named SocietyOS Demo was rejected because the account has reached its limit of two active free projects. The quoted cost of another project was $0 per month, and the limit still blocked it.
-- The only project visible in this session is the live Yasvik store. It contains products, orders, customers, and tax records. The SocietyOS migration was not applied there, and that project was not paused or deleted.
-- This environment has no Cloudflare API token. The Pages environment variables were not changed. `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` still have to be set on the Pages project, followed by a rebuild, after an empty Supabase project exists. The service-role key must not be added as a `VITE_` variable.
-- DEMO role logins are defined, and they have not been created on a hosted project. The sign-in page lists them. `npm run seed:demo` creates them on an empty project when `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set. It refuses the live Yasvik store and the unreachable host. The shared password is `Sabha-Demo-2026`. The community name is `DEMO · Palm Court`. No ledger entries are posted.
-- Society OS (`wzchqxwwezklxsxmjvyt`) was resumed by the owner on 19 November 2026. Its auth service answers. `public.communities` is not present, so the foundation migration has not been applied. This session still cannot run SQL or create users on that project. The client no longer blocks the host locally.
+- Preview: `https://cursor-transparency-platform.societyos.pages.dev`. The built client embeds `https://wzchqxwwezklxsxmjvyt.supabase.co`, and that host answers.
+- The Yasvik store was not modified. Society OS is a separate project in the SocietyOS organization.
+- Cloudflare Pages environment variables were already present. They were not changed in this session.
+- The five DEMO accounts exist on Society OS for `DEMO · Palm Court`. The shared password is `Sabha-Demo-2026`. No ledger entries were posted.
+- On 19 November 2026 the SocietyOS organization was connected and the SABHA tables, row security, home dashboard functions, and five DEMO accounts were created on Society OS. A resident sign-in on `https://cursor-transparency-platform.societyos.pages.dev` opens Home. The shared password is `Sabha-Demo-2026`. Write actions such as opening a fund, recording an expense, and raising a concern still need the remaining database functions from the foundation migration.
 
 ## Outstanding
 
