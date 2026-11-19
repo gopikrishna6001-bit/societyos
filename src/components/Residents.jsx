@@ -7,7 +7,7 @@ import { raiseOnError } from "../lib/async.js";
 
 const inp = { width: "100%", background: "#0d1117", border: "1px solid #2a2f45", borderRadius: 8, padding: "10px 12px", color: "#e2e8f0", fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit" };
 const lbl = { color: "#94a3b8", fontSize: 11, fontWeight: 600, letterSpacing: "0.5px", textTransform: "uppercase", marginBottom: 5, display: "block" };
-const btnPrimary = { background: "linear-gradient(135deg,#d97706,#f59e0b)", border: "none", borderRadius: 8, padding: "10px 18px", color: "#0d0f14", fontWeight: 700, cursor: "pointer", fontSize: 14 };
+const btnPrimary = { background: "#0878E8", border: "none", borderRadius: 8, padding: "10px 18px", color: "#FFFFFF", fontWeight: 700, cursor: "pointer", fontSize: 14 };
 const btnSec = (color = "#38bdf8") => ({ background: `${color}18`, border: `1px solid ${color}33`, borderRadius: 8, padding: "6px 12px", color, cursor: "pointer", fontSize: 12, fontWeight: 600 });
 
 const Modal = ({ open, onClose, title, wide, children }) => {

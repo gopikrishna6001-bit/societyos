@@ -8,7 +8,7 @@ Use the name in uppercase for the wordmark. Do not set it in sentence case or as
 
 ## Tagline
 
-Clarity in Every Community.
+Clarity in Community.
 
 ## Product descriptor
 
@@ -30,27 +30,24 @@ Avoid generic apartment-management slogans, decorative cultural motifs, a govern
 
 ## Colour
 
+Approved on 19 November 2026. Terracotta and forest green are not part of the palette.
+
 | Role | Value | Use |
 | --- | --- | --- |
-| Warm ivory | `#F7F5F0` | Page background and browser theme |
-| Deep ink | `#252525` | Primary text and the wordmark |
-| Terracotta | `#A65F49` | The mark and primary buttons. White text on this fill meets contrast for a button label. |
-| Terracotta ink | `#8C4E3B` | Small accent text. The candidate `#A65F49` is slightly under 4.5:1 on ivory, so links use this darker tone. |
-| Stone | `#EAE6DE` | Borders and selected navigation |
-| White | `#FFFFFF` | Form and list surfaces |
-| Muted | `#5C5852` | Secondary text. The candidate `#77736D` is under 4.5:1 on ivory, so body secondary text uses this darker stone. |
+| Navy | `#031D27` | Sign-in background, application chrome, browser theme |
+| Cyan | `#00D4E8` | Current navigation item and the mark on navy |
+| Blue | `#0878E8` | Primary buttons and the mark on white. White text on this blue is the button label. |
+| White | `#FFFFFF` | Cards, button labels, and text on navy |
 
-Manrope is used for the wordmark and headings. Inter is used for interface text. Amounts use tabular numerals.
+Module screens still use a light content surface (`#F7F5F0` and white) so existing tables stay readable. Amounts stay in the same ink as the surrounding text.
 
-Forest green is not part of the palette. A monochrome ink-and-ivory version was compared with terracotta. Terracotta is kept for the mark and primary actions because the ivory page would otherwise have no distinctive brand colour. It is not used for small body text.
-
-Do not introduce a second accent. Amounts stay in the same ink as the surrounding text so a colour is not doing the work of a number.
+Manrope is used for the wordmark and headings. Inter is used for interface text.
 
 ## Mark
 
-The mark is an open ring with one horizontal stroke. The ring stands for an assembly. The stroke stands for a line in a record. It is not a building, a seal, or a flag.
+The mark currently in the repository is an open ring with one horizontal stroke. The approved circular emblem of eight figures and a central S is not in the repository. Do not draw a substitute and call it that emblem. The ring is recolored blue or cyan until the emblem file is added.
 
-It is drawn in `currentColor` in the app and as a pine stroke in the default SVG, so the same geometry works on paper and on a dark bar.
+It is drawn in `currentColor` in the app.
 
 ## Assets
 

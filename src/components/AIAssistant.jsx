@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase, SOCIETY_ID } from "../lib/supabase";
 
-const btnPrimary = { background: "linear-gradient(135deg,#d97706,#f59e0b)", border: "none", borderRadius: 8, padding: "10px 18px", color: "#0d0f14", fontWeight: 700, cursor: "pointer", fontSize: 14 };
+const btnPrimary = { background: "#0878E8", border: "none", borderRadius: 8, padding: "10px 18px", color: "#FFFFFF", fontWeight: 700, cursor: "pointer", fontSize: 14 };
 
 const QUICK_PROMPTS = [
   "What are the rules for parking in Indian apartment societies?",
@@ -117,7 +117,7 @@ Be practical, specific to Indian context, and always cite relevant laws or norms
       <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 14, paddingRight: 4 }}>
         {messages.map((m, i) => (
           <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", flexDirection: m.role === "user" ? "row-reverse" : "row" }}>
-            <div style={{ width: 34, height: 34, borderRadius: 10, background: m.role === "user" ? "linear-gradient(135deg,#d97706,#f59e0b)" : "linear-gradient(135deg,#312e81,#4f46e5)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: m.role === "user" ? "#0878E8" : "#031D27", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>
               {m.role === "user" ? "👤" : "✨"}
             </div>
             <div style={{ maxWidth: "80%", background: m.role === "user" ? "#1e2535" : "#161b27", border: `1px solid ${m.role === "user" ? "#2a2f45" : "#818cf822"}`, borderRadius: m.role === "user" ? "14px 4px 14px 14px" : "4px 14px 14px 14px", padding: "12px 16px" }}>

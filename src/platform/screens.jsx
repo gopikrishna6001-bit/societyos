@@ -495,7 +495,7 @@ function Statements({ communityId, canPost, canReview }) {
               <button type="button" className="min-h-12 border border-slate-800 bg-white px-3" onClick={() => window.print()}>Print this view</button>
               {canPost && statement.status === "draft" && <button type="button" className="min-h-12 bg-[#252525] px-3 font-semibold text-white" onClick={() => { if (window.confirm("Submit this statement for auditor review?")) rpc("submit_statement", { p_statement: statement.id }).then(query.reload); }}>Submit for review</button>}
               {canReview && <button type="button" className="min-h-12 border border-slate-800 bg-white px-3" onClick={() => { if (window.confirm("Record this statement as verified?")) rpc("review_statement", { p_statement: statement.id, p_status: "verified", p_comments: "Reviewed in the app" }).then(query.reload); }}>Record review</button>}
-              {canPost && statement.status === "reconciled_and_reviewed" && <button type="button" className="min-h-12 bg-[#A65F49] px-3 font-semibold text-white" onClick={() => { if (window.confirm("Publish this statement? Residents will be able to read it.")) rpc("publish_statement", { p_statement: statement.id, p_with_exceptions: false }).then(query.reload); }}>Publish</button>}
+              {canPost && statement.status === "reconciled_and_reviewed" && <button type="button" className="min-h-12 bg-[#0878E8] px-3 font-semibold text-white" onClick={() => { if (window.confirm("Publish this statement? Residents will be able to read it.")) rpc("publish_statement", { p_statement: statement.id, p_with_exceptions: false }).then(query.reload); }}>Publish</button>}
               {canPost && (statement.status === "published" || statement.status === "published_with_exceptions") && <button type="button" className="min-h-12 border border-slate-800 bg-white px-3" onClick={() => { if (window.confirm("Publish a corrected version? Older versions stay on record.")) rpc("append_statement_version", { p_statement: statement.id, p_with_exceptions: false }).then(query.reload); }}>Publish a corrected version</button>}
             </div>
           </li>
@@ -524,7 +524,7 @@ export function ConcernsScreen({ communityId, roles }) {
     <section>
       <h2 className="mb-1 font-display text-xl font-semibold">Concerns</h2>
       <p className="mb-4 text-sm text-slate-400">A public concern can be read by residents. A private concern stays with you and the committee.</p>
-      <button type="button" className="min-h-12 w-full bg-[#A65F49] px-3 font-semibold text-white" onClick={() => setRaising((open) => !open)}>{raising ? "Close the form" : "Raise concern"}</button>
+      <button type="button" className="min-h-12 w-full bg-[#0878E8] px-3 font-semibold text-white" onClick={() => setRaising((open) => !open)}>{raising ? "Close the form" : "Raise concern"}</button>
       {raising && (
       <SaveForm submitLabel="Submit concern" onSubmit={(data) => rpc("create_ticket", {
         p_community: communityId,

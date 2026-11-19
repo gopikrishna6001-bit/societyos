@@ -78,13 +78,13 @@ Results below are from the review fixes on this branch. They are local. They are
 
 ## Interface
 
-The product name is SABHA. The sign-in screen shows the wordmark, “Clarity in Every Community.”, and “A transparent platform for community finances, decisions and accountability.” The primary sign-in is still email and password. It does not collect a mobile number, does not offer public registration, and does not send an OTP. There is no self-service password recovery screen. A replacement password is issued by the community administrator. The older phone sign-in remains at `/legacy` for communities that already stored a number. That sign-in no longer returns the phone number or PIN to the browser, and resident lists show only the last four digits.
+The product name is SABHA. The sign-in screen shows the wordmark, “Clarity in Community.”, and “A transparent platform for community finances, decisions and accountability.” The primary sign-in is still email and password. It does not collect a mobile number, does not offer public registration, and does not send an OTP. There is no self-service password recovery screen. A replacement password is issued by the community administrator. The older phone sign-in remains at `/legacy` for communities that already stored a number. That sign-in no longer returns the phone number or PIN to the browser, and resident lists show only the last four digits.
 
 ## Branding
 
 Checked on 19 November 2026. User-facing titles, the sign-in screens, the application shell, the profile line, the PWA manifest, the favicon, and the install icons now say SABHA. The strings live in `src/brand.js`. The mark and wordmark files are under `public/brand/`. Rules are in `docs/BRAND.md`.
 
-Authentication, role navigation, ledger functions, and row-level security were not changed. The browser title is `SABHA — Clarity in Every Community.` The manifest `name` and `short_name` are `SABHA`. A bad sign-in still shows an alert and leaves the Sign in button usable. `/legacy` still opens and shows the same wordmark. Logout and role navigation remain covered by `src/platform/session.test.jsx`.
+Authentication, role navigation, ledger functions, and row-level security were not changed. The browser title is `SABHA — Clarity in Community.` The manifest `name` and `short_name` are `SABHA`. A bad sign-in still shows an alert and leaves the Sign in button usable. `/legacy` still opens and shows the same wordmark. Logout and role navigation remain covered by `src/platform/session.test.jsx`.
 
 Names kept on purpose: the npm package `societyos`, `src/SocietyOS.jsx`, the storage key `societyos_auth`, the synthetic address `@societyos.app`, the local database `societyos_test`, the Pages hostname `societyos.pages.dev`, environment variable names, database objects, migration filenames, and the WhatsApp verify-token default.
 
@@ -92,7 +92,7 @@ Names kept on purpose: the npm package `societyos`, `src/SocietyOS.jsx`, the sto
 
 The resident, treasurer, and auditor shell is mobile-first. Below 1024px the primary bar is Home, Finance, Concerns, Meetings, and More. Documents, notifications, profile, and role-specific tools sit under More. A left sidebar appears from 1024px. The earlier Super Admin screens stay at `/legacy` and remain a desktop layout. They were not rebuilt.
 
-The palette is warm ivory, deep ink, stone, white, and terracotta. Forest green is removed. Secondary text uses `#5C5852` and small accent text uses `#8C4E3B` because the specified muted `#77736D` and terracotta `#A65F49` fall short of 4.5:1 on ivory. Terracotta remains the mark and the primary button colour. Headings use Manrope. Interface text uses Inter. Amounts use tabular numerals.
+The approved palette is navy `#031D27`, cyan `#00D4E8`, blue `#0878E8`, and white. Sign-in and the application chrome use it. Module interiors are still the earlier light surface so existing tables remain readable. The eight-figure emblem is not in the repository. Headings use Manrope. Interface text uses Inter.
 
 Home shows the posted fund balance, posted receipts, and posted payments. Those figures are the authorised ledger totals. They are not labelled as this calendar month, because the dashboard function does not return a month slice and a resident cannot see every collection. Latest statement, next meeting, open public concerns, and notifications come from the same dashboard function. Empty communities still show “No fund balances yet” and no rupee amount.
 
@@ -106,7 +106,7 @@ Checked on 19 November 2026 at 320, 360, 390, 430, 768, 1024, and 1440px on the 
 
 - `npm test` — Vitest 2.1.9, 4 files, 12 tests, all passed. The unconfigured screen asserts the SABHA heading and the tagline, and asserts that SocietyOS is not shown.
 - `npm run test:db` — exit 0, final line `database tests passed`.
-- `npm run build` — Vite 5.4.21, succeeded. The built `index.html` title is `SABHA — Clarity in Every Community.`
+- `npm run build` — Vite 5.4.21, succeeded. The built `index.html` title is `SABHA — Clarity in Community.`
 - Browser check of the production build: title and manifest name are SABHA, the sign-in heading and tagline render, a failed sign-in shows “Could not reach the server. Check your connection and try again.”, and `/legacy` shows the SABHA heading. The hosted Supabase host still does not resolve, so a real session was not created.
 
 ## Build status

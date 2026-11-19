@@ -345,7 +345,7 @@ Duplicate pairs stay visible until each has one backing table:
 
 ## 7. Mobile-first design architecture
 
-Not implemented. `src/brand.js` still says "Clarity in Every Community." Tailwind still maps slate and amber onto the ivory and terracotta palette (`tailwind.config.js`). Do not revert to forest green. The approved identity replaces terracotta when implementation starts.
+Phase 1 applied the tagline "Clarity in Community." and the navy, cyan, and blue chrome. See `docs/PHASE_1_ASSESSMENT.md`. The eight-figure emblem is still not in the repository. Do not revert to forest green or terracotta.
 
 ### Tokens to introduce
 

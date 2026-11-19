@@ -1,7 +1,7 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import { supabase } from "./lib/supabase.js";
 import { callAuth } from "./lib/authApi.js";
-import { brand } from "./brand.js";
+import { brand, colors } from "./brand.js";
 import Login from "./components/Login.jsx";
 import QueryStatus from "./components/QueryStatus.jsx";
 
@@ -71,7 +71,7 @@ const ROLE_NAV = {
 };
 
 const ROLE_COLORS = {
-  super_admin: "#f87171", president: "#f59e0b", secretary: "#818cf8",
+  super_admin: "#f87171", president: colors.cyan, secretary: "#818cf8",
   treasurer: "#4ade80", committee: "#38bdf8", resident: "#64748b", tenant: "#475569",
 };
 
@@ -166,7 +166,7 @@ export default function SocietyOS() {
     return (
       <div style={{ minHeight: "100vh", background: "#0d1117", fontFamily: "'DM Sans',system-ui,sans-serif" }}>
         <style>{`@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap'); * { box-sizing: border-box; }`}</style>
-        <div style={{ background: "#0a0d13", borderBottom: "1px solid #1e2535", padding: "0 16px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56, position: "sticky", top: 0, zIndex: 100 }}>
+        <div style={{ background: colors.navy, borderBottom: "1px solid #1e2535", padding: "0 16px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56, position: "sticky", top: 0, zIndex: 100 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true" style={{ color: "#f7f4ee" }}>
               <path d="M11.2 8.4a10.4 10.4 0 1 0 9.6 0" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" />
@@ -227,7 +227,7 @@ export default function SocietyOS() {
       `}</style>
 
       {/* Topbar */}
-      <div style={{ background: "#0a0d13", borderBottom: "1px solid #1e2535", padding: "0 16px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56, position: "sticky", top: 0, zIndex: 100 }}>
+      <div style={{ background: colors.navy, borderBottom: "1px solid #1e2535", padding: "0 16px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56, position: "sticky", top: 0, zIndex: 100 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true" style={{ color: "#f7f4ee" }}>
               <path d="M11.2 8.4a10.4 10.4 0 1 0 9.6 0" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" />
@@ -282,7 +282,7 @@ export default function SocietyOS() {
                     value={confirmPin} onChange={e => setConfirmPin(e.target.value.replace(/\D/g,"").slice(0,4))} />
                   {pinMsg && <div style={{ color: pinMsg.startsWith("✓") ? "#4ade80" : "#f87171", fontSize: 11, textAlign: "center" }}>{pinMsg}</div>}
                   <button onClick={changePin} disabled={changingPin || newPin.length < 4}
-                    style={{ background: "linear-gradient(135deg,#d97706,#f59e0b)", border: "none", borderRadius: 8, padding: "8px", color: "#0d0f14", fontWeight: 700, cursor: "pointer", fontSize: 13, opacity: newPin.length < 4 ? 0.5 : 1 }}>
+                    style={{ background: colors.blue, border: "none", borderRadius: 8, padding: "8px", color: colors.white, fontWeight: 700, cursor: "pointer", fontSize: 13, opacity: newPin.length < 4 ? 0.5 : 1 }}>
                     {changingPin ? "Saving…" : "Update PIN"}
                   </button>
                 </div>
@@ -297,10 +297,10 @@ export default function SocietyOS() {
 
       <div style={{ display: "flex" }}>
         {!isMobile && (
-          <div style={{ width: 220, background: "#0a0d13", borderRight: "1px solid #1e2535", minHeight: "calc(100vh - 56px)", padding: "16px 12px", position: "sticky", top: 56, height: "calc(100vh - 56px)", overflowY: "auto", flexShrink: 0 }}>
+          <div style={{ width: 220, background: colors.navy, borderRight: "1px solid #1e2535", minHeight: "calc(100vh - 56px)", padding: "16px 12px", position: "sticky", top: 56, height: "calc(100vh - 56px)", overflowY: "auto", flexShrink: 0 }}>
             {navItems.map(item => (
               <button key={item.id} onClick={() => setTab(item.id)}
-                style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 10, border: "none", background: tab === item.id ? "#1e2535" : "none", color: tab === item.id ? "#f59e0b" : "#64748b", cursor: "pointer", fontSize: 13, fontWeight: tab === item.id ? 700 : 500, marginBottom: 2, textAlign: "left" }}>
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 10, border: "none", background: tab === item.id ? "#1e2535" : "none", color: tab === item.id ? colors.cyan : "#64748b", cursor: "pointer", fontSize: 13, fontWeight: tab === item.id ? 700 : 500, marginBottom: 2, textAlign: "left" }}>
                 <span>{item.icon}</span>
                 <span style={{ flex: 1 }}>{item.label}</span>
               </button>
@@ -325,23 +325,23 @@ export default function SocietyOS() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
                 {moreNav.map(item => (
                   <button key={item.id} onClick={() => { setTab(item.id); setShowMore(false); }}
-                    style={{ background: tab === item.id ? "#1e2535" : "#0d1117", border: `1px solid ${tab === item.id ? "#f59e0b44" : "#2a2f45"}`, borderRadius: 12, padding: "14px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                    style={{ background: tab === item.id ? "#1e2535" : "#0d1117", border: `1px solid ${tab === item.id ? `${colors.cyan}44` : "#2a2f45"}`, borderRadius: 12, padding: "14px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer" }}>
                     <span style={{ fontSize: 20 }}>{item.icon}</span>
-                    <span style={{ color: tab === item.id ? "#f59e0b" : "#64748b", fontSize: 10, fontWeight: 600, textAlign: "center" }}>{item.label}</span>
+                    <span style={{ color: tab === item.id ? colors.cyan : "#64748b", fontSize: 10, fontWeight: 600, textAlign: "center" }}>{item.label}</span>
                   </button>
                 ))}
               </div>
             </div>
           )}
-          <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#0a0d13", borderTop: "1px solid #1e2535", zIndex: 200, display: "flex", height: 66 }}>
+          <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: colors.navy, borderTop: "1px solid #1e2535", zIndex: 200, display: "flex", height: 66 }}>
             {primaryNav.map(item => {
               const isActive = tab === item.id && !showMore;
               return (
                 <button key={item.id} onClick={() => { setTab(item.id); setShowMore(false); }}
                   style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, border: "none", background: "none", cursor: "pointer", position: "relative" }}>
                   <span style={{ fontSize: 18 }}>{item.icon}</span>
-                  <span style={{ fontSize: 9, fontWeight: isActive ? 700 : 400, color: isActive ? "#f59e0b" : "#475569" }}>{item.label}</span>
-                  {isActive && <div style={{ position: "absolute", bottom: 0, width: 20, height: 2, background: "#f59e0b", borderRadius: 1 }} />}
+                  <span style={{ fontSize: 9, fontWeight: isActive ? 700 : 400, color: isActive ? colors.cyan : "#475569" }}>{item.label}</span>
+                  {isActive && <div style={{ position: "absolute", bottom: 0, width: 20, height: 2, background: colors.cyan, borderRadius: 1 }} />}
                 </button>
               );
             })}
@@ -349,7 +349,7 @@ export default function SocietyOS() {
               <button onClick={() => setShowMore(p => !p)}
                 style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, border: "none", background: "none", cursor: "pointer" }}>
                 <span style={{ fontSize: 18 }}>⋯</span>
-                <span style={{ fontSize: 9, fontWeight: showMore ? 700 : 400, color: showMore ? "#f59e0b" : "#475569" }}>More</span>
+                <span style={{ fontSize: 9, fontWeight: showMore ? 700 : 400, color: showMore ? colors.cyan : "#475569" }}>More</span>
               </button>
             )}
           </div>

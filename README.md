@@ -1,6 +1,6 @@
 # SABHA
 
-Clarity in Every Community.
+Clarity in Community.
 
 SABHA is a Community Governance & Transparency Platform. Every rupee. Every decision. Accounted for.
 

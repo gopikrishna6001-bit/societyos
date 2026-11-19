@@ -18,7 +18,7 @@ export default function Platform() {
 function ConfigRequired() {
   return (
     <main className="mx-auto max-w-lg px-4 py-16">
-      <div className="flex items-center gap-3 text-[#A65F49]">
+      <div className="flex items-center gap-3 text-[#0878E8]">
         <Mark size={36} />
         <h1 className="text-4xl font-semibold tracking-[0.14em] text-slate-100">{brand.name}</h1>
       </div>
@@ -76,7 +76,7 @@ function AuthScreen() {
   };
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-10">
-      <div className="flex items-center gap-3 text-[#A65F49]">
+      <div className="flex items-center gap-3 text-[#0878E8]">
         <Mark size={40} />
         <h1 className="text-4xl font-semibold tracking-[0.14em] text-slate-100">{brand.name}</h1>
       </div>
@@ -285,9 +285,9 @@ function Shell({ email, community, communities, communityId, onCommunity, roles,
       <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-800 bg-white pb-[env(safe-area-inset-bottom)] lg:hidden" aria-label="Mobile">
         <div className="grid grid-cols-5">
           {primary.map(([id, label]) => (
-            <button key={id} type="button" aria-current={current === id ? "page" : undefined} className={`min-h-12 px-1 py-2 text-center text-xs leading-tight ${current === id ? "font-semibold text-[#8C4E3B]" : ""}`} onClick={() => openPage(id)}>{label}</button>
+            <button key={id} type="button" aria-current={current === id ? "page" : undefined} className={`min-h-12 px-1 py-2 text-center text-xs leading-tight ${current === id ? "font-semibold text-[#0878E8]" : ""}`} onClick={() => openPage(id)}>{label}</button>
           ))}
-          <button type="button" className={`min-h-12 px-1 py-2 text-center text-xs ${moreOpen || overflow.some(([id]) => id === page) ? "font-semibold text-[#8C4E3B]" : ""}`} aria-expanded={moreOpen} onClick={() => setMoreOpen((open) => !open)}>More</button>
+          <button type="button" className={`min-h-12 px-1 py-2 text-center text-xs ${moreOpen || overflow.some(([id]) => id === page) ? "font-semibold text-[#0878E8]" : ""}`} aria-expanded={moreOpen} onClick={() => setMoreOpen((open) => !open)}>More</button>
         </div>
         {moreOpen && (
           <div className="absolute bottom-full right-2 mb-2 grid max-h-80 w-56 gap-1 overflow-auto border border-slate-800 bg-white p-2">

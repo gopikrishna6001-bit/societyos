@@ -2,7 +2,7 @@
 
 SABHA is a Community Governance & Transparency Platform. The repository was first built as SocietyOS. That earlier name remains on internal files and database objects. The product name is SABHA.
 
-Tagline: Clarity in Every Community.
+Tagline: Clarity in Community.
 
 Brand promise: Every rupee. Every decision. Accounted for.
 
