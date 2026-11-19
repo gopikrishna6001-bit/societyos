@@ -16,10 +16,9 @@ export default function Platform() {
 function ConfigRequired() {
   return (
     <main className="mx-auto max-w-lg px-4 py-16">
-      <p className="text-sm uppercase tracking-wide text-amber-300">Apartment transparency</p>
-      <h1 className="mt-2 text-3xl font-semibold">Every Rupee. Every Decision. Every Concern.</h1>
-      <p className="mt-4 text-slate-300">Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY, apply the migration, then sign in. No sample balances are shown.</p>
-      <Link className="mt-6 inline-block text-amber-300" to="/legacy">Open the earlier SocietyOS screens</Link>
+      <h1 className="text-3xl font-semibold leading-tight">Every Rupee. Every Decision. Every Concern.</h1>
+      <p className="mt-4 text-slate-400">Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY, apply the migration, then sign in. No sample balances are shown.</p>
+      <Link className="mt-6 inline-block font-semibold text-amber-300" to="/legacy">Open the earlier SocietyOS screens</Link>
     </main>
   );
 }
@@ -53,22 +52,16 @@ function SignedInApp() {
 }
 
 function AuthScreen() {
-  const [mode, setMode] = useState("sign-in");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
-  const [notice, setNotice] = useState("");
   const submit = async (event) => {
     event.preventDefault();
     const data = Object.fromEntries(new FormData(event.currentTarget));
     setPending(true);
     setError("");
-    setNotice("");
     try {
-      const result = mode === "sign-in"
-        ? await supabase.auth.signInWithPassword({ email: data.email, password: data.password })
-        : await supabase.auth.signUp({ email: data.email, password: data.password, options: { data: { full_name: data.name } } });
+      const result = await supabase.auth.signInWithPassword({ email: data.email, password: data.password });
       if (result.error) throw new Error(result.error.message);
-      if (mode === "register" && !result.data.session) setNotice("Account created. Confirm the email if the project requires it, then sign in.");
     } catch (cause) {
       setError(explain(cause));
     } finally {
@@ -76,22 +69,18 @@ function AuthScreen() {
     }
   };
   return (
-    <main className="mx-auto max-w-md px-4 py-12">
-      <h1 className="text-3xl font-semibold">Every Rupee. Every Decision. Every Concern.</h1>
-      <p className="mt-2 text-sm text-slate-400">Sign in with the email on your community membership. Roles come from the community, not from the sign-in form.</p>
-      <form className="mt-6 grid gap-3" onSubmit={submit}>
-        {mode === "register" && <Field label="Name"><input className={control} name="name" required /></Field>}
-        <Field label="Email"><input className={control} type="email" name="email" required /></Field>
-        <Field label="Password"><input className={control} type="password" name="password" minLength={8} required /></Field>
+    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-10">
+      <h1 className="text-3xl font-semibold leading-tight">Every Rupee. Every Decision. Every Concern.</h1>
+      <p className="mt-3 text-sm text-slate-400">Sign in with the email your community issued. Roles come from the community, not from this form.</p>
+      <form className="mt-6 grid gap-3 rounded-xl border border-slate-800 bg-slate-900 p-4 shadow-card" onSubmit={submit}>
+        <Field label="Email"><input className={control} type="email" name="email" autoComplete="username" required /></Field>
+        <Field label="Password"><input className={control} type="password" name="password" autoComplete="current-password" minLength={8} required /></Field>
         {error && <p role="alert" className="text-sm text-red-300">{error}</p>}
-        {notice && <p className="text-sm text-slate-300">{notice}</p>}
-        <button disabled={pending} className="rounded-lg bg-amber-500 px-3 py-2 font-semibold text-slate-950 disabled:opacity-60" type="submit">
-          {pending ? "Please wait…" : mode === "sign-in" ? "Sign in" : "Create account"}
+        <button disabled={pending} className="min-h-12 rounded-lg bg-amber-500 px-3 py-3 font-semibold text-white disabled:opacity-60" type="submit">
+          {pending ? "Please wait…" : "Sign in"}
         </button>
       </form>
-      <button type="button" className="mt-4 text-sm text-amber-300" onClick={() => setMode(mode === "sign-in" ? "register" : "sign-in")}>
-        {mode === "sign-in" ? "Need an account?" : "Already registered?"}
-      </button>
+      <p className="mt-4 text-sm text-slate-400">This sign-in does not ask for a mobile number and does not send an OTP. Accounts are created by the community, not from a public registration form.</p>
     </main>
   );
 }
@@ -153,7 +142,7 @@ function Setup({ onCreated }) {
         <Field label="Committee can approve up to"><input className={control} name="committee" inputMode="decimal" required /></Field>
         <Field label="Statement due day"><input className={control} name="due" type="number" min="1" max="28" defaultValue="10" /></Field>
         {error && <p role="alert" className="text-sm text-red-300">{error}</p>}
-        <button disabled={pending} className="rounded-lg bg-amber-500 px-3 py-2 font-semibold text-slate-950" type="submit">{pending ? "Saving…" : "Create community"}</button>
+        <button disabled={pending} className="min-h-12 rounded-lg bg-amber-500 px-3 py-3 font-semibold text-white" type="submit">{pending ? "Saving…" : "Create community"}</button>
       </form>
     </main>
   );
@@ -203,47 +192,65 @@ function navigation(roles) {
   ];
 }
 
+function roleLabel(roles) {
+  const names = {
+    platform_admin: "Platform admin",
+    committee_admin: "Committee",
+    treasurer: "Treasurer",
+    resident_auditor: "Auditor",
+    resident: "Resident",
+  };
+  return roles.map((role) => names[role] || role).join(" · ");
+}
+
 function Shell({ email, community, communities, communityId, onCommunity, roles, onSignOut }) {
   const items = navigation(roles);
   const [page, setPage] = useState(items[0][0]);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const primary = items.slice(0, 4);
+  const overflow = items.slice(4);
   const unique = [...new Map(communities.map((row) => [row.community_id, row])).values()];
+  const openPage = (id) => { setPage(id); setMoreOpen(false); };
+  const itemClass = (id) => `min-h-12 rounded-lg px-3 py-2 text-left text-sm ${page === id ? "bg-[#d7efe8] font-semibold text-[#06281f]" : ""}`;
   return (
-    <div className="min-h-screen md:grid md:grid-cols-[240px_1fr]">
-      <nav className="hidden border-r border-slate-800 p-4 md:block" aria-label="Primary">
-        <p className="text-xs uppercase tracking-wide text-amber-300">SocietyOS</p>
-        <p className="mt-1 font-semibold">{community?.name}</p>
+    <div className="min-h-screen bg-slate-950 text-slate-100 md:grid md:grid-cols-[220px_minmax(0,1fr)]">
+      <nav className="hidden border-r border-slate-800 bg-slate-900 p-4 md:block" aria-label="Primary">
+        <p className="font-semibold">SocietyOS</p>
+        <p className="mt-1 text-sm text-slate-400">{community?.name}</p>
         <div className="mt-4 grid gap-1">
           {items.map(([id, label]) => (
-            <button key={id} type="button" className={`rounded-lg px-3 py-2 text-left text-sm ${page === id ? "bg-slate-800" : ""}`} onClick={() => setPage(id)}>{label}</button>
+            <button key={id} type="button" className={itemClass(id)} onClick={() => openPage(id)}>{label}</button>
           ))}
         </div>
       </nav>
-      <div className="pb-24 md:pb-6">
-        <header className="flex items-center justify-between gap-3 border-b border-slate-800 px-4 py-3">
-          <div>
-            <p className="text-xs text-slate-400">Every Rupee. Every Decision. Every Concern.</p>
-            <p className="font-semibold">{community?.name}</p>
+      <div className="pb-24 md:pb-8">
+        <header className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-slate-800 bg-slate-950 px-4 py-3">
+          <div className="min-w-0">
+            <p className="truncate text-lg font-semibold leading-tight">{community?.name}</p>
+            <p className="truncate text-sm text-slate-400">{roleLabel(roles)}</p>
           </div>
           {unique.length > 1 && (
-            <select className={control} value={communityId} onChange={(event) => onCommunity(event.target.value)} aria-label="Community">
+            <select className={`${control} max-w-[46%]`} value={communityId} onChange={(event) => onCommunity(event.target.value)} aria-label="Community">
               {unique.map((row) => <option key={row.community_id} value={row.community_id}>{row.communities?.name}</option>)}
             </select>
           )}
         </header>
-        <main className="px-4 py-5">
+        <main className="mx-auto w-full max-w-5xl px-4 py-5">
           <Screen page={page} communityId={communityId} roles={roles} email={email} onSignOut={onSignOut} />
         </main>
       </div>
-      <nav className="fixed inset-x-0 bottom-0 flex gap-1 overflow-x-auto border-t border-slate-800 bg-slate-950 p-2 md:hidden" aria-label="Mobile">
-        {items.slice(0, 5).map(([id, label]) => (
-          <button key={id} type="button" className={`shrink-0 rounded-lg px-3 py-2 text-xs ${page === id ? "bg-slate-800" : ""}`} onClick={() => setPage(id)}>{label}</button>
-        ))}
-        <details className="shrink-0">
-          <summary className="cursor-pointer rounded-lg px-3 py-2 text-xs">More</summary>
-          <div className="absolute bottom-14 right-2 grid max-h-80 gap-1 overflow-auto rounded-xl border border-slate-700 bg-slate-950 p-2">
-            {items.slice(5).map(([id, label]) => <button key={id} type="button" className="rounded-lg px-3 py-2 text-left text-sm" onClick={() => setPage(id)}>{label}</button>)}
+      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-800 bg-slate-900 pb-[env(safe-area-inset-bottom)] md:hidden" aria-label="Mobile">
+        <div className="grid grid-cols-5">
+          {primary.map(([id, label]) => (
+            <button key={id} type="button" className={`min-h-14 px-1 py-2 text-center text-xs leading-tight ${page === id ? "bg-[#d7efe8] font-semibold text-[#06281f]" : ""}`} onClick={() => openPage(id)}>{label}</button>
+          ))}
+          <button type="button" className="min-h-14 px-1 py-2 text-center text-xs" aria-expanded={moreOpen} onClick={() => setMoreOpen((open) => !open)}>More</button>
+        </div>
+        {moreOpen && (
+          <div className="absolute bottom-full right-2 mb-2 grid max-h-80 w-52 gap-1 overflow-auto rounded-xl border border-slate-800 bg-slate-900 p-2 shadow-card">
+            {overflow.map(([id, label]) => <button key={id} type="button" className={itemClass(id)} onClick={() => openPage(id)}>{label}</button>)}
           </div>
-        </details>
+        )}
       </nav>
     </div>
   );

@@ -72,7 +72,22 @@ serve(async (req) => {
       const cr = resident.committee_members?.[0]?.role;
       const role = resident.is_super_admin ? "super_admin" : cr === "President" ? "president" : cr === "Secretary" ? "secretary" : cr === "Treasurer" ? "treasurer" : cr ? "committee" : resident.type === "tenant" ? "tenant" : "resident";
 
-      return json({ session: si.session, resident: { id: resident.id, name: resident.name, flat_number: resident.flat_number, block: resident.block, phone: resident.phone, type: resident.type, society_id: resident.society_id, is_super_admin: resident.is_super_admin, pin_changed: resident.pin_changed, committee_members: resident.committee_members }, role, first_login: !resident.pin_changed });
+      return json({
+        session: si.session,
+        resident: {
+          id: resident.id,
+          name: resident.name,
+          flat_number: resident.flat_number,
+          block: resident.block,
+          type: resident.type,
+          society_id: resident.society_id,
+          is_super_admin: resident.is_super_admin,
+          pin_changed: resident.pin_changed,
+          committee_members: resident.committee_members,
+        },
+        role,
+        first_login: !resident.pin_changed,
+      });
     }
 
     if (action === "reset_pin") {

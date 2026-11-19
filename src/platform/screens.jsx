@@ -53,7 +53,7 @@ export function HomeScreen({ communityId }) {
 function Card({ label, value }) {
   return (
     <article className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-      <p className="text-xs uppercase tracking-wide text-slate-400">{label}</p>
+      <p className="text-sm text-slate-400">{label}</p>
       <p className="mt-2 text-2xl font-semibold">{value}</p>
     </article>
   );

@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase, SOCIETY_ID } from "../lib/supabase";
+import { maskPhone } from "../lib/privacy";
 import QueryStatus from "./QueryStatus.jsx";
 import { raiseOnError } from "../lib/async.js";
 
@@ -435,7 +436,7 @@ export default function Finances() {
                   <span style={{ color: "#fbbf24", fontWeight: 700, fontSize: 13 }}>{inv.flat_number}</span>
                   <div>
                     <div style={{ color: "#e2e8f0", fontSize: 13 }}>{res?.name || "—"}</div>
-                    <div style={{ color: "#475569", fontSize: 11 }}>{res?.phone}</div>
+                    <div style={{ color: "#475569", fontSize: 11 }}>{maskPhone(res?.phone)}</div>
                   </div>
                   <span style={{ color: "#e2e8f0", fontSize: 13 }}>{fmt(inv.total_amount)}</span>
                   <span style={{ color: "#4ade80", fontSize: 13, fontWeight: 600 }}>{fmt(inv.amount_paid)}</span>

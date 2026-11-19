@@ -1,6 +1,7 @@
 // src/components/WhatsAppCentre.jsx
 import { useState, useEffect } from "react";
 import { supabase, SOCIETY_ID } from "../lib/supabase";
+import { maskPhone } from "../lib/privacy";
 import QueryStatus from "./QueryStatus.jsx";
 import { raiseOnError } from "../lib/async.js";
 
@@ -244,7 +245,7 @@ export default function WhatsAppCentre() {
                   <div key={r.id} style={{ background: "#161b27", border: "1px solid #2a2f45", borderRadius: 10, padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
                       <span style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 600 }}>{r.name}</span>
-                      <span style={{ color: "#475569", fontSize: 12, marginLeft: 8 }}>Flat {r.flat_number} · {r.phone}</span>
+                      <span style={{ color: "#475569", fontSize: 12, marginLeft: 8 }}>Flat {r.flat_number} · {maskPhone(r.phone)}</span>
                     </div>
                     <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                       <span style={{ color: r.whatsapp_opt_in ? "#25d366" : "#f87171", fontSize: 12, fontWeight: 700 }}>{r.whatsapp_opt_in ? "✓ Opted In" : "✗ Opted Out"}</span>

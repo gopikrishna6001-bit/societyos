@@ -1,6 +1,7 @@
 // src/components/Committee.jsx
 import { useState, useEffect } from "react";
 import { supabase, SOCIETY_ID } from "../lib/supabase";
+import { maskPhone } from "../lib/privacy";
 import QueryStatus from "./QueryStatus.jsx";
 import { raiseOnError } from "../lib/async.js";
 
@@ -188,7 +189,7 @@ Write a professional 3-4 paragraph report suitable for AGM records. Include key 
                         <div style={{ flex: 1 }}>
                           <div style={{ color: "#e2e8f0", fontSize: 14, fontWeight: 700 }}>{m.residents?.name}</div>
                           <div style={{ color: "#475569", fontSize: 12 }}>Flat {m.residents?.flat_number}</div>
-                          <div style={{ color: "#475569", fontSize: 11 }}>{m.residents?.phone}</div>
+                          <div style={{ color: "#475569", fontSize: 11 }}>{maskPhone(m.residents?.phone)}</div>
                         </div>
                       </div>
 

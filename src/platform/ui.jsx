@@ -5,16 +5,16 @@ export function PageStatus({ loading, error, onRetry, empty, title, body }) {
   if (loading) return <p className="text-slate-400">Loading…</p>;
   if (error) {
     return (
-      <div role="alert" className="rounded-xl border border-red-900 bg-red-950/40 p-4">
+      <div role="alert" className="rounded-xl border border-red-900 bg-red-950 p-4">
         <p className="font-semibold text-red-300">Could not load this page</p>
-        <p className="mt-1 text-sm text-slate-300">{error}</p>
-        {onRetry && <button type="button" className="mt-3 rounded-lg border border-slate-600 px-3 py-2 text-sm" onClick={onRetry}>Retry</button>}
+        <p className="mt-1 text-sm text-slate-400">{error}</p>
+        {onRetry && <button type="button" className="mt-3 min-h-11 rounded-lg border border-slate-700 bg-white px-3 py-2 text-sm" onClick={onRetry}>Retry</button>}
       </div>
     );
   }
   if (empty) {
     return (
-      <div className="rounded-xl border border-slate-700 p-4">
+      <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
         <p className="font-semibold">{title || "Nothing here yet"}</p>
         {body && <p className="mt-1 text-sm text-slate-400">{body}</p>}
       </div>
@@ -46,14 +46,14 @@ export function Field({ label, children }) {
   );
 }
 
-export const control = "w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100";
+export const control = "w-full min-h-12 rounded-lg border border-slate-800 bg-white px-3 py-3 text-base text-slate-100";
 
 export function SaveForm({ onSubmit, submitLabel = "Save", children }) {
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   return (
     <form
-      className="grid gap-3 rounded-xl border border-slate-800 p-4"
+      className="grid gap-3 rounded-xl border border-slate-800 bg-slate-900 p-4 shadow-card"
       onSubmit={async (event) => {
         event.preventDefault();
         const data = Object.fromEntries(new FormData(event.currentTarget));
@@ -71,7 +71,7 @@ export function SaveForm({ onSubmit, submitLabel = "Save", children }) {
     >
       {children}
       {error && <p role="alert" className="text-sm text-red-300">{error}</p>}
-      <button type="submit" disabled={pending} className="rounded-lg bg-amber-500 px-3 py-2 font-semibold text-slate-950 disabled:opacity-60">
+      <button type="submit" disabled={pending} className="min-h-12 rounded-lg bg-amber-500 px-3 py-3 font-semibold text-white disabled:opacity-60">
         {pending ? "Saving…" : submitLabel}
       </button>
     </form>

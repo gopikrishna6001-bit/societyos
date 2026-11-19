@@ -2,6 +2,7 @@
 // Simplified view for residents - only what they need
 import { useState, useEffect } from "react";
 import { supabase, SOCIETY_ID } from "../lib/supabase";
+import { maskPhone } from "../lib/privacy";
 import QueryStatus from "./QueryStatus.jsx";
 import { raiseOnError } from "../lib/async.js";
 
@@ -112,7 +113,7 @@ export default function ResidentPortal({ flatNumber, onExitResidentView }) {
           <div>
             <div style={{ color: "#e2e8f0", fontSize: 16, fontWeight: 700 }}>{data?.resident?.name || `Flat ${flatNumber}`}</div>
             <div style={{ color: "#fbbf24", fontSize: 12 }}>Flat {flatNumber} · {data?.resident?.type || "Resident"}</div>
-            <div style={{ color: "#475569", fontSize: 11 }}>{data?.resident?.phone}</div>
+            <div style={{ color: "#475569", fontSize: 11 }}>{maskPhone(data?.resident?.phone)}</div>
           </div>
         </div>
         <div style={{ display: "flex", gap: 8 }}>

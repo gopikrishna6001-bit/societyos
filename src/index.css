@@ -1,10 +1,62 @@
+@import "@fontsource/source-sans-3/400.css";
+@import "@fontsource/source-sans-3/600.css";
+@import "@fontsource/source-sans-3/700.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  color-scheme: light;
+}
+
+html {
+  background: #f7f4ee;
+}
+
 body {
   margin: 0;
-  background: #0f1419;
-  color: #e2e8f0;
-  font-family: "Segoe UI", system-ui, sans-serif;
+  background: #f7f4ee;
+  color: #1c1917;
+  font-family: "Source Sans 3", sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+::selection {
+  background: #d7efe8;
+  color: #06281f;
+}
+
+:focus-visible {
+  outline: 2px solid #0f6b56;
+  outline-offset: 2px;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+table {
+  font-variant-numeric: tabular-nums;
+}
+
+h1,
+h2 {
+  text-wrap: balance;
+}
+
+input,
+select,
+textarea {
+  background: #fffdf8;
+  color: #1c1917;
+}
+
+::placeholder {
+  color: #5c534a;
+  opacity: 1;
 }

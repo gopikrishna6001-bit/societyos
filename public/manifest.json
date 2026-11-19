@@ -4,8 +4,8 @@
   "description": "Apartment transparency and accountability. Every rupee, decision, and concern.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0d1117",
-  "theme_color": "#f59e0b",
+  "background_color": "#f7f4ee",
+  "theme_color": "#0f6b56",
   "orientation": "portrait-primary",
   "icons": [
     { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },

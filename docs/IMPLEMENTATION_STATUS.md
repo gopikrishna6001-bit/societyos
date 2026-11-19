@@ -76,6 +76,10 @@ Results below are from the review fixes on this branch. They are local. They are
 - `npm run build` — Vite 5.4.21, succeeded in 1.50s, no JSX warning. Largest chunks: `index` 182.07 kB (gzip 59.96 kB), `supabase` 176.73 kB (gzip 46.68 kB), `Platform` 51.45 kB (gzip 12.81 kB).
 - GitHub CI on `0884f8f` had one check, Cloudflare Pages, and it succeeded. There was no failing check to repair. The review commit starts a new Pages deployment. Playwright was not re-run: the smoke path is the unconfigured sign-in screen, and these fixes sit behind an authenticated session.
 
+## Interface
+
+The primary sign-in is email and password on a light, mobile-width layout. It does not collect a mobile number, does not offer public registration, and does not send an OTP. The older phone sign-in remains at `/legacy` for communities that already stored a number. That sign-in no longer returns the phone number or PIN to the browser, and resident lists show only the last four digits.
+
 ## Build status
 
 Production build succeeds.

@@ -1,6 +1,7 @@
 // src/components/Residents.jsx
 import { useState, useEffect } from "react";
 import { supabase, SOCIETY_ID } from "../lib/supabase";
+import { maskPhone } from "../lib/privacy";
 import QueryStatus from "./QueryStatus.jsx";
 import { raiseOnError } from "../lib/async.js";
 
@@ -251,7 +252,7 @@ export default function Residents() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ color: "#e2e8f0", fontSize: 14, fontWeight: 700, marginBottom: 2 }}>{r.name}</div>
                     <div style={{ color: "#fbbf24", fontSize: 12, fontWeight: 600 }}>Flat {r.flat_number}</div>
-                    <div style={{ color: "#475569", fontSize: 11 }}>{r.phone}</div>
+                    <div style={{ color: "#475569", fontSize: 11 }}>{maskPhone(r.phone)}</div>
                   </div>
                   <div style={{ textAlign: "right", flexShrink: 0 }}>
                     <div style={{ color: hColor, fontSize: 18, fontWeight: 900 }}>{harmony}</div>

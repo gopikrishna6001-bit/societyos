@@ -99,6 +99,11 @@ export default function SocietyOS() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
+        if (parsed?.resident) {
+          delete parsed.resident.phone;
+          delete parsed.resident.pin;
+          localStorage.setItem("societyos_auth", JSON.stringify(parsed));
+        }
         setAuth(parsed);
         loadSocietyName(parsed.resident?.society_id);
       } catch(e) {}
@@ -118,8 +123,12 @@ export default function SocietyOS() {
   };
 
   const handleLogin = async (authData) => {
-    setAuth(authData);
-    localStorage.setItem("societyos_auth", JSON.stringify(authData));
+    const resident = { ...(authData.resident || {}) };
+    delete resident.phone;
+    delete resident.pin;
+    const stored = { ...authData, resident };
+    setAuth(stored);
+    localStorage.setItem("societyos_auth", JSON.stringify(stored));
     await loadSocietyName(authData.resident?.society_id);
     if (authData.role === "treasurer") setTab("finances");
     else setTab("dashboard");
@@ -253,7 +262,7 @@ export default function SocietyOS() {
               <div onClick={e => e.stopPropagation()} style={{ position: "absolute", right: 0, top: 42, background: "#161b27", border: "1px solid #2a2f45", borderRadius: 14, padding: 16, width: 240, zIndex: 200, boxShadow: "0 8px 32px rgba(0,0,0,0.4)" }}>
                 <div style={{ marginBottom: 14, paddingBottom: 14, borderBottom: "1px solid #2a2f45" }}>
                   <div style={{ color: "#e2e8f0", fontSize: 14, fontWeight: 700 }}>{resident.name}</div>
-                  <div style={{ color: "#475569", fontSize: 12, marginTop: 2 }}>Flat {resident.flat_number} · {resident.phone}</div>
+                  <div style={{ color: "#475569", fontSize: 12, marginTop: 2 }}>Flat {resident.flat_number}</div>
                   <div style={{ color: ROLE_COLORS[role], fontSize: 11, fontWeight: 700, marginTop: 4 }}>{ROLE_LABELS[role]}</div>
                 </div>
                 <div style={{ marginBottom: 8, color: "#94a3b8", fontSize: 12, fontWeight: 600 }}>Change PIN</div>
