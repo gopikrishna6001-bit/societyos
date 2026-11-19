@@ -1,12 +1,16 @@
 import { brand } from "../brand.js";
 
 export function Mark({ size = 28, title }) {
+  const label = title || "";
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" role={title ? "img" : "presentation"} aria-hidden={title ? undefined : true} aria-label={title || undefined}>
-      {title ? <title>{title}</title> : null}
-      <path d="M11.2 8.4a10.4 10.4 0 1 0 9.6 0" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" />
-      <path d="M11 18.75h10" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" />
-    </svg>
+    <img
+      src="/brand/sabha-logo.png"
+      width={size}
+      height={size}
+      alt={label}
+      aria-hidden={label ? undefined : true}
+      style={{ width: size, height: size, borderRadius: "50%", display: "block", objectFit: "cover" }}
+    />
   );
 }
 
@@ -14,7 +18,7 @@ export function Wordmark({ tone = "ink", markSize = 28 }) {
   const color = tone === "light" ? "#f7f4ee" : "#1c1917";
   return (
     <span className="inline-flex items-center gap-2 font-display" style={{ color }}>
-      <span className="text-[#0878E8]"><Mark size={markSize} /></span>
+      <Mark size={markSize} />
       <span className="font-semibold tracking-[0.14em]">{brand.name}</span>
     </span>
   );

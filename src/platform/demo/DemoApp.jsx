@@ -102,7 +102,7 @@ function Shell() {
     <div className="app-shell">
       <aside className="app-sidebar">
         <div className="app-brand">
-          <Mark size={28} />
+          <Mark size={40} />
           <strong>{brand.name}</strong>
         </div>
         <p>{brand.tagline}</p>
@@ -118,7 +118,7 @@ function Shell() {
       <div className="app-column">
         <header className="app-header">
           <div className="app-header-title">
-            <span className="app-header-mark"><Mark size={22} /></span>
+            <span className="app-header-mark"><Mark size={36} /></span>
             <span>
               <strong>{brand.name}</strong>
               <small>{community.name}</small>

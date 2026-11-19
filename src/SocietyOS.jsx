@@ -1,6 +1,7 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import { supabase } from "./lib/supabase.js";
 import { brand, colors } from "./brand.js";
+import { Mark } from "./brand/Mark.jsx";
 import { RESIDENT_READ_COLUMNS, roleFromResident } from "./lib/residentAccess.js";
 import Login from "./components/Login.jsx";
 import QueryStatus from "./components/QueryStatus.jsx";
@@ -186,10 +187,7 @@ export default function SocietyOS() {
         <style>{`@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap'); * { box-sizing: border-box; }`}</style>
         <div style={{ background: colors.navy, borderBottom: "1px solid #1e2535", padding: "0 16px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56, position: "sticky", top: 0, zIndex: 100 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true" style={{ color: "#f7f4ee" }}>
-              <path d="M11.2 8.4a10.4 10.4 0 1 0 9.6 0" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" />
-              <path d="M11 18.75h10" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" />
-            </svg>
+            <Mark size={28} />
             <div>
               <div style={{ color: "#f7f4ee", fontSize: 14, fontWeight: 700, letterSpacing: "0.14em" }}>{brand.name}</div>
               <div style={{ color: "#475569", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.8px" }}>{societyName || "Resident Portal"}</div>
@@ -247,10 +245,7 @@ export default function SocietyOS() {
       {/* Topbar */}
       <div style={{ background: colors.navy, borderBottom: "1px solid #1e2535", padding: "0 16px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56, position: "sticky", top: 0, zIndex: 100 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true" style={{ color: "#f7f4ee" }}>
-              <path d="M11.2 8.4a10.4 10.4 0 1 0 9.6 0" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" />
-              <path d="M11 18.75h10" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" />
-            </svg>
+          <Mark size={28} />
           <div>
             <div style={{ color: "#f7f4ee", fontSize: 14, fontWeight: 700, letterSpacing: "0.14em" }}>{brand.name}</div>
             <div style={{ color: "#475569", fontSize: 9, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.8px" }}>{societyName || "Loading…"}</div>
