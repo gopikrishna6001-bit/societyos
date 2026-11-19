@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { canApprove, categoryTotals, collectionSnapshot, funds, months, novemberInvoices, publishedCategories } from "./data.js";
+import { useDemo } from "./context.js";
 import { Empty, Meter, MonthChart, MoneyTable, Notice, rupee } from "./ui.jsx";
 
-export function Finance({ state, dispatch, person }) {
+export function Finance() {
+  const { state, dispatch, person } = useDemo();
   const [tab, setTab] = useState("Overview");
   const [category, setCategory] = useState("All");
   const [status, setStatus] = useState("All");
@@ -119,7 +121,8 @@ export function Finance({ state, dispatch, person }) {
             </select>
           </div>
           {shownInvoices.length === 0 && <Empty title="No invoices match" body="Try another flat or status." />}
-          <table className="demo-table">
+          <div className="app-scroll">
+          <table className="demo-table demo-table-wide">
             <thead>
               <tr><th>Flat</th><th>Status</th><th>Billed</th><th>Paid</th><th>Left</th></tr>
             </thead>
@@ -135,6 +138,7 @@ export function Finance({ state, dispatch, person }) {
               ))}
             </tbody>
           </table>
+          </div>
           {shownInvoices.length > 24 && <p className="demo-secondary">Showing 24 of {shownInvoices.length}. Search a flat to open its row.</p>}
         </div>
       )}

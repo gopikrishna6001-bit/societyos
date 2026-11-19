@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { visibleConcerns } from "./data.js";
+import { useDemo } from "./context.js";
 import { Empty } from "./ui.jsx";
 
-export function Concerns({ state, dispatch, person }) {
+export function Concerns() {
+  const { state, dispatch, person } = useDemo();
   const [status, setStatus] = useState("All");
   const [selected, setSelected] = useState(null);
   const visible = visibleConcerns(state.concerns, person).filter((item) => status === "All" || item.status === status);

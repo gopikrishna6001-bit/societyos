@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { documents, statement } from "./data.js";
+import { useDemo } from "./context.js";
 
 const ANSWERS = [
   ["collection", "November collection is ₹4,32,000 of ₹4,86,000 billed, which is 88.9%. Outstanding this month is ₹54,000."],
@@ -7,7 +8,8 @@ const ANSWERS = [
   ["meeting", "The next committee meeting is 22 November 2026 at the clubhouse."],
 ];
 
-export function More({ person, onSignOut }) {
+export function More() {
+  const { person, onSignOut } = useDemo();
   const [section, setSection] = useState("Profile");
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");

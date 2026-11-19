@@ -1,11 +1,13 @@
 import { useMemo, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { amenities, buildHouseholds, committee, flats, meetings, notices, resolutions, staff } from "./data.js";
+import { useDemo } from "./context.js";
 import { Empty } from "./ui.jsx";
 
 const TABS = ["Directory", "Units", "Committee", "Staff", "Notices", "Meetings", "Polls", "Amenities", "Visitors"];
 
-export function Community({ state, dispatch }) {
+export function Community() {
+  const { state, dispatch } = useDemo();
   const [tab, setTab] = useState("Directory");
   const [query, setQuery] = useState("");
   const [selectedNotice, setSelectedNotice] = useState(null);

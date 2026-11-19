@@ -1,32 +1,31 @@
 import { useReducer, useState } from "react";
-import { Building2, Ellipsis, Home, Landmark, LifeBuoy } from "lucide-react";
+import { NavLink, Outlet, Route, Routes } from "react-router-dom";
+import { Bell, Building2, Ellipsis, Home, Landmark, LifeBuoy } from "lucide-react";
 import { brand } from "../../brand.js";
-import { rupee } from "./ui.jsx";
+import { Mark } from "../../brand/Mark.jsx";
 import {
-  bankClosings,
   collectionSnapshot,
   community,
-  concerns,
   createDemoState,
+  funds,
   meetings,
   months,
   notices,
   personaFromEmail,
-  statement,
-  visibleConcerns,
 } from "./data.js";
+import { DemoProvider, useDemo } from "./context.js";
 import { Community } from "./Community.jsx";
 import { Concerns } from "./Concerns.jsx";
 import { Finance } from "./Finance.jsx";
 import { More } from "./More.jsx";
-import { Meter, MonthChart } from "./ui.jsx";
+import { Meter, MonthChart, rupee } from "./ui.jsx";
 
 const NAV = [
-  ["home", "Home", Home],
-  ["community", "Community", Building2],
-  ["finance", "Finance", Landmark],
-  ["concerns", "Concerns", LifeBuoy],
-  ["more", "More", Ellipsis],
+  ["/", "Home", Home],
+  ["/community", "Community", Building2],
+  ["/finance", "Finance", Landmark],
+  ["/concerns", "Concerns", LifeBuoy],
+  ["/more", "More", Ellipsis],
 ];
 
 function reducer(state, action) {
@@ -80,102 +79,132 @@ function reducer(state, action) {
 export function DemoApp({ email, onSignOut }) {
   const person = personaFromEmail(email);
   const [state, dispatch] = useReducer(reducer, null, () => ({ ...createDemoState(), votes: [] }));
-  const [page, setPage] = useState("home");
-  const open = visibleConcerns(state.concerns, person).filter((item) => item.status !== "Resolved").length;
-  const pending = state.expenses.filter((row) => row.approval === "Pending committee");
   return (
-    <div className="demo-shell">
-      <p className="demo-banner">Demo mode. Palm Court figures stay on this device and are not written to a community ledger. <button type="button" className="demo-text-button" onClick={onSignOut}>Sign out</button></p>
-      <div className="demo-layout">
-        <nav className="demo-rail" aria-label="Primary">
+    <DemoProvider value={{ person, state, dispatch, onSignOut }}>
+      <Routes>
+        <Route element={<Shell />}>
+          <Route index element={<HomeScreen />} />
+          <Route path="community" element={<Community />} />
+          <Route path="finance" element={<Finance />} />
+          <Route path="concerns" element={<Concerns />} />
+          <Route path="more" element={<More />} />
+        </Route>
+      </Routes>
+    </DemoProvider>
+  );
+}
+
+function Shell() {
+  const { person, onSignOut } = useDemo();
+  const [menu, setMenu] = useState("");
+  const close = () => setMenu("");
+  return (
+    <div className="app-shell">
+      <aside className="app-sidebar">
+        <div className="app-brand">
+          <Mark size={28} />
           <strong>{brand.name}</strong>
-          <span>{brand.tagline}</span>
-          <span>{community.name}</span>
-          <span>{person.label}</span>
-          {NAV.map(([id, label, Icon]) => (
-            <button key={id} type="button" aria-current={page === id ? "page" : undefined} onClick={() => setPage(id)}>
-              <Icon size={18} aria-hidden="true" /> {label}
-            </button>
+        </div>
+        <p>{brand.tagline}</p>
+        <nav aria-label="Primary">
+          {NAV.map(([to, label, Icon]) => (
+            <NavLink key={to} to={to} end={to === "/"} onClick={close}>
+              <Icon size={18} aria-hidden="true" />
+              <span>{label}</span>
+            </NavLink>
           ))}
         </nav>
-        <main className="demo-main">
-          {page === "home" && <HomeScreen person={person} state={state} pending={pending} openConcerns={open} onOpen={setPage} />}
-          {page === "community" && <Community state={state} dispatch={dispatch} />}
-          {page === "finance" && <Finance state={state} dispatch={dispatch} person={person} />}
-          {page === "concerns" && <Concerns state={state} dispatch={dispatch} person={person} />}
-          {page === "more" && <More person={person} onSignOut={onSignOut} />}
+      </aside>
+      <div className="app-column">
+        <header className="app-header">
+          <div className="app-header-title">
+            <span className="app-header-mark"><Mark size={22} /></span>
+            <span>
+              <strong>{brand.name}</strong>
+              <small>{community.name}</small>
+            </span>
+          </div>
+          <div className="app-header-actions">
+            <button type="button" aria-label="Notifications" aria-expanded={menu === "notes"} onClick={() => setMenu((current) => current === "notes" ? "" : "notes")}>
+              <Bell size={18} aria-hidden="true" />
+            </button>
+            <button type="button" className="app-avatar" aria-label="Profile" aria-expanded={menu === "profile"} onClick={() => setMenu((current) => current === "profile" ? "" : "profile")}>
+              {person.name.split(" ").map((part) => part[0]).slice(0, 2).join("")}
+            </button>
+          </div>
+          {menu === "notes" && (
+            <div className="app-popover" role="dialog" aria-label="Notifications">
+              {notices.map((notice) => <p key={notice.id}><strong>{notice.title}</strong><br />{notice.date}</p>)}
+              <button type="button" onClick={close}>Close</button>
+            </div>
+          )}
+          {menu === "profile" && (
+            <div className="app-popover" role="dialog" aria-label="Profile">
+              <p><strong>{person.name}</strong><br />{person.label} · {person.flat}</p>
+              <button type="button" onClick={onSignOut}>Sign out</button>
+            </div>
+          )}
+        </header>
+        <p className="app-note">Demo mode. Palm Court figures stay on this device and are not written to a community ledger.</p>
+        <main className="app-main">
+          <Outlet />
         </main>
       </div>
-      <nav className="demo-mobile-nav" aria-label="Mobile">
-        {NAV.map(([id, label, Icon]) => (
-          <button key={id} type="button" aria-current={page === id ? "page" : undefined} onClick={() => setPage(id)}>
-            <Icon size={20} aria-hidden="true" /> {label}
-          </button>
+      <nav className="app-tabbar" aria-label="Mobile">
+        {NAV.map(([to, label, Icon]) => (
+          <NavLink key={to} to={to} end={to === "/"} onClick={close}>
+            <Icon size={20} aria-hidden="true" />
+            <span>{label}</span>
+          </NavLink>
         ))}
       </nav>
     </div>
   );
 }
 
-function HomeScreen({ person, state, pending, openConcerns, onOpen }) {
+function HomeScreen() {
+  const { person, state } = useDemo();
   const snapshot = collectionSnapshot();
   const month = months.find((item) => item.id === state.monthId) || months.at(-1);
   const recent = state.expenses.slice(-5).reverse();
   const meeting = meetings.find((item) => item.status === "Upcoming");
-  const banks = bankClosings();
   return (
-    <section>
-      <div className="demo-band">
+    <section className="dash">
+      <header className="dash-welcome">
         <h1>{person.name.split(" ")[0]}, November is {snapshot.efficiency}% collected.</h1>
-        <p>{community.name} · {community.city} · {community.monthLabel}</p>
-        <dl className="demo-facts">
-          <div><dt>Units</dt><dd>{community.units}</dd></div>
-          <div><dt>Occupied</dt><dd>{community.occupied}</dd></div>
-          <div><dt>Vacant</dt><dd>{community.vacant}</dd></div>
-          <div><dt>Residents</dt><dd>{community.residents}</dd></div>
-          <div><dt>Staff</dt><dd>{community.staffCount}</dd></div>
-        </dl>
+        <p>{community.name} · {community.city} · {month.label}</p>
+      </header>
+      <div className="metric-grid">
+        <article className="metric"><span>Collected</span><strong>{rupee(snapshot.collected)}</strong></article>
+        <article className="metric"><span>Outstanding</span><strong>{rupee(snapshot.outstanding)}</strong></article>
+        <article className="metric"><span>Expenses</span><strong>{rupee(month.expenses)}</strong></article>
+        <article className="metric"><span>Bank balance</span><strong>{rupee(funds.bank)}</strong></article>
+        <article className="metric"><span>Corpus</span><strong>{rupee(funds.corpus)}</strong></article>
+        <article className="metric"><span>Reserve</span><strong>{rupee(funds.reserve)}</strong></article>
       </div>
-      <section className="demo-panel">
-        <h2>November collection</h2>
-        <Meter value={snapshot.collected} max={snapshot.billed} label="November maintenance collection" />
-        <p>{rupee(snapshot.collected)} collected of {rupee(snapshot.billed)} billed. {rupee(snapshot.outstanding)} is still outstanding. Maintenance is {rupee(community.maintenancePerUnit)} per occupied unit.</p>
-      </section>
-      <div className="demo-split">
-        <section className="demo-panel">
-          <h2>Collection and expenditure</h2>
+      <div className="dash-grid">
+        <article className="card">
+          <h2>Collection progress</h2>
+          <Meter value={snapshot.collected} max={snapshot.billed} label="November maintenance collection" />
+          <p>{rupee(snapshot.collected)} of {rupee(snapshot.billed)} billed. Maintenance is {rupee(community.maintenancePerUnit)} per occupied unit.</p>
+        </article>
+        <article className="card">
+          <h2>Income and expenditure</h2>
           <MonthChart months={months} activeId={month.id} />
-          <p className="demo-secondary">The highlighted month follows the reporting period in Finance. November expenses are the 20 itemised transactions.</p>
-        </section>
-        <section className="demo-panel">
-          <h2>Where the money sits</h2>
-          <p>Operating bank {rupee(1875000)}. Corpus {rupee(3250000)}. Reserve {rupee(840000)}.</p>
-          <p className="demo-secondary">November added {rupee(month.collected - month.expenses)} to the operating bank. The bank trend closes at {rupee(banks.at(-1).closing)}.</p>
-          <h2>Pending actions</h2>
-          {pending.length === 0 ? <p>No expenses are waiting.</p> : pending.map((row) => <p key={row.id}>{row.description} · {rupee(row.amount)}</p>)}
-          <button type="button" className="demo-primary" onClick={() => onOpen("finance")}>Open finance</button>
-        </section>
+        </article>
       </div>
-      <div className="demo-split">
-        <section className="demo-panel">
+      <div className="dash-grid">
+        <article className="card">
           <h2>Recent transactions</h2>
-          <ul>{recent.map((row) => <li key={row.id}>{row.date} · {row.description} · {rupee(row.amount)} · {row.approval}</li>)}</ul>
-          <h2>Latest notice</h2>
-          <p>{notices[0].title}. {notices[0].body}</p>
-        </section>
-        <section className="demo-panel">
-          <h2>Coming up</h2>
+          <ul>{recent.map((row) => <li key={row.id}>{row.date} · {row.description} · {rupee(row.amount)}</li>)}</ul>
+        </article>
+        <article className="card">
+          <h2>Announcements</h2>
+          <p><strong>{notices[0].title}</strong></p>
+          <p>{notices[0].body}</p>
+          <h2>Upcoming meeting</h2>
           <p>{meeting.title} · {meeting.when} · {meeting.venue}</p>
-          <h2>Concerns and publication</h2>
-          <p>{openConcerns} open concerns visible to you. {concerns.filter((item) => item.visibility === "Public" && item.status !== "Resolved").length} of the public ones are still open.</p>
-          <p>November statement: {statement.status}. Due {statement.due}.</p>
-          <p>{statement.observation}</p>
-          <div className="demo-actions">
-            <button type="button" onClick={() => onOpen("concerns")}><LifeBuoy size={16} aria-hidden="true" /> Review concerns</button>
-            <button type="button" onClick={() => onOpen("community")}><Building2 size={16} aria-hidden="true" /> Open community</button>
-            <button type="button" onClick={() => onOpen("more")}><Landmark size={16} aria-hidden="true" /> Read documents</button>
-          </div>
-        </section>
+        </article>
       </div>
     </section>
   );
