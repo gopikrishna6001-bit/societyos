@@ -9,9 +9,20 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 export const SOCIETY_ID = import.meta.env.VITE_SOCIETY_ID || 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
 export const isSupabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
-const REQUEST_TIMEOUT_MS = 12000;
+const REQUEST_TIMEOUT_MS = 30000;
 
-function fetchWithTimeout(input, init = {}) {
+function requestUrl(input) {
+  if (typeof input === "string") return input;
+  return input?.url || "";
+}
+
+function canRetry(input, init) {
+  const method = (init.method || "GET").toUpperCase();
+  if (method === "GET" || method === "HEAD") return true;
+  return requestUrl(input).includes("/auth/v1/token");
+}
+
+function fetchWithTimeout(input, init = {}, attempt = 0) {
   if (!isSupabaseConfigured) {
     return Promise.reject(new Error("Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY."));
   }
@@ -21,7 +32,17 @@ function fetchWithTimeout(input, init = {}) {
     if (init.signal.aborted) controller.abort();
     else init.signal.addEventListener("abort", () => controller.abort(), { once: true });
   }
-  return fetch(input, { ...init, signal: controller.signal }).finally(() => clearTimeout(timer));
+  return fetch(input, { ...init, signal: controller.signal }).then((response) => {
+    clearTimeout(timer);
+    return response;
+  }, (error) => {
+    clearTimeout(timer);
+    const cancelledByCaller = Boolean(init.signal?.aborted);
+    if (!cancelledByCaller && error?.name === "AbortError" && attempt === 0 && canRetry(input, init)) {
+      return fetchWithTimeout(input, init, attempt + 1);
+    }
+    throw error;
+  });
 }
 
 export const supabase = createClient(SUPABASE_URL || "http://127.0.0.1", SUPABASE_ANON_KEY || "public-anon-key", {
