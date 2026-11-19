@@ -9,6 +9,7 @@ import {
 import { Field, PageStatus, control } from "./ui.jsx";
 import { brand } from "../brand.js";
 import { Mark, Wordmark } from "../brand/Mark.jsx";
+import { demoAccounts, demoPassword } from "../demoAccounts.js";
 
 export default function Platform() {
   if (!isSupabaseConfigured) return <ConfigRequired />;
@@ -60,6 +61,8 @@ function SignedInApp() {
 function AuthScreen() {
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const submit = async (event) => {
     event.preventDefault();
     const data = Object.fromEntries(new FormData(event.currentTarget));
@@ -82,14 +85,30 @@ function AuthScreen() {
       </div>
       <p className="mt-4 text-lg">{brand.tagline}</p>
       <p className="mt-2 text-sm text-slate-400">{brand.loginLead}</p>
-      <form className="mt-6 grid gap-3 rounded-xl border border-slate-800 bg-slate-900 p-4 shadow-card" onSubmit={submit}>
-        <Field label="Email"><input className={control} type="email" name="email" autoComplete="username" required /></Field>
-        <Field label="Password"><input className={control} type="password" name="password" autoComplete="current-password" minLength={8} required /></Field>
+      <form className="mt-6 grid gap-3 border border-slate-800 bg-white p-4" onSubmit={submit}>
+        <Field label="Email"><input className={control} type="email" name="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} required /></Field>
+        <Field label="Password"><input className={control} type="password" name="password" autoComplete="current-password" minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} required /></Field>
         {error && <p role="alert" className="text-sm text-red-300">{error}</p>}
-        <button disabled={pending} className="min-h-12 rounded-lg bg-amber-500 px-3 py-3 font-semibold text-white disabled:opacity-60" type="submit">
+        <button disabled={pending} className="min-h-12 bg-amber-500 px-3 py-3 font-semibold text-white disabled:opacity-60" type="submit">
           {pending ? "Please wait…" : "Sign in"}
         </button>
       </form>
+      <section className="mt-4 border border-slate-800 bg-white p-4">
+        <h2 className="font-display text-lg font-semibold">DEMO accounts</h2>
+        <p className="mt-1 text-sm text-slate-400">One community, labelled DEMO · Palm Court. No sample balances are posted. Shared password: {demoPassword}. These accounts work after the demo seed runs on an empty project.</p>
+        <div className="mt-3 grid gap-2">
+          {demoAccounts.map((account) => (
+            <button
+              key={account.email}
+              type="button"
+              className="min-h-12 border border-slate-800 px-3 text-left text-sm"
+              onClick={() => { setEmail(account.email); setPassword(account.password); }}
+            >
+              {account.role}<span className="mt-0.5 block text-slate-400">{account.email}</span>
+            </button>
+          ))}
+        </div>
+      </section>
       <p className="mt-4 text-sm text-slate-400">Sign in with the email your community issued. This form does not ask for a mobile number and does not send an OTP. A new password is issued by your community administrator.</p>
     </main>
   );
