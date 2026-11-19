@@ -21,7 +21,7 @@ export default function AIAssistant() {
   const [messages, setMessages] = useState([
     {
       role: "assistant",
-      content: "Namaste! 🙏 I'm your SocietyOS AI Assistant, trained on Indian RWA laws, apartment society norms, and community management best practices.\n\nI can help you with:\n• Legal questions about RWA rules and resident rights\n• Drafting notices, minutes, and official communications\n• Conflict resolution strategies\n• Financial management advice\n• Maintenance best practices\n• Any society management questions\n\nHow can I help your society today?"
+      content: "I am the SABHA assistant. I can help with community records and questions about finances, decisions, and concerns.\n\nI can help you with:\n• Questions about community rules and resident rights\n• Drafting notices, minutes, and official communications\n• Conflict resolution strategies\n• Financial record questions\n• Maintenance questions\n\nWhat do you need to look up?"
     }
   ]);
   const [input, setInput] = useState("");

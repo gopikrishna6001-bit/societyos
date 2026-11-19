@@ -1,8 +1,10 @@
 # Deployment
 
+SABHA is deployed as a responsive web application and PWA. It is not packaged as a native Android or iOS app.
+
 ## Target
 
-Cloudflare Pages can host the Vite build. Supabase hosts Auth, Postgres, Storage, and later Edge Functions.
+Cloudflare Pages can host the Vite build. The current Pages hostname still contains `societyos` because that is the existing project name. Supabase hosts Auth, Postgres, Storage, and later Edge Functions.
 
 ## Before the first deploy
 

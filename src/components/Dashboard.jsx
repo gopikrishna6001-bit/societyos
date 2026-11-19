@@ -126,7 +126,7 @@ export default function Dashboard({ onNavigate }) {
   return (
     <div style={{ fontFamily: "'DM Sans',system-ui,sans-serif", color: "#e2e8f0" }}>
       <div style={{ marginBottom: 20 }}>
-        <h2 style={{ color: "#e2e8f0", fontSize: 24, fontFamily: "'Playfair Display',serif", margin: "0 0 4px" }}>Society Dashboard</h2>
+        <h2 style={{ color: "#e2e8f0", fontSize: 24, margin: "0 0 4px" }}>Dashboard</h2>
         <p style={{ color: "#64748b", fontSize: 13, margin: 0 }}>{data.society?.name}, {data.society?.city} — Live Overview</p>
       </div>
 

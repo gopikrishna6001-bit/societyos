@@ -2,14 +2,14 @@
 
 ## Stack
 
-React 18 and Vite 5 render the interface. Tailwind 3 supplies utilities for the new platform with preflight turned off, so the older inline-styled screens keep their layout. Routing is React Router: `/` is the transparency platform and `/legacy` is the existing SocietyOS shell. Supabase Auth, PostgreSQL row-level security, and storage are the backend. Vitest and React Testing Library cover units. Playwright covers the unconfigured browser smoke path. PostgreSQL assertions live in `supabase/tests` and run with `npm run test:db`.
+React 18 and Vite 5 render the interface. Tailwind 3 supplies utilities for the new platform with preflight turned off, so the older inline-styled screens keep their layout. Routing is React Router: `/` is SABHA and `/legacy` is the earlier shell, still implemented in `src/SocietyOS.jsx`. Supabase Auth, PostgreSQL row-level security, and storage are the backend. Vitest and React Testing Library cover units. Playwright covers the unconfigured browser smoke path. PostgreSQL assertions live in `supabase/tests` and run with `npm run test:db`.
 
 Vite stays on 5. Vitest 2 matches that major version.
 
 ## Layers
 
 - `src/platform` presents the new workflows and calls RPCs. It does not compute fund balances.
-- `src/components` is the retained SocietyOS interface. Deferred modules are lazy-loaded and removed from the primary role menus.
+- `src/components` is the earlier interface. Deferred modules are lazy-loaded and removed from the primary role menus. The product name on those screens is SABHA. The file and storage names are unchanged.
 - `src/lib/supabase.js` creates one browser client. Requests time out after 12 seconds. A missing environment rejects instead of hanging.
 - `supabase/migrations/20261118120000_platform_foundation.sql` owns identity, the ledger, concerns, governance, documents, notifications, and policies.
 - Security-definer helpers live in the `private` schema, which PostgREST does not expose. Authorization reads `community_memberships`, never JWT user metadata.

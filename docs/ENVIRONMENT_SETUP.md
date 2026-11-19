@@ -1,5 +1,7 @@
 # Environment setup
 
+The product name is SABHA. The environment variable names below are unchanged.
+
 ## Frontend
 
 Copy `env.example` to `.env.local`.

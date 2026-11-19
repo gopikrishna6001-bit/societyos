@@ -1,4 +1,5 @@
 -- ============================================================
+-- Product name: SABHA. Object names below are unchanged from the original SocietyOS schema.
 -- SocietyOS — Supabase Schema
 -- Run this in Supabase SQL Editor (Dashboard > SQL Editor)
 -- ============================================================

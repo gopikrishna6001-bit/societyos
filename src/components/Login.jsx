@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase, SOCIETY_ID } from "../lib/supabase";
 import { callAuth } from "../lib/authApi";
+import { brand } from "../brand.js";
 
 const ink = "#1c1917";
 const mute = "#4f473f";
@@ -90,8 +91,15 @@ export default function Login({ onLogin }) {
     <div style={{ minHeight: "100vh", background: paper, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, fontFamily: '"Source Sans 3", sans-serif', color: ink }}>
       <div style={{ width: "100%", maxWidth: 420 }}>
         <div style={{ marginBottom: 24 }}>
-          <h1 style={{ color: ink, fontSize: 28, margin: "0 0 6px", lineHeight: 1.2 }}>SocietyOS</h1>
-          <p style={{ color: mute, fontSize: 14, margin: 0 }}>{societyStatus === "ready" ? `${society.name}, ${society.city}` : societyStatus === "unavailable" ? "Community name unavailable" : "Loading…"}</p>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, color: pine }}>
+            <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+              <path d="M11.2 8.4a10.4 10.4 0 1 0 9.6 0" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" />
+              <path d="M11 18.75h10" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" />
+            </svg>
+            <h1 style={{ color: ink, fontSize: 32, margin: 0, letterSpacing: "0.14em", lineHeight: 1 }}>{brand.name}</h1>
+          </div>
+          <p style={{ color: ink, fontSize: 18, margin: "12px 0 0" }}>{brand.tagline}</p>
+          <p style={{ color: mute, fontSize: 14, margin: "6px 0 0" }}>{societyStatus === "ready" ? `${society.name}, ${society.city}` : societyStatus === "unavailable" ? "Community name unavailable" : "Loading…"}</p>
         </div>
 
         <div style={{ background: card, border: `1px solid ${line}`, borderRadius: 16, padding: 20, boxShadow: "0 10px 24px rgba(28,25,23,0.08)" }}>
@@ -186,7 +194,7 @@ export default function Login({ onLogin }) {
           )}
 
         </div>
-        <p style={{ color: mute, fontSize: 13, textAlign: "center", marginTop: 20 }}>The email sign-in does not store a mobile number.</p>
+        <p style={{ color: mute, fontSize: 13, textAlign: "center", marginTop: 20 }}>{brand.promise}</p>
       </div>
     </div>
   );

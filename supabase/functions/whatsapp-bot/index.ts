@@ -485,7 +485,7 @@ serve(async (req) => {
 
     const resident = await getResident(from);
     if (!resident) {
-      await send(from, `👋 Welcome to SocietyOS!\n\nYour number is not registered.\n\nContact your secretary to get registered.\n\nWeb portal: https://societyos.pages.dev`);
+      await send(from, `Welcome to SABHA.\n\nYour number is not registered.\n\nContact your secretary to get registered.\n\nWeb portal: https://societyos.pages.dev`);
       continue;
     }
 

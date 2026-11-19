@@ -20,7 +20,7 @@ Post opening balances with `post_journal` using type `opening` and an idempotenc
 
 Upload the original and, for anything residents should see, a separate file with bank details, phone numbers, addresses, tax identifiers, signatures, and payment credentials removed. Register the public copy with `redacted = true`. The application does not strip those details from a PDF.
 
-## Old SocietyOS tables
+## Earlier tables
 
 `supabase/schema.sql` is a prototype. Its policies are permissive and its money columns are integers. Leave it unused on the new project. If rows must be copied, map them explicitly and label anything that was not independently checked.
 

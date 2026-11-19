@@ -1,8 +1,10 @@
 # Product requirements
 
-SocietyOS is the technical foundation for an Apartment Transparency & Accountability Platform.
+SABHA is a Community Governance & Transparency Platform. The repository was first built as SocietyOS. That earlier name remains on internal files and database objects. The product name is SABHA.
 
-Core promise: every rupee, every decision, every concern.
+Tagline: Clarity in Every Community.
+
+Brand promise: Every rupee. Every decision. Accounted for.
 
 The product is not a full apartment-management suite. It answers ten resident questions from permissioned, auditable records:
 
@@ -31,7 +33,7 @@ The product is not a full apartment-management suite. It answers ten resident qu
 - Documents with public, committee, and unit-private access. A public invoice must be a separate redacted file.
 - In-app notifications.
 
-## Deferred from the old SocietyOS navigation
+## Deferred from the earlier navigation
 
 Gate and staff, amenities, volunteers, the WhatsApp centre, and the AI assistant stay in the repository and remain reachable from the legacy route. They are not primary navigation for the new platform. WhatsApp is a future notification channel only.
 

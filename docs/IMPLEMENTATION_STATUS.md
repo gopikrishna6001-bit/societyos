@@ -78,7 +78,22 @@ Results below are from the review fixes on this branch. They are local. They are
 
 ## Interface
 
-The primary sign-in is email and password on a light, mobile-width layout. It does not collect a mobile number, does not offer public registration, and does not send an OTP. The older phone sign-in remains at `/legacy` for communities that already stored a number. That sign-in no longer returns the phone number or PIN to the browser, and resident lists show only the last four digits.
+The product name is SABHA. The sign-in screen shows the wordmark, “Clarity in Every Community.”, and “A transparent platform for community finances, decisions and accountability.” The primary sign-in is still email and password. It does not collect a mobile number, does not offer public registration, and does not send an OTP. There is no self-service password recovery screen. A replacement password is issued by the community administrator. The older phone sign-in remains at `/legacy` for communities that already stored a number. That sign-in no longer returns the phone number or PIN to the browser, and resident lists show only the last four digits.
+
+## Branding
+
+Checked on 19 November 2026. User-facing titles, the sign-in screens, the application shell, the profile line, the PWA manifest, the favicon, and the install icons now say SABHA. The strings live in `src/brand.js`. The mark and wordmark files are under `public/brand/`. Rules are in `docs/BRAND.md`.
+
+Authentication, role navigation, ledger functions, and row-level security were not changed. The browser title is `SABHA — Clarity in Every Community.` The manifest `name` and `short_name` are `SABHA`. A bad sign-in still shows an alert and leaves the Sign in button usable. `/legacy` still opens and shows the same wordmark. Logout and role navigation remain covered by `src/platform/session.test.jsx`.
+
+Names kept on purpose: the npm package `societyos`, `src/SocietyOS.jsx`, the storage key `societyos_auth`, the synthetic address `@societyos.app`, the local database `societyos_test`, the Pages hostname `societyos.pages.dev`, environment variable names, database objects, migration filenames, and the WhatsApp verify-token default.
+
+## Branding verification
+
+- `npm test` — Vitest 2.1.9, 4 files, 12 tests, all passed. The unconfigured screen asserts the SABHA heading and the tagline, and asserts that SocietyOS is not shown.
+- `npm run test:db` — exit 0, final line `database tests passed`.
+- `npm run build` — Vite 5.4.21, succeeded. The built `index.html` title is `SABHA — Clarity in Every Community.`
+- Browser check of the production build: title and manifest name are SABHA, the sign-in heading and tagline render, a failed sign-in shows “Could not reach the server. Check your connection and try again.”, and `/legacy` shows the SABHA heading. The hosted Supabase host still does not resolve, so a real session was not created.
 
 ## Build status
 

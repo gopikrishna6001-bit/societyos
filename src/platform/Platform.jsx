@@ -7,6 +7,8 @@ import {
   HomeScreen, NotificationsScreen, ProfileScreen, SettingsScreen, UnitsScreen,
 } from "./screens.jsx";
 import { Field, PageStatus, control } from "./ui.jsx";
+import { brand } from "../brand.js";
+import { Mark, Wordmark } from "../brand/Mark.jsx";
 
 export default function Platform() {
   if (!isSupabaseConfigured) return <ConfigRequired />;
@@ -16,9 +18,13 @@ export default function Platform() {
 function ConfigRequired() {
   return (
     <main className="mx-auto max-w-lg px-4 py-16">
-      <h1 className="text-3xl font-semibold leading-tight">Every Rupee. Every Decision. Every Concern.</h1>
+      <div className="flex items-center gap-3 text-[#0f6b56]">
+        <Mark size={36} />
+        <h1 className="text-4xl font-semibold tracking-[0.14em] text-slate-100">{brand.name}</h1>
+      </div>
+      <p className="mt-3 text-lg">{brand.tagline}</p>
       <p className="mt-4 text-slate-400">Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY, apply the migration, then sign in. No sample balances are shown.</p>
-      <Link className="mt-6 inline-block font-semibold text-amber-300" to="/legacy">Open the earlier SocietyOS screens</Link>
+      <Link className="mt-6 inline-block font-semibold text-amber-300" to="/legacy">Open the earlier screens</Link>
     </main>
   );
 }
@@ -70,8 +76,12 @@ function AuthScreen() {
   };
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-10">
-      <h1 className="text-3xl font-semibold leading-tight">Every Rupee. Every Decision. Every Concern.</h1>
-      <p className="mt-3 text-sm text-slate-400">Sign in with the email your community issued. Roles come from the community, not from this form.</p>
+      <div className="flex items-center gap-3 text-[#0f6b56]">
+        <Mark size={40} />
+        <h1 className="text-4xl font-semibold tracking-[0.14em] text-slate-100">{brand.name}</h1>
+      </div>
+      <p className="mt-4 text-lg">{brand.tagline}</p>
+      <p className="mt-2 text-sm text-slate-400">{brand.loginLead}</p>
       <form className="mt-6 grid gap-3 rounded-xl border border-slate-800 bg-slate-900 p-4 shadow-card" onSubmit={submit}>
         <Field label="Email"><input className={control} type="email" name="email" autoComplete="username" required /></Field>
         <Field label="Password"><input className={control} type="password" name="password" autoComplete="current-password" minLength={8} required /></Field>
@@ -80,7 +90,7 @@ function AuthScreen() {
           {pending ? "Please wait…" : "Sign in"}
         </button>
       </form>
-      <p className="mt-4 text-sm text-slate-400">This sign-in does not ask for a mobile number and does not send an OTP. Accounts are created by the community, not from a public registration form.</p>
+      <p className="mt-4 text-sm text-slate-400">Sign in with the email your community issued. This form does not ask for a mobile number and does not send an OTP. A new password is issued by your community administrator.</p>
     </main>
   );
 }
@@ -112,7 +122,8 @@ function Setup({ onCreated }) {
   const [pending, setPending] = useState(false);
   return (
     <main className="mx-auto max-w-lg px-4 py-10">
-      <h1 className="text-2xl font-semibold">Set up your community</h1>
+      <Wordmark />
+      <h1 className="mt-4 text-2xl font-semibold">Set up your community</h1>
       <p className="mt-2 text-sm text-slate-400">Approval limits are required. Leave them as the amounts your community has actually agreed. The statement deadline defaults to the 10th of the next month and can be changed.</p>
       <form className="mt-4 grid gap-3" onSubmit={async (event) => {
         event.preventDefault();
@@ -215,8 +226,9 @@ function Shell({ email, community, communities, communityId, onCommunity, roles,
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 md:grid md:grid-cols-[220px_minmax(0,1fr)]">
       <nav className="hidden border-r border-slate-800 bg-slate-900 p-4 md:block" aria-label="Primary">
-        <p className="font-semibold">SocietyOS</p>
-        <p className="mt-1 text-sm text-slate-400">{community?.name}</p>
+        <Wordmark />
+        <p className="mt-2 text-sm text-slate-400">{brand.tagline}</p>
+        <p className="mt-3 font-semibold">{community?.name}</p>
         <div className="mt-4 grid gap-1">
           {items.map(([id, label]) => (
             <button key={id} type="button" className={itemClass(id)} onClick={() => openPage(id)}>{label}</button>
@@ -226,7 +238,9 @@ function Shell({ email, community, communities, communityId, onCommunity, roles,
       <div className="pb-24 md:pb-8">
         <header className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-slate-800 bg-slate-950 px-4 py-3">
           <div className="min-w-0">
-            <p className="truncate text-lg font-semibold leading-tight">{community?.name}</p>
+            <p className="print:hidden"><Wordmark /></p>
+            <p className="hidden text-sm font-semibold print:block">{brand.name} · {brand.promise}</p>
+            <p className="mt-1 truncate text-lg font-semibold leading-tight">{community?.name}</p>
             <p className="truncate text-sm text-slate-400">{roleLabel(roles)}</p>
           </div>
           {unique.length > 1 && (

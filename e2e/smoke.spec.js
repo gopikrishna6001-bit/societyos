@@ -18,7 +18,7 @@ test("legacy login reports a failure and stays usable", async ({ page }) => {
 
 test("the platform does not show sample fund balances", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Every Rupee. Every Decision. Every Concern." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "SABHA" })).toBeVisible();
   await expect(page.getByText(/Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY|Sign in with the email/)).toBeVisible();
   await expect(page.getByText("₹2,84,500")).toHaveCount(0);
   const signIn = page.getByRole("button", { name: "Sign in" });
@@ -34,5 +34,5 @@ test("the platform does not show sample fund balances", async ({ page }) => {
 test("the configuration screen stays readable on a phone", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Every Rupee. Every Decision. Every Concern." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "SABHA" })).toBeVisible();
 });

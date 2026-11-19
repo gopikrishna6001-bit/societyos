@@ -2,6 +2,7 @@ import { useState } from "react";
 import { rpc, rows, supabase } from "./api.js";
 import { downloadText, inr, toCsv } from "./money.js";
 import { Field, PageStatus, SaveForm, control, useLoad } from "./ui.jsx";
+import { brand } from "../brand.js";
 
 const TICKET_CATEGORIES = ["Maintenance", "Water", "Electricity", "Security", "Housekeeping", "Lift and facilities", "Finance", "Governance", "General", "Other"];
 const EXPENSE_CATEGORIES = ["Security", "Housekeeping", "Electricity", "Water", "Lift maintenance", "Plumbing", "Civil repairs", "Gardening", "Administration", "Insurance", "Emergency repairs", "Other"];
@@ -749,7 +750,8 @@ export function ProfileScreen({ email, roles, onSignOut }) {
       <h2 className="mb-3 text-xl font-semibold">Profile</h2>
       <p>{email}</p>
       <p className="mt-2 text-sm text-slate-400">Roles in this community: {roles.join(", ") || "none"}</p>
-      <button type="button" className="mt-4 rounded-lg border border-slate-600 px-3 py-2" onClick={onSignOut}>Sign out</button>
+      <p className="mt-4 text-sm text-slate-400">{brand.name}. {brand.descriptor}. {brand.promise}</p>
+      <button type="button" className="mt-4 min-h-12 rounded-lg border border-slate-700 bg-white px-3 py-2" onClick={onSignOut}>Sign out</button>
     </section>
   );
 }
