@@ -4,6 +4,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { LEGACY_EXPENSES, LEGACY_MEETINGS, LEGACY_NOTIFICATIONS } from './legacyTables.js';
+import { RESIDENT_READ_COLUMNS, withoutResidentSecrets } from "./residentAccess.js";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -69,11 +70,11 @@ export const Society = {
 
 // ─── MODULE 2: RESIDENTS ───────────────────────────────────────────────────────
 export const Residents = {
-  getAll: () => supabase.from('residents').select('*, flats(number,type,sqft,block_id)').eq('society_id', sid()).order('flat_number'),
-  getByFlat: (flat) => supabase.from('residents').select('*').eq('society_id', sid()).eq('flat_number', flat),
-  getById: (id) => supabase.from('residents').select('*').eq('id', id).single(),
-  create: (data) => supabase.from('residents').insert({ ...data, society_id: sid() }).select().single(),
-  update: (id, data) => supabase.from('residents').update(data).eq('id', id),
+  getAll: () => supabase.from('residents').select(`${RESIDENT_READ_COLUMNS}, flats(number,type,sqft,block_id)`).eq('society_id', sid()).order('flat_number'),
+  getByFlat: (flat) => supabase.from('residents').select(RESIDENT_READ_COLUMNS).eq('society_id', sid()).eq('flat_number', flat),
+  getById: (id) => supabase.from('residents').select(RESIDENT_READ_COLUMNS).eq('id', id).single(),
+  create: (data) => supabase.from('residents').insert({ ...withoutResidentSecrets(data), society_id: sid() }).select(RESIDENT_READ_COLUMNS).single(),
+  update: (id, data) => supabase.from('residents').update(withoutResidentSecrets(data)).eq('id', id),
   deactivate: (id) => supabase.from('residents').update({ status: 'inactive', move_out_date: new Date().toISOString().slice(0,10) }).eq('id', id),
 
   // Family

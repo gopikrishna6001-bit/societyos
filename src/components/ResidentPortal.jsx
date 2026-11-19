@@ -43,7 +43,7 @@ export default function ResidentPortal({ flatNumber, onExitResidentView }) {
     try {
     const flat = flatNumber || "101";
     const [res, inv, comp, notices, polls, amenities, bookings] = await Promise.all([
-      supabase.from("residents").select("*").eq("society_id", SOCIETY_ID).eq("flat_number", flat).eq("status", "active").single(),
+      supabase.from("residents").select("id,society_id,flat_id,flat_number,name,email,type,block,status").eq("society_id", SOCIETY_ID).eq("flat_number", flat).eq("status", "active").single(),
       supabase.from("invoices").select("*").eq("society_id", SOCIETY_ID).eq("flat_number", flat).order("month", { ascending: false }).limit(6),
       supabase.from("complaints").select("*").eq("society_id", SOCIETY_ID).eq("flat_number", flat).order("created_at", { ascending: false }).limit(10),
       supabase.from("notices").select("*").eq("society_id", SOCIETY_ID).order("pinned", { ascending: false }).order("created_at", { ascending: false }).limit(10),

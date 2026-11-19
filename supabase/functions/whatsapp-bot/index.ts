@@ -2,7 +2,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const VERIFY_TOKEN = Deno.env.get("WA_VERIFY_TOKEN") ?? "societyos_verify_2026";
+const VERIFY_TOKEN = Deno.env.get("WA_VERIFY_TOKEN") ?? "";
 const WA_TOKEN     = Deno.env.get("WA_ACCESS_TOKEN") ?? "";
 const WA_PHONE_ID  = Deno.env.get("WA_PHONE_NUMBER_ID") ?? "";
 const GEMINI_KEY   = Deno.env.get("GEMINI_API_KEY") ?? "";
@@ -467,7 +467,7 @@ serve(async (req) => {
     const mode = url.searchParams.get("hub.mode");
     const token = url.searchParams.get("hub.verify_token");
     const challenge = url.searchParams.get("hub.challenge");
-    if (mode === "subscribe" && token === VERIFY_TOKEN) return new Response(challenge, { status: 200 });
+    if (VERIFY_TOKEN && mode === "subscribe" && token === VERIFY_TOKEN) return new Response(challenge, { status: 200 });
     return new Response("Forbidden", { status: 403 });
   }
   if (req.method !== "POST") return new Response("ok");

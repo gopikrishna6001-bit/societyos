@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import Platform from "./Platform.jsx";
 import { demoPassword } from "../demoAccounts.js";
 
@@ -19,7 +20,7 @@ vi.mock("../lib/supabase.js", () => ({
 }));
 
 test("a failed saved session opens the sign-in form", async () => {
-  render(<Platform />);
+  render(<MemoryRouter><Platform /></MemoryRouter>);
   expect(await screen.findByRole("button", { name: "Sign in" })).toBeInTheDocument();
   expect(screen.queryByText(/timed out/i)).not.toBeInTheDocument();
   expect(screen.queryByRole("heading", { name: "DEMO accounts" })).not.toBeInTheDocument();

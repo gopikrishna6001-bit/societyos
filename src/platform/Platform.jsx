@@ -8,6 +8,7 @@ import {
 } from "./screens.jsx";
 import { Field, PageStatus, control } from "./ui.jsx";
 import { brand } from "../brand.js";
+import { passwordRule, signInMessage } from "../lib/authPolicy.js";
 import { Mark, Wordmark } from "../brand/Mark.jsx";
 
 export default function Platform() {
@@ -66,10 +67,14 @@ function AuthScreen() {
     setPending(true);
     setError("");
     try {
+      if (String(data.website || "").trim()) throw new Error("credentials");
+      const rule = passwordRule(String(data.password || ""));
+      if (rule) throw new Error(rule);
       const result = await supabase.auth.signInWithPassword({ email: data.email, password: data.password });
-      if (result.error) throw new Error(result.error.message);
+      if (result.error) throw result.error;
     } catch (cause) {
-      setError(explain(cause));
+      const text = String(cause?.message || "");
+      setError(text === "Use at least 8 characters." ? text : signInMessage(cause));
     } finally {
       setPending(false);
     }
@@ -85,13 +90,15 @@ function AuthScreen() {
       <form className="mt-6 grid gap-3 border border-slate-800 bg-white p-4" onSubmit={submit}>
         <Field label="Email"><input className={control} type="email" name="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} required /></Field>
         <Field label="Password"><input className={control} type="password" name="password" autoComplete="current-password" minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} required /></Field>
+        <input name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" className="absolute -left-[9999px]" />
         {error && <p role="alert" className="text-sm text-red-300">{error}</p>}
         <button disabled={pending} className="min-h-12 bg-amber-500 px-3 py-3 font-semibold text-white disabled:opacity-60" type="submit">
           {pending ? "Please wait…" : "Sign in"}
         </button>
       </form>
       <DemoAccounts onPick={(account) => { setEmail(account.email); setPassword(account.password); }} />
-      <p className="mt-4 text-sm text-slate-400">Sign in with the email your community issued. This form does not ask for a mobile number and does not send an OTP. A new password is issued by your community administrator.</p>
+      <p className="mt-4 text-sm"><Link className="font-semibold text-amber-300" to="/reset">Forgot password</Link></p>
+      <p className="mt-4 text-sm text-slate-400">Sign in with the email your community issued. This form does not ask for a phone number or a PIN, and it does not create accounts.</p>
     </main>
   );
 }
@@ -309,7 +316,7 @@ function Screen({ page, communityId, roles, email, onSignOut, onOpen }) {
   if (page === "documents") return <DocumentsScreen communityId={communityId} roles={roles} />;
   if (page === "units") return <UnitsScreen communityId={communityId} />;
   if (page === "notifications") return <NotificationsScreen communityId={communityId} />;
-  if (page === "settings") return <SettingsScreen communityId={communityId} />;
+  if (page === "settings") return <SettingsScreen communityId={communityId} roles={roles} />;
   if (page === "history") return <HistoryScreen communityId={communityId} />;
   return <ProfileScreen email={email} roles={roles} onSignOut={onSignOut} />;
 }

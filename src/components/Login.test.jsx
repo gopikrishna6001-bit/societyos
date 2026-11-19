@@ -1,66 +1,52 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Login from "./Login.jsx";
-import { callAuth } from "../lib/authApi.js";
+import { GENERIC_AUTH_ERROR, NETWORK_AUTH_ERROR } from "../lib/authPolicy.js";
 
-vi.mock("../lib/authApi.js", () => ({ callAuth: vi.fn() }));
+const { signInWithPassword } = vi.hoisted(() => ({ signInWithPassword: vi.fn() }));
+
 vi.mock("../lib/supabase.js", () => ({
-  SOCIETY_ID: "society",
-  supabase: {
-    from: () => ({ select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: null, error: { message: "missing" } }) }) }) }),
-    auth: { setSession: vi.fn() },
-  },
+  supabase: { auth: { signInWithPassword: (...args) => signInWithPassword(...args) } },
 }));
 
-async function enterPhone(user, phone) {
+vi.mock("react-router-dom", () => ({
+  Link: ({ children, to }) => <a href={to}>{children}</a>,
+}));
+
+beforeEach(() => {
+  signInWithPassword.mockReset();
+});
+
+test("a failed sign-in uses one message for a wrong password and a missing account", async () => {
+  signInWithPassword.mockResolvedValueOnce({ data: { session: null }, error: { message: "Invalid login credentials" } });
+  const user = userEvent.setup();
   render(<Login onLogin={() => {}} />);
-  await user.type(screen.getByPlaceholderText("9XXXXXXXXX"), phone);
-  await user.click(screen.getByRole("button", { name: "Continue →" }));
-}
-
-test("rejects a short phone number and does not call the server", async () => {
-  const user = userEvent.setup();
-  await enterPhone(user, "123");
-  expect(screen.getByText("Enter a valid 10-digit phone number")).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Continue →" })).toBeEnabled();
-  expect(callAuth).not.toHaveBeenCalled();
+  await user.type(screen.getByLabelText("Email"), "asha@example.com");
+  await user.type(screen.getByLabelText("Password"), "long-enough");
+  await user.click(screen.getByRole("button", { name: "Sign in" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent(GENERIC_AUTH_ERROR);
+  expect(screen.queryByText(/invalid login credentials/i)).not.toBeInTheDocument();
+  expect(screen.queryByPlaceholderText("••••")).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /continue/i })).not.toBeInTheDocument();
 });
 
-test("shows a network failure and releases the button", async () => {
-  callAuth.mockResolvedValueOnce({ error: "Could not reach the server. Check your connection and try again." });
+test("a network failure stays specific and releases the button", async () => {
+  signInWithPassword.mockResolvedValueOnce({ data: { session: null }, error: { message: "Failed to fetch" } });
   const user = userEvent.setup();
-  await enterPhone(user, "9876543210");
-  expect(screen.getByText("Could not reach the server. Check your connection and try again.")).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Continue →" })).toBeEnabled();
+  render(<Login onLogin={() => {}} />);
+  await user.type(screen.getByLabelText("Email"), "asha@example.com");
+  await user.type(screen.getByLabelText("Password"), "long-enough");
+  await user.click(screen.getByRole("button", { name: "Sign in" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent(NETWORK_AUTH_ERROR);
+  expect(screen.getByRole("button", { name: "Sign in" })).toBeEnabled();
 });
 
-test("shows a timeout and releases the button", async () => {
-  callAuth.mockResolvedValueOnce({ error: "The server took too long to respond. Try again." });
+test("a short password is rejected before the server is called", async () => {
   const user = userEvent.setup();
-  await enterPhone(user, "9876543210");
-  expect(screen.getByText("The server took too long to respond. Try again.")).toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "Checking…" })).not.toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Continue →" })).toBeEnabled();
-});
-
-test("moves to the PIN step after a resident is found", async () => {
-  callAuth.mockResolvedValueOnce({ resident: { id: "1", name: "Asha Rao", flat_number: "101" } });
-  const user = userEvent.setup();
-  await enterPhone(user, "9876543210");
-  expect(screen.getByText("Asha Rao")).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Login →" })).toBeDisabled();
-});
-
-test("shows an invalid PIN and releases the button", async () => {
-  callAuth.mockImplementation(async (body) => {
-    if (body.action === "lookup") return { resident: { id: "1", name: "Asha Rao", flat_number: "101" } };
-    return { error: "Invalid PIN" };
-  });
-  const user = userEvent.setup();
-  await enterPhone(user, "9876543210");
-  await user.type(screen.getByPlaceholderText("••••"), "0000");
-  await user.click(screen.getByRole("button", { name: "Login →" }));
-  expect(await screen.findByText("Invalid PIN")).toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "Verifying…" })).not.toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Login →" })).toBeDisabled();
+  render(<Login onLogin={() => {}} />);
+  await user.type(screen.getByLabelText("Email"), "asha@example.com");
+  await user.type(screen.getByLabelText("Password"), "short");
+  await user.click(screen.getByRole("button", { name: "Sign in" }));
+  expect(screen.getByRole("alert")).toHaveTextContent("Use at least 8 characters.");
+  expect(signInWithPassword).not.toHaveBeenCalled();
 });

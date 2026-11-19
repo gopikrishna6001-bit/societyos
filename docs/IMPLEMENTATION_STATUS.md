@@ -55,7 +55,7 @@ Updated after the pre-merge review of pull request #2. This is not a production-
 
 ## Files
 
-Application: `src/main.jsx`, `src/index.css`, `src/SocietyOS.jsx`, `src/components/*`, `src/lib/supabase.js`, `src/lib/authApi.js`, `src/lib/async.js`, `src/platform/*`.
+Application: `src/main.jsx`, `src/index.css`, `src/SocietyOS.jsx`, `src/components/*`, `src/lib/supabase.js`, `src/lib/async.js`, `src/platform/*`.
 
 Backend: `supabase/migrations/20261118120000_platform_foundation.sql`, `supabase/tests/bootstrap.sql`, `supabase/tests/ledger_rls.sql`, `scripts/test-db.sh`.
 

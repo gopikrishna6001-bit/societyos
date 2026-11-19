@@ -3,6 +3,7 @@ import { rpc, rows, supabase } from "./api.js";
 import { downloadText, inr, toCsv } from "./money.js";
 import { Field, FilterSheet, PageStatus, SaveForm, control, useLoad } from "./ui.jsx";
 import { brand } from "../brand.js";
+import InviteResident from "./InviteResident.jsx";
 
 const TICKET_CATEGORIES = ["Maintenance", "Water", "Electricity", "Security", "Housekeeping", "Lift and facilities", "Finance", "Governance", "General", "Other"];
 const EXPENSE_CATEGORIES = ["Security", "Housekeeping", "Electricity", "Water", "Lift maintenance", "Plumbing", "Civil repairs", "Gardening", "Administration", "Insurance", "Emergency repairs", "Other"];
@@ -792,7 +793,7 @@ export function NotificationsScreen({ communityId }) {
   );
 }
 
-export function SettingsScreen({ communityId }) {
+export function SettingsScreen({ communityId, roles = [] }) {
   const query = useLoad(() => rows(supabase.from("community_settings").select("*").eq("community_id", communityId)), [communityId]);
   const settings = query.data?.[0];
   return (
@@ -812,6 +813,7 @@ export function SettingsScreen({ communityId }) {
         </dl>
       )}
       <p className="mt-3 text-sm text-slate-400">These values were set for this community. Changing them is a governed action and is not a silent edit from this screen.</p>
+      <InviteResident communityId={communityId} roles={roles} />
     </section>
   );
 }

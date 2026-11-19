@@ -4,6 +4,7 @@ import { supabase, SOCIETY_ID } from "../lib/supabase";
 import { maskPhone } from "../lib/privacy";
 import QueryStatus from "./QueryStatus.jsx";
 import { raiseOnError } from "../lib/async.js";
+import { RESIDENT_READ_COLUMNS, withoutResidentSecrets } from "../lib/residentAccess.js";
 
 const inp = { width: "100%", background: "#0d1117", border: "1px solid #2a2f45", borderRadius: 8, padding: "10px 12px", color: "#e2e8f0", fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit" };
 const lbl = { color: "#94a3b8", fontSize: 11, fontWeight: 600, letterSpacing: "0.5px", textTransform: "uppercase", marginBottom: 5, display: "block" };
@@ -69,7 +70,7 @@ export default function Residents() {
     setLoadError("");
     try {
     const [res, inv, comp, rl, ur, veh] = await Promise.all([
-      supabase.from("residents").select("*").eq("society_id", SOCIETY_ID).eq("status", "active").order("flat_number"),
+      supabase.from("residents").select(RESIDENT_READ_COLUMNS).eq("society_id", SOCIETY_ID).eq("status", "active").order("flat_number"),
       supabase.from("invoices").select("flat_number,status,balance_due,month").eq("society_id", SOCIETY_ID),
       supabase.from("complaints").select("flat_number,status").eq("society_id", SOCIETY_ID),
       supabase.from("roles").select("*").eq("society_id", SOCIETY_ID),
@@ -95,7 +96,7 @@ export default function Residents() {
   const addResident = async () => {
     if (!form.name || !form.flat_number) { toast("Name and flat number required", "#f87171"); return; }
     setSaving(true);
-    const { error } = await supabase.from("residents").insert({ ...form, society_id: SOCIETY_ID, status: "active" });
+    const { error } = await supabase.from("residents").insert({ ...withoutResidentSecrets(form), society_id: SOCIETY_ID, status: "active" });
     if (error) { toast(error.message, "#f87171"); setSaving(false); return; }
     toast(`✓ ${form.name} added to Flat ${form.flat_number}`);
     setShowAdd(false);
@@ -115,7 +116,7 @@ export default function Residents() {
   // ── Update profile ────────────────────────────────────────────────────────
   const saveProfile = async () => {
     setSaving(true);
-    await supabase.from("residents").update(profileData).eq("id", profile.id);
+    await supabase.from("residents").update(withoutResidentSecrets(profileData)).eq("id", profile.id);
     setResidents(p => p.map(r => r.id === profile.id ? { ...r, ...profileData } : r));
     toast("✓ Profile updated");
     setSaving(false);

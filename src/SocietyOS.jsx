@@ -1,7 +1,7 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import { supabase } from "./lib/supabase.js";
-import { callAuth } from "./lib/authApi.js";
 import { brand, colors } from "./brand.js";
+import { RESIDENT_READ_COLUMNS, roleFromResident } from "./lib/residentAccess.js";
 import Login from "./components/Login.jsx";
 import QueryStatus from "./components/QueryStatus.jsx";
 
@@ -88,28 +88,55 @@ export default function SocietyOS() {
   const [residentView, setResidentView] = useState(null);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
   const [showProfile, setShowProfile] = useState(false);
-  const [newPin, setNewPin] = useState("");
-  const [confirmPin, setConfirmPin] = useState("");
-  const [pinMsg, setPinMsg] = useState("");
-  const [changingPin, setChangingPin] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
+
+  const adoptSession = async (session) => {
+    const { data, error } = await supabase
+      .from("residents")
+      .select(`${RESIDENT_READ_COLUMNS}, committee_members(role)`)
+      .eq("auth_user_id", session.user.id)
+      .eq("status", "active")
+      .limit(1);
+    if (error) {
+      setAuth({ email: session.user.email, resident: null, role: null, error: "Could not load the community record." });
+      return;
+    }
+    const resident = data?.[0] || null;
+    setAuth({ email: session.user.email, resident, role: roleFromResident(resident) });
+    if (resident?.society_id) loadSocietyName(resident.society_id);
+  };
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener("resize", check);
-    const saved = localStorage.getItem("societyos_auth");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed?.resident) {
-          delete parsed.resident.phone;
-          delete parsed.resident.pin;
-          localStorage.setItem("societyos_auth", JSON.stringify(parsed));
-        }
-        setAuth(parsed);
-        loadSocietyName(parsed.resident?.society_id);
-      } catch(e) {}
-    }
-    return () => window.removeEventListener("resize", check);
+    localStorage.removeItem("societyos_auth");
+    let live = true;
+    supabase.auth.getSession().then(async ({ data, error }) => {
+      if (!live) return;
+      if (error || !data.session) {
+        if (error) await supabase.auth.signOut({ scope: "local" });
+        setAuth(null);
+      } else {
+        await adoptSession(data.session);
+      }
+      if (live) setSessionReady(true);
+    }).catch(async () => {
+      await supabase.auth.signOut({ scope: "local" });
+      if (live) {
+        setAuth(null);
+        setSessionReady(true);
+      }
+    });
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!live) return;
+      if (!session) setAuth(null);
+      else if (event === "SIGNED_IN") adoptSession(session);
+    });
+    return () => {
+      live = false;
+      data.subscription.unsubscribe();
+      window.removeEventListener("resize", check);
+    };
   }, []);
 
   const loadSocietyName = async (societyId) => {
@@ -123,16 +150,9 @@ export default function SocietyOS() {
     }
   };
 
-  const handleLogin = async (authData) => {
-    const resident = { ...(authData.resident || {}) };
-    delete resident.phone;
-    delete resident.pin;
-    const stored = { ...authData, resident };
-    setAuth(stored);
-    localStorage.setItem("societyos_auth", JSON.stringify(stored));
-    await loadSocietyName(authData.resident?.society_id);
-    if (authData.role === "treasurer") setTab("finances");
-    else setTab("dashboard");
+  const handleLogin = async () => {
+    const { data } = await supabase.auth.getSession();
+    if (data.session) await adoptSession(data.session);
   };
 
   const handleLogout = () => {
@@ -142,22 +162,20 @@ export default function SocietyOS() {
     supabase.auth.signOut();
   };
 
-  const changePin = async () => {
-    if (newPin.length !== 4) { setPinMsg("PIN must be 4 digits"); return; }
-    if (newPin !== confirmPin) { setPinMsg("PINs do not match"); return; }
-    setChangingPin(true);
-    const result = await callAuth({ action: "set_pin", resident_id: auth.resident.id, new_pin: newPin });
-    setChangingPin(false);
-    if (result.error) { setPinMsg(result.error); return; }
-    const updated = { ...auth, resident: { ...auth.resident, pin_changed: true } };
-    setAuth(updated);
-    localStorage.setItem("societyos_auth", JSON.stringify(updated));
-    setPinMsg("✓ PIN changed");
-    setNewPin(""); setConfirmPin("");
-    setTimeout(() => { setShowProfile(false); setPinMsg(""); }, 2000);
-  };
-
+  if (!sessionReady) return <p style={{ padding: 24, color: "#94a3b8" }}>Checking your session…</p>;
   if (!auth) return <Login onLogin={handleLogin} />;
+  if (!auth.resident) {
+    return (
+      <main style={{ minHeight: "100vh", background: colors.navy, color: colors.white, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+        <section style={{ maxWidth: 420 }}>
+          <h1 style={{ fontSize: 28, marginBottom: 8 }}>{brand.name}</h1>
+          <p>Signed in as {auth.email}. This login is not linked to a resident record yet. Ask a community administrator to send an invitation.</p>
+          {auth.error && <p>{auth.error}</p>}
+          <button type="button" onClick={handleLogout} style={{ marginTop: 16, background: colors.blue, color: colors.white, border: "none", borderRadius: 8, padding: "10px 16px", fontWeight: 700 }}>Sign out</button>
+        </section>
+      </main>
+    );
+  }
 
   const { resident, role } = auth;
   const isResidentOnly = role === "resident" || role === "tenant";
@@ -252,7 +270,7 @@ export default function SocietyOS() {
             </button>
           )}
           <div style={{ position: "relative" }}>
-            <button onClick={() => { setShowProfile(p => !p); setPinMsg(""); setNewPin(""); setConfirmPin(""); }}
+            <button onClick={() => setShowProfile(p => !p)}
               style={{ display: "flex", gap: 8, alignItems: "center", background: "#1e2535", border: "1px solid #2a2f45", borderRadius: 20, padding: "4px 10px 4px 5px", cursor: "pointer" }}>
               <div style={{ width: 26, height: 26, borderRadius: "50%", background: `${ROLE_COLORS[role]}22`, border: `1px solid ${ROLE_COLORS[role]}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: ROLE_COLORS[role] }}>
                 {resident.name?.split(" ").map(w => w[0]).join("").slice(0,2).toUpperCase()}
@@ -272,20 +290,7 @@ export default function SocietyOS() {
                   <div style={{ color: "#475569", fontSize: 12, marginTop: 2 }}>Flat {resident.flat_number}</div>
                   <div style={{ color: ROLE_COLORS[role], fontSize: 11, fontWeight: 700, marginTop: 4 }}>{ROLE_LABELS[role]}</div>
                 </div>
-                <div style={{ marginBottom: 8, color: "#94a3b8", fontSize: 12, fontWeight: 600 }}>Change PIN</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
-                  <input type="password" placeholder="New PIN" maxLength={4}
-                    style={{ background: "#0d1117", border: "1px solid #2a2f45", borderRadius: 8, padding: "8px 12px", color: "#e2e8f0", fontSize: 18, outline: "none", letterSpacing: "6px", textAlign: "center" }}
-                    value={newPin} onChange={e => setNewPin(e.target.value.replace(/\D/g,"").slice(0,4))} />
-                  <input type="password" placeholder="Confirm PIN" maxLength={4}
-                    style={{ background: "#0d1117", border: "1px solid #2a2f45", borderRadius: 8, padding: "8px 12px", color: "#e2e8f0", fontSize: 18, outline: "none", letterSpacing: "6px", textAlign: "center" }}
-                    value={confirmPin} onChange={e => setConfirmPin(e.target.value.replace(/\D/g,"").slice(0,4))} />
-                  {pinMsg && <div style={{ color: pinMsg.startsWith("✓") ? "#4ade80" : "#f87171", fontSize: 11, textAlign: "center" }}>{pinMsg}</div>}
-                  <button onClick={changePin} disabled={changingPin || newPin.length < 4}
-                    style={{ background: colors.blue, border: "none", borderRadius: 8, padding: "8px", color: colors.white, fontWeight: 700, cursor: "pointer", fontSize: 13, opacity: newPin.length < 4 ? 0.5 : 1 }}>
-                    {changingPin ? "Saving…" : "Update PIN"}
-                  </button>
-                </div>
+                <div style={{ marginBottom: 12, color: "#94a3b8", fontSize: 12 }}>{auth.email}</div>
                 <button onClick={handleLogout} style={{ width: "100%", background: "#2d1b1b", border: "1px solid #f8717133", borderRadius: 8, padding: "8px", color: "#f87171", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Logout</button>
               </div>
             )}
