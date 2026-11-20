@@ -3,12 +3,16 @@
 // Body: { "society_id": "<uuid>", "limit"?: 1-25, "lease_seconds"?: 60-3600 }
 // At-least-once delivery: if Graph accepts a message but finalize fails, a later
 // reclaim may send again. Do not claim exactly-once delivery.
-// Do not put WA_DISPATCH_SECRET in frontend, logs, or git.
+// Claims are renewed before each send so execution cannot outlive the lease
+// while this worker still holds the token. Do not put WA_DISPATCH_SECRET in
+// frontend, logs, or git.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const MAX_BATCH = 25;
 const MIN_INTERVAL_MS = 200;
+/** Worst-case seconds reserved per message (Graph + finalize + spacing). */
+const SECONDS_PER_MESSAGE = 3;
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -51,7 +55,11 @@ function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-/** Finalize claim; never swallow RPC/network failures. Returns ok for response tallies. */
+function clampLease(seconds: number): number {
+  return Math.min(3600, Math.max(60, Math.floor(seconds)));
+}
+
+/** Finalize claim; never swallow RPC/network failures. */
 async function finalizeDispatch(
   supabase: Supabase,
   args: {
@@ -80,8 +88,6 @@ async function finalizeDispatch(
       return "finalize_error";
     }
     if (data !== true) {
-      // Row may already be finalized, lease stolen after expiry, or token mismatch.
-      // Leave status alone so stale-lease recovery can reclaim if still sending.
       diagnostics.push(
         redactError(
           `finalize_false id=${args.id} success=${args.success}; row not updated (recoverable if still sending)`,
@@ -98,8 +104,32 @@ async function finalizeDispatch(
   }
 }
 
+/** Extend claimed_at for rows still held by this worker. */
+async function renewClaims(
+  supabase: Supabase,
+  societyId: string,
+  claimToken: string,
+  ids: string[],
+  diagnostics: string[],
+): Promise<number> {
+  try {
+    const { data, error } = await supabase.rpc("renew_whatsapp_claims", {
+      p_society_id: societyId,
+      p_claim_token: claimToken,
+      p_ids: ids,
+    });
+    if (error) {
+      diagnostics.push(redactError(`renew_rpc: ${error.message ?? "rpc_error"}`));
+      return 0;
+    }
+    return typeof data === "number" ? data : Number(data) || 0;
+  } catch (e) {
+    diagnostics.push(redactError(`renew_throw: ${String((e as Error)?.message ?? e)}`));
+    return 0;
+  }
+}
+
 serve(async (req) => {
-  // Reject CORS preflight — this function is cron/operator only.
   if (req.method === "OPTIONS") {
     return json(403, { error: "Browser access denied." });
   }
@@ -135,11 +165,13 @@ serve(async (req) => {
   }
   if (!Number.isFinite(limit)) limit = 20;
   limit = Math.min(MAX_BATCH, Math.max(1, Math.floor(limit)));
-  if (leaseSeconds != null && Number.isFinite(leaseSeconds)) {
-    leaseSeconds = Math.min(3600, Math.max(60, Math.floor(leaseSeconds)));
-  } else {
-    leaseSeconds = null;
-  }
+
+  // Lease must cover the batch; renewals keep it alive, but size the initial lease for the budget.
+  const minLeaseForBatch = clampLease(60 + limit * SECONDS_PER_MESSAGE);
+  let effectiveLease = leaseSeconds != null && Number.isFinite(leaseSeconds)
+    ? clampLease(leaseSeconds)
+    : 300;
+  if (effectiveLease < minLeaseForBatch) effectiveLease = minLeaseForBatch;
 
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
@@ -152,17 +184,16 @@ serve(async (req) => {
   }
 
   const claimToken = crypto.randomUUID();
-  const claimArgs: Record<string, unknown> = {
+  const startedAt = Date.now();
+  // Stop sending (release remaining) before the lease could expire without renewal.
+  const hardDeadlineMs = startedAt + effectiveLease * 1000 * 0.75;
+
+  const { data: messages, error: claimError } = await supabase.rpc("claim_whatsapp_batch", {
     p_society_id: societyId,
     p_limit: limit,
     p_claim_token: claimToken,
-  };
-  if (leaseSeconds != null) claimArgs.p_lease_seconds = leaseSeconds;
-
-  const { data: messages, error: claimError } = await supabase.rpc(
-    "claim_whatsapp_batch",
-    claimArgs,
-  );
+    p_lease_seconds: effectiveLease,
+  });
   if (claimError) {
     return json(500, { error: "Claim failed.", detail: redactError(claimError.message) });
   }
@@ -174,6 +205,7 @@ serve(async (req) => {
       sent: 0,
       failed: 0,
       finalize_issues: 0,
+      lease_seconds: effectiveLease,
       diagnostics: [],
     });
   }
@@ -181,9 +213,50 @@ serve(async (req) => {
   let sent = 0;
   let failed = 0;
   let finalizeIssues = 0;
+  let releasedEarly = 0;
   const diagnostics: string[] = [];
 
-  for (const msg of messages) {
+  for (let i = 0; i < messages.length; i++) {
+    const msg = messages[i];
+    const remainingIds = messages.slice(i).map((m: { id: string }) => m.id);
+
+    if (Date.now() >= hardDeadlineMs) {
+      // Release unsent claimed rows as pending so another worker can take them after...
+      // actually finalize failure with attempt returns to pending — good.
+      for (let j = i; j < messages.length; j++) {
+        const left = messages[j];
+        const fr = await finalizeDispatch(supabase, {
+          id: left.id,
+          claimToken,
+          societyId,
+          success: false,
+          error: "lease_budget_exhausted: released before send to avoid concurrent reclaim",
+        }, diagnostics);
+        if (fr !== "finalized") finalizeIssues += 1;
+        releasedEarly += 1;
+        failed += 1;
+      }
+      diagnostics.push("lease_budget_exhausted: stopped dispatch loop");
+      break;
+    }
+
+    // Renew lease for remaining claimed ids before any Graph call.
+    const renewed = await renewClaims(
+      supabase,
+      societyId,
+      claimToken,
+      remainingIds,
+      diagnostics,
+    );
+    if (renewed < 1) {
+      diagnostics.push(
+        redactError(`renew_lost id=${msg.id}: claim no longer held; aborting remainder`),
+      );
+      finalizeIssues += remainingIds.length;
+      failed += remainingIds.length;
+      break;
+    }
+
     if (msg.society_id !== societyId) {
       const fr = await finalizeDispatch(supabase, {
         id: msg.id,
@@ -209,8 +282,6 @@ serve(async (req) => {
       continue;
     }
 
-    let graphAccepted = false;
-    let waId: string | null = null;
     try {
       const res = await fetch(
         `https://graph.facebook.com/v19.0/${WA_PHONE_ID}/messages`,
@@ -229,8 +300,8 @@ serve(async (req) => {
         },
       );
       const result = await res.json().catch(() => ({}));
-      waId = result?.messages?.[0]?.id ?? null;
-      graphAccepted = res.ok && !!waId;
+      const waId = result?.messages?.[0]?.id ?? null;
+      const graphAccepted = res.ok && !!waId;
       const errText = graphAccepted
         ? null
         : redactError(
@@ -246,7 +317,6 @@ serve(async (req) => {
       }, diagnostics);
       if (fr !== "finalized") {
         finalizeIssues += 1;
-        // Graph may have accepted; row may stay sending until lease expires → possible duplicate.
         if (graphAccepted) {
           diagnostics.push(
             redactError(
@@ -277,8 +347,9 @@ serve(async (req) => {
     claimed: messages.length,
     sent,
     failed,
+    released_early: releasedEarly,
     finalize_issues: finalizeIssues,
-    // Safe operational diagnostics only (already redacted). Cap length.
+    lease_seconds: effectiveLease,
     diagnostics: diagnostics.slice(0, 25),
   });
 });

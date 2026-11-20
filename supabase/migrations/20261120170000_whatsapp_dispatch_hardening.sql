@@ -63,7 +63,7 @@ BEGIN
         OR (
           w.status = 'sending'
           AND w.claimed_at IS NOT NULL
-          AND w.claimed_at < now() - v_lease
+          AND w.claimed_at < clock_timestamp() - v_lease
         )
       )
     ORDER BY w.created_at ASC
@@ -74,7 +74,7 @@ BEGIN
   SET
     status = 'sending',
     claim_token = v_token,
-    claimed_at = now(),
+    claimed_at = clock_timestamp(),
     attempt_count = w.attempt_count + 1,
     last_error = CASE
       WHEN picked.was_stale THEN left(
@@ -161,6 +161,45 @@ DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
     EXECUTE 'GRANT EXECUTE ON FUNCTION public.finalize_whatsapp_dispatch(uuid, text, uuid, boolean, text, text) TO service_role';
+  END IF;
+END $$;
+
+-- 3b) Renew active claims so a long dispatch cannot outlive the lease and be reclaimed mid-send.
+CREATE OR REPLACE FUNCTION public.renew_whatsapp_claims(
+  p_society_id uuid,
+  p_claim_token text,
+  p_ids uuid[] DEFAULT NULL
+)
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_updated integer;
+BEGIN
+  IF p_society_id IS NULL OR p_claim_token IS NULL THEN
+    RAISE EXCEPTION 'society_id and claim_token required';
+  END IF;
+
+  UPDATE public.whatsapp_log
+  SET claimed_at = clock_timestamp()
+  WHERE society_id = p_society_id
+    AND claim_token = p_claim_token
+    AND status = 'sending'
+    AND (p_ids IS NULL OR id = ANY (p_ids));
+
+  GET DIAGNOSTICS v_updated = ROW_COUNT;
+  RETURN v_updated;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.renew_whatsapp_claims(uuid, text, uuid[])
+  FROM PUBLIC, anon, authenticated;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.renew_whatsapp_claims(uuid, text, uuid[]) TO service_role';
   END IF;
 END $$;
 

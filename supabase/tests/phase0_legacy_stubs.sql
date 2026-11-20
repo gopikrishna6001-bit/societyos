@@ -10,17 +10,55 @@ CREATE TABLE IF NOT EXISTS public.societies (
 CREATE TABLE IF NOT EXISTS public.residents (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   society_id uuid REFERENCES public.societies(id),
-  auth_user_id uuid,
+  flat_id uuid,
   flat_number text,
-  status text DEFAULT 'active',
-  is_super_admin boolean DEFAULT false,
-  pin text,
-  pin_hash text,
-  portal_pin text,
+  name text,
+  phone text,
+  email text,
+  type text,
+  gender text,
+  date_of_birth date,
+  profile_photo text,
+  id_type text,
   id_number text,
   id_document_url text,
-  id_type text
+  move_in_date date,
+  move_out_date date,
+  whatsapp_opt_in boolean DEFAULT false,
+  email_opt_in boolean DEFAULT false,
+  portal_access boolean DEFAULT false,
+  portal_pin text,
+  status text DEFAULT 'active',
+  notes text,
+  created_at timestamptz DEFAULT now(),
+  pin text,
+  pin_changed boolean DEFAULT false,
+  last_login timestamptz,
+  is_super_admin boolean DEFAULT false,
+  block text,
+  auth_user_id uuid,
+  pin_hash text
 );
+
+-- If an older stub table already existed, add missing hosted columns.
+ALTER TABLE public.residents ADD COLUMN IF NOT EXISTS flat_id uuid;
+ALTER TABLE public.residents ADD COLUMN IF NOT EXISTS name text;
+ALTER TABLE public.residents ADD COLUMN IF NOT EXISTS phone text;
+ALTER TABLE public.residents ADD COLUMN IF NOT EXISTS email text;
+ALTER TABLE public.residents ADD COLUMN IF NOT EXISTS type text;
+ALTER TABLE public.residents ADD COLUMN IF NOT EXISTS gender text;
+ALTER TABLE public.residents ADD COLUMN IF NOT EXISTS date_of_birth date;
+ALTER TABLE public.residents ADD COLUMN IF NOT EXISTS profile_photo text;
+ALTER TABLE public.residents ADD COLUMN IF NOT EXISTS move_in_date date;
+ALTER TABLE public.residents ADD COLUMN IF NOT EXISTS move_out_date date;
+ALTER TABLE public.residents ADD COLUMN IF NOT EXISTS whatsapp_opt_in boolean DEFAULT false;
+ALTER TABLE public.residents ADD COLUMN IF NOT EXISTS email_opt_in boolean DEFAULT false;
+ALTER TABLE public.residents ADD COLUMN IF NOT EXISTS portal_access boolean DEFAULT false;
+ALTER TABLE public.residents ADD COLUMN IF NOT EXISTS notes text;
+ALTER TABLE public.residents ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
+ALTER TABLE public.residents ADD COLUMN IF NOT EXISTS pin_changed boolean DEFAULT false;
+ALTER TABLE public.residents ADD COLUMN IF NOT EXISTS last_login timestamptz;
+ALTER TABLE public.residents ADD COLUMN IF NOT EXISTS block text;
 
 CREATE TABLE IF NOT EXISTS public.committee_members (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -167,8 +205,21 @@ GRANT EXECUTE ON FUNCTION public.trigger_send_whatsapp() TO PUBLIC, anon, authen
 GRANT EXECUTE ON FUNCTION public.generate_invoice_number() TO PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.generate_ticket_number() TO PUBLIC, anon, authenticated;
 
+-- Hosted baseline: table-level SELECT (overrides column REVOKE unless migration
+-- revokes table SELECT and re-grants non-secret columns only).
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.residents TO anon, authenticated;
 GRANT SELECT (pin, pin_hash, portal_pin, id_number, id_document_url, id_type)
   ON public.residents TO anon, authenticated;
+
+-- Hosted: service_role has full DML (Edge Functions).
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
+    GRANT ALL ON TABLE public.residents TO service_role;
+    GRANT ALL ON TABLE public.whatsapp_log TO service_role;
+    GRANT ALL ON TABLE public.societies TO service_role;
+  END IF;
+END $$;
 
 -- Minimal invoice / ticket tables so generator triggers stay exercisable after EXECUTE revoke.
 CREATE TABLE IF NOT EXISTS public.invoices (

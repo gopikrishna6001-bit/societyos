@@ -42,8 +42,10 @@ describe("Phase 0 edge function hardening", () => {
 });
 
 describe("Phase 0 database migration", () => {
-  test("phase0 migration revokes all secret column selects and anon executes", () => {
+  test("phase0 migration revokes table SELECT then grants non-secret columns only", () => {
     const body = source("supabase/migrations/20261120163000_phase0_security.sql");
+    expect(body).toContain("REVOKE SELECT ON TABLE public.residents FROM PUBLIC, anon, authenticated");
+    expect(body).toContain("GRANT SELECT (%s) ON public.residents TO authenticated");
     for (const col of ["pin", "pin_hash", "portal_pin", "id_number", "id_document_url", "id_type"]) {
       expect(body).toContain(`'${col}'`);
     }
@@ -58,6 +60,7 @@ describe("Phase 0 database migration", () => {
     expect(body).toContain("FOR UPDATE SKIP LOCKED");
     expect(body).toContain("claim_whatsapp_batch");
     expect(body).toContain("finalize_whatsapp_dispatch");
+    expect(body).toContain("renew_whatsapp_claims");
     expect(body).toContain("stale_claim_recovered");
     expect(body).toContain("app.wa_claim_lease_seconds");
     expect(body).toContain("p_lease_seconds");
@@ -69,9 +72,13 @@ describe("Phase 0 database migration", () => {
 });
 
 describe("Phase 0 send-whatsapp finalisation", () => {
-  test("dispatcher inspects finalize results and documents at-least-once risk", () => {
+  test("dispatcher renews leases, bounds runtime, and documents at-least-once risk", () => {
     const body = source("supabase/functions/send-whatsapp/index.ts");
     expect(body).toContain("finalizeDispatch");
+    expect(body).toContain("renewClaims");
+    expect(body).toContain("renew_whatsapp_claims");
+    expect(body).toContain("lease_budget_exhausted");
+    expect(body).toContain("hardDeadlineMs");
     expect(body).toContain("finalize_false");
     expect(body).toContain("finalize_error");
     expect(body).toContain("at_least_once_risk");

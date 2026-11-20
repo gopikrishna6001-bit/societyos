@@ -22,7 +22,8 @@ BEGIN
     'resident_dashboard',
     'bank_balances',
     'claim_whatsapp_batch',
-    'finalize_whatsapp_dispatch'
+    'finalize_whatsapp_dispatch',
+    'renew_whatsapp_claims'
   ]
   LOOP
     FOR v_sig IN
@@ -68,7 +69,8 @@ BEGIN
     'generate_invoice_number',
     'generate_ticket_number',
     'claim_whatsapp_batch',
-    'finalize_whatsapp_dispatch'
+    'finalize_whatsapp_dispatch',
+    'renew_whatsapp_claims'
   ]
   LOOP
     FOR v_sig IN
@@ -87,6 +89,14 @@ BEGIN
       END IF;
     END LOOP;
   END LOOP;
+
+  -- Table-level SELECT must be gone (otherwise column REVOKE is ineffective).
+  IF has_table_privilege('anon', 'public.residents', 'SELECT') THEN
+    RAISE EXCEPTION 'anon still has table-level SELECT on residents';
+  END IF;
+  IF has_table_privilege('authenticated', 'public.residents', 'SELECT') THEN
+    RAISE EXCEPTION 'authenticated still has table-level SELECT on residents';
+  END IF;
 
   -- Every sensitive residents column: SELECT denied for anon and authenticated.
   FOREACH v_col IN ARRAY ARRAY[
@@ -107,6 +117,17 @@ BEGIN
     END IF;
   END LOOP;
 
+  -- Legitimate non-sensitive reads preserved for authenticated only.
+  IF NOT has_column_privilege('authenticated', 'public.residents', 'name', 'SELECT') THEN
+    RAISE EXCEPTION 'authenticated lost SELECT on residents.name';
+  END IF;
+  IF NOT has_column_privilege('authenticated', 'public.residents', 'phone', 'SELECT') THEN
+    RAISE EXCEPTION 'authenticated lost SELECT on residents.phone';
+  END IF;
+  IF has_column_privilege('anon', 'public.residents', 'name', 'SELECT') THEN
+    RAISE EXCEPTION 'anon unexpectedly has SELECT on residents.name';
+  END IF;
+
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = 'whatsapp_log' AND column_name = 'claim_token'
@@ -115,7 +136,41 @@ BEGIN
   END IF;
 END $$;
 
--- Atomic claim, active-lease protection, stale recovery, finalize, society isolation.
+-- Effective access: authenticated cannot SELECT pin even with a visible row path.
+DO $$
+DECLARE
+  v_society uuid;
+  v_id uuid;
+BEGIN
+  INSERT INTO public.societies (name) VALUES ('phase0-priv-society') RETURNING id INTO v_society;
+  INSERT INTO public.residents (society_id, name, flat_number, status, pin, phone)
+  VALUES (v_society, 'Priv Test', 'P-1', 'active', '1234', '9999999999')
+  RETURNING id INTO v_id;
+
+  BEGIN
+    SET ROLE authenticated;
+    PERFORM pin FROM public.residents WHERE id = v_id;
+    RESET ROLE;
+    RAISE EXCEPTION 'authenticated SELECT pin should have failed';
+  EXCEPTION
+    WHEN insufficient_privilege THEN
+      RESET ROLE;
+    WHEN OTHERS THEN
+      RESET ROLE;
+      IF SQLERRM ILIKE '%permission denied%' OR SQLERRM ILIKE '%pin%' THEN
+        NULL;
+      ELSE
+        RAISE;
+      END IF;
+  END;
+
+  -- Non-sensitive column still selectable (RLS may hide rows; privilege must allow).
+  SET ROLE authenticated;
+  PERFORM name, phone FROM public.residents WHERE id = v_id;
+  RESET ROLE;
+END $$;
+
+-- service_role claim / renew / finalize path (matches Edge Function privileges).
 DO $$
 DECLARE
   v_society uuid;
@@ -125,6 +180,8 @@ DECLARE
   v_token text := 'test-claim-token';
   v_row public.whatsapp_log%ROWTYPE;
   v_ok boolean;
+  v_renewed integer;
+  v_claimed_at timestamptz;
 BEGIN
   INSERT INTO public.societies (name) VALUES ('phase0-wa-test') RETURNING id INTO v_society;
   INSERT INTO public.societies (name) VALUES ('phase0-wa-other') RETURNING id INTO v_other;
@@ -133,31 +190,62 @@ BEGIN
   VALUES (v_society, '9876543210', 'hello', 'pending')
   RETURNING id INTO v_id;
 
-  -- Fresh claim.
+  SET ROLE service_role;
+
   SELECT * INTO v_row FROM public.claim_whatsapp_batch(v_society, 10, v_token, 60) LIMIT 1;
   IF v_row.id IS DISTINCT FROM v_id OR v_row.status <> 'sending' OR v_row.claim_token <> v_token THEN
-    RAISE EXCEPTION 'claim_whatsapp_batch failed';
+    RESET ROLE;
+    RAISE EXCEPTION 'service_role claim_whatsapp_batch failed';
   END IF;
+  v_claimed_at := v_row.claimed_at;
 
-  -- Active claim must not be reclaimed (same society, short lease).
+  -- Active claim must not be reclaimed.
   IF EXISTS (SELECT 1 FROM public.claim_whatsapp_batch(v_society, 10, 'other', 60)) THEN
+    RESET ROLE;
     RAISE EXCEPTION 'active claim was reclaimed';
   END IF;
 
-  -- Other society must not see this row.
   IF EXISTS (SELECT 1 FROM public.claim_whatsapp_batch(v_other, 10, 'cross', 60)) THEN
+    RESET ROLE;
     RAISE EXCEPTION 'cross-society claim returned a row';
+  END IF;
+
+  -- Lease renewal extends claimed_at without allowing concurrent reclaim.
+  PERFORM pg_sleep(0.05);
+  SELECT public.renew_whatsapp_claims(v_society, v_token, ARRAY[v_id]) INTO v_renewed;
+  IF v_renewed <> 1 THEN
+    RESET ROLE;
+    RAISE EXCEPTION 'renew_whatsapp_claims failed under service_role';
+  END IF;
+  IF (SELECT claimed_at FROM public.whatsapp_log WHERE id = v_id) <= v_claimed_at THEN
+    RESET ROLE;
+    RAISE EXCEPTION 'renew did not advance claimed_at';
+  END IF;
+  IF EXISTS (SELECT 1 FROM public.claim_whatsapp_batch(v_society, 10, 'steal', 60)) THEN
+    RESET ROLE;
+    RAISE EXCEPTION 'renewed claim was reclaimed while active';
+  END IF;
+
+  -- Wrong token cannot renew (returns 0).
+  SELECT public.renew_whatsapp_claims(v_society, 'wrong-token', ARRAY[v_id]) INTO v_renewed;
+  IF v_renewed <> 0 THEN
+    RESET ROLE;
+    RAISE EXCEPTION 'renew with wrong token should update 0 rows';
   END IF;
 
   SELECT public.finalize_whatsapp_dispatch(v_id, v_token, v_society, true, 'wamid.test', NULL) INTO v_ok;
   IF NOT v_ok THEN
-    RAISE EXCEPTION 'finalize success failed';
+    RESET ROLE;
+    RAISE EXCEPTION 'service_role finalize success failed';
   END IF;
+
+  RESET ROLE;
+
   IF (SELECT status FROM public.whatsapp_log WHERE id = v_id) <> 'delivered' THEN
     RAISE EXCEPTION 'expected delivered after finalize';
   END IF;
 
-  -- Stale sending recovery: insert stuck sending with old claimed_at.
+  -- Stale sending recovery.
   INSERT INTO public.whatsapp_log (
     society_id, to_number, message, status, attempt_count, claimed_at, claim_token, last_error
   ) VALUES (
@@ -165,7 +253,10 @@ BEGIN
     now() - interval '10 minutes', 'old-token', 'dispatcher crashed'
   ) RETURNING id INTO v_stale;
 
+  SET ROLE service_role;
   SELECT * INTO v_row FROM public.claim_whatsapp_batch(v_society, 10, 'recover-token', 60) LIMIT 1;
+  RESET ROLE;
+
   IF v_row.id IS DISTINCT FROM v_stale THEN
     RAISE EXCEPTION 'stale claim was not recovered';
   END IF;
@@ -176,18 +267,23 @@ BEGIN
     RAISE EXCEPTION 'stale recovery did not record safe reason';
   END IF;
 
-  -- Idempotent: second recovery while active lease must not reclaim.
+  SET ROLE service_role;
   IF EXISTS (SELECT 1 FROM public.claim_whatsapp_batch(v_society, 10, 'again', 60)) THEN
+    RESET ROLE;
     RAISE EXCEPTION 'recovered claim was reclaimed while active';
   END IF;
+  RESET ROLE;
 
-  -- Attempt cap: exhausted sending stale row must not reclaim.
   UPDATE public.whatsapp_log
   SET attempt_count = 5, status = 'sending', claimed_at = now() - interval '1 hour', claim_token = 'x'
   WHERE id = v_stale;
+
+  SET ROLE service_role;
   IF EXISTS (SELECT 1 FROM public.claim_whatsapp_batch(v_society, 10, 'cap', 60)) THEN
+    RESET ROLE;
     RAISE EXCEPTION 'attempt_count cap violated';
   END IF;
+  RESET ROLE;
 END $$;
 
 -- Invoice / ticket triggers still fire without client EXECUTE on generators.

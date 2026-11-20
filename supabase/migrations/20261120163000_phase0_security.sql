@@ -2,15 +2,30 @@
 -- Apply only with explicit human approval on the chosen environment.
 -- Do not replay the full platform foundation migration beside this file.
 
--- 1) Credential columns on legacy residents must not be selectable by clients.
--- Revoke per column so a missing column on a divergent schema cannot abort the rest.
+-- 1) Sensitive residents columns must be unreadable by anon/authenticated.
+-- Hosted Society OS grants table-level SELECT to anon + authenticated; a column-level
+-- REVOKE alone does not remove effective access while table SELECT remains.
+-- Fix: revoke table SELECT, then grant SELECT only on non-secret columns to authenticated.
 DO $$
 DECLARE
   v_col text;
-BEGIN
-  FOREACH v_col IN ARRAY ARRAY[
+  v_cols text;
+  v_secrets text[] := ARRAY[
     'pin', 'pin_hash', 'portal_pin', 'id_number', 'id_document_url', 'id_type'
-  ]
+  ];
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'residents'
+  ) THEN
+    RETURN;
+  END IF;
+
+  -- Remove blanket table SELECT (and any PUBLIC grant) that would override column denies.
+  REVOKE SELECT ON TABLE public.residents FROM PUBLIC, anon, authenticated;
+
+  -- Explicitly revoke column SELECT on secrets (covers leftover column grants).
+  FOREACH v_col IN ARRAY v_secrets
   LOOP
     IF EXISTS (
       SELECT 1 FROM information_schema.columns
@@ -22,6 +37,26 @@ BEGIN
       );
     END IF;
   END LOOP;
+
+  -- Restore legitimate non-sensitive reads for signed-in clients (matches app allowlists).
+  SELECT string_agg(quote_ident(a.attname), ', ' ORDER BY a.attnum)
+  INTO v_cols
+  FROM pg_attribute a
+  JOIN pg_class c ON c.oid = a.attrelid
+  JOIN pg_namespace n ON n.oid = c.relnamespace
+  WHERE n.nspname = 'public'
+    AND c.relname = 'residents'
+    AND a.attnum > 0
+    AND NOT a.attisdropped
+    AND NOT (a.attname = ANY (v_secrets));
+
+  IF v_cols IS NOT NULL THEN
+    EXECUTE format(
+      'GRANT SELECT (%s) ON public.residents TO authenticated',
+      v_cols
+    );
+  END IF;
+  -- anon keeps no SELECT on residents (table or column).
 END $$;
 
 -- 2) Anonymous callers cannot execute messaging, number generators, or policy helpers.

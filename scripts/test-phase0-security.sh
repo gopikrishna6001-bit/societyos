@@ -10,6 +10,7 @@ PSQL=(sudo -u postgres psql -v ON_ERROR_STOP=1)
 "${PSQL[@]}" -d postgres -c "CREATE DATABASE ${DB_NAME};"
 "${PSQL[@]}" -d "$DB_NAME" -f supabase/tests/bootstrap.sql
 "${PSQL[@]}" -d "$DB_NAME" -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN CREATE ROLE service_role NOLOGIN; END IF; END \$\$;"
+# Hosted grants service_role full table access (Edge path).
 "${PSQL[@]}" -d "$DB_NAME" -f supabase/migrations/20261118120000_platform_foundation.sql
 "${PSQL[@]}" -d "$DB_NAME" -f supabase/migrations/20261119120000_invitations.sql
 # Hosted still grants anon EXECUTE on several RPCs; restore that baseline before phase0.
@@ -29,6 +30,8 @@ WHERE n.nspname = 'public'
     'is_committee','account_balances','trigger_send_whatsapp','resident_dashboard','bank_balances'
   )
 ORDER BY 1;
+SELECT 'table_sel|anon|' || has_table_privilege('anon', 'public.residents', 'SELECT')
+    || '|auth|' || has_table_privilege('authenticated', 'public.residents', 'SELECT');
 SELECT 'pin_anon|' || has_column_privilege('anon', 'public.residents', 'pin', 'SELECT');
 SQL
 
@@ -47,12 +50,14 @@ WHERE n.nspname = 'public'
     'trigger_send_whatsapp','generate_invoice_number','generate_ticket_number',
     'is_committee','is_super_admin','has_role','get_my_flat','get_my_society_id','get_resident_id',
     'account_balances','resident_dashboard','bank_balances',
-    'claim_whatsapp_batch','finalize_whatsapp_dispatch'
+    'claim_whatsapp_batch','finalize_whatsapp_dispatch','renew_whatsapp_claims'
   )
 ORDER BY p.proname;
+SELECT 'table_sel|anon|' || has_table_privilege('anon', 'public.residents', 'SELECT')
+    || '|auth|' || has_table_privilege('authenticated', 'public.residents', 'SELECT');
 SELECT col || '|anon|' || has_column_privilege('anon', 'public.residents', col, 'SELECT')
     || '|auth|' || has_column_privilege('authenticated', 'public.residents', col, 'SELECT')
-FROM unnest(ARRAY['pin','pin_hash','portal_pin','id_number','id_document_url','id_type']) AS col
+FROM unnest(ARRAY['pin','pin_hash','portal_pin','id_number','id_document_url','id_type','name','phone']) AS col
 ORDER BY 1;
 SQL
 

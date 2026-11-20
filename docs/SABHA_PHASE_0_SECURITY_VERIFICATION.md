@@ -6,7 +6,7 @@ Date: 20 November 2026 (Asia/Calcutta). Branch: `cursor/phase-0-security-remedia
 
 **This phase does not deploy.** CI green is not completion. Phase 0 completes only after approved function deploys + migration apply + independent hosted re-probe.
 
-**In-repo reliability corrections (stale claim recovery, finalize diagnostics, expanded PIN tests, authenticated regression) are complete below.** Hosted apply remains human-gated. Request human deployment approval only after reading this document’s deploy order and rollback.
+**In-repo corrections complete below**, including the table-level SELECT privilege fix (deployment blocker), lease renewal / execution bound, and `service_role` claim path tests. Hosted apply remains human-gated.
 
 ---
 
@@ -20,7 +20,8 @@ Date: 20 November 2026 (Asia/Calcutta). Branch: `cursor/phase-0-security-remedia
 | Edge `whatsapp-bot` | ACTIVE, `verify_jwt=false` (webhook). |
 | Edge `invite-member` | Not listed on host (repo-only). |
 | RPC `anon` EXECUTE | `true` for all listed Phase 0 functions (see privilege matrix). |
-| `residents` secret columns | `anon`/`authenticated` still have SELECT on `pin`, `pin_hash`, `portal_pin`, `id_number`, `id_document_url`, `id_type` (hosted confirmed). |
+| `residents` table SELECT | **`anon` and `authenticated` have table-level SELECT** (plus INSERT/UPDATE/DELETE). Column-level REVOKE alone cannot protect secrets while this remains. |
+| `residents` secret columns | Effective SELECT true for all six secrets via table privilege (`pin`, `pin_hash`, `portal_pin`, `id_number`, `id_document_url`, `id_type`). |
 | Hosted `trigger_send_whatsapp` | SECURITY DEFINER trigger posts to Edge with `Authorization: Bearer` + `current_setting('app.service_role_key')` and empty body `{}` — **cross-tenant + bypasses any future dispatch secret**. |
 
 Probes used the project anon key and did **not** modify rows. Source-level migrations were **not** assumed equal to hosted grants.
@@ -34,7 +35,9 @@ Probes used the project anon key and did **not** modify rows. Source-level migra
 | Society / tenant scoping | `POST` body **requires** `society_id` (UUID). Claim RPC filters `WHERE society_id = p_society_id`. Edge rejects rows whose `society_id` ≠ request. |
 | Atomic claim / no duplicate dispatch | `claim_whatsapp_batch` uses `FOR UPDATE SKIP LOCKED`, sets `status='sending'`, `claim_token`, increments `attempt_count`. Concurrent dispatchers cannot take the same active row. |
 | Stale claim recovery | Rows in `sending` with `claimed_at` older than the **claim lease** are reclaimable. Active leases are never reclaimed. Recovery increments `attempt_count`, rotates `claim_token`, writes `last_error` starting with `stale_claim_recovered:`. |
-| Claim lease | Default **300s**. Override via body `lease_seconds` (60–3600) or GUC `app.wa_claim_lease_seconds`. Reclaiming an active lease returns no row (idempotent). |
+| Claim lease | Default **300s**, raised to cover batch size (`60 + limit×3`). Override via body `lease_seconds` (60–3600) or GUC `app.wa_claim_lease_seconds`. Reclaiming an active lease returns no row (idempotent). Uses `clock_timestamp()` so renewals advance inside a transaction. |
+| Lease renewal | `renew_whatsapp_claims` (service_role only) advances `claimed_at` for rows still held by the claim token. Edge renews **before each send**. |
+| Execution bound | Hard stop at **75% of lease** from dispatch start: remaining claimed rows are finalized back to `pending` (`lease_budget_exhausted`) so another worker cannot race an in-flight send after silent expiry. If renew returns 0, the worker aborts the remainder. |
 | Attempt cap | `attempt_count < 5` required to claim or recover. At 5, finalize failure marks `failed`. |
 | Idempotent finalize | Updates only when `claim_token` + `society_id` + `status='sending'` match. Failures with `attempt_count < 5` return to `pending`; at 5 → `failed`. |
 | Finalize error handling | Edge inspects every RPC result. RPC errors, thrown failures, and `false` results go into redacted `diagnostics`; `finalize_issues` counted. Rows left in `sending` remain recoverable after lease expiry. |
@@ -49,10 +52,24 @@ Probes used the project anon key and did **not** modify rows. Source-level migra
 ### Stale claim recovery design
 
 1. Crash / timeout / failed finalize leaves `status='sending'` with `claimed_at` + `claim_token`.
-2. While `now() - claimed_at < lease`, other workers skip the row.
-3. After lease expiry, the next society-scoped claim may take the row, record `stale_claim_recovered…`, bump `attempt_count`, and assign a new token.
-4. Recovery is society-isolated and subject to the five-attempt cap.
-5. Finalize with a wrong/stale token returns `false` without mutating the row.
+2. While `clock_timestamp() - claimed_at < lease`, other workers skip the row.
+3. The owning worker renews `claimed_at` before each Graph call so a healthy dispatch cannot outlive its lease and be reclaimed mid-send.
+4. After true lease expiry (crashed worker), the next society-scoped claim may take the row, record `stale_claim_recovered…`, bump `attempt_count`, and assign a new token.
+5. Recovery is society-isolated and subject to the five-attempt cap.
+6. Finalize with a wrong/stale token returns `false` without mutating the row.
+
+### Residents privilege fix (deployment blocker)
+
+Hosted grants **table-level** `SELECT` to `anon` and `authenticated`. In PostgreSQL, that makes every column selectable; column-level `REVOKE SELECT (pin)` does **not** remove effective access.
+
+Migration `20261120163000_phase0_security.sql` now:
+
+1. `REVOKE SELECT ON TABLE public.residents FROM PUBLIC, anon, authenticated`
+2. `REVOKE SELECT (secret)` per sensitive column
+3. `GRANT SELECT (…all non-secret columns…)` to **`authenticated` only** (dynamic from `pg_attribute`, excluding the six secrets)
+4. Leaves `anon` with no residents SELECT (table or column)
+
+Legitimate committee/resident UI reads that use non-secret columns (and `RESIDENT_READ_COLUMNS`) keep working for signed-in users. `SELECT *` / selecting `pin` fails for clients.
 
 ### WA_DISPATCH_SECRET — generate, store, rotate
 
@@ -116,7 +133,8 @@ Hosted signatures verified via read-only SQL on `wzchqxwwezklxsxmjvyt` (20 Nov 2
 | `trigger_send_whatsapp()` EXECUTE | true | true |
 | `generate_invoice_number()` EXECUTE | true | true |
 | `generate_ticket_number()` EXECUTE | true | true |
-| `residents.pin` SELECT | true | true |
+| `residents` TABLE SELECT | true | true |
+| `residents.pin` SELECT (effective) | true | true |
 | `residents.pin_hash` SELECT | true | true |
 | `residents.portal_pin` SELECT | true | true |
 | `residents.id_number` SELECT | true | true |
@@ -127,7 +145,7 @@ Hosted signatures verified via read-only SQL on `wzchqxwwezklxsxmjvyt` (20 Nov 2
 
 Script: `scripts/test-phase0-security.sh` → DB `societyos_phase0_test` (PostgreSQL 16).
 
-Representative of hosted: foundation + invitations + **legacy stubs matching hosted helper signatures and secret columns**, with hosted-like anon grants restored, then:
+**Baseline includes hosted-like `GRANT SELECT ON TABLE residents TO anon, authenticated`** (proves column-only REVOKE would be insufficient). Then:
 
 - `20261120163000_phase0_security.sql`
 - `20261120170000_whatsapp_dispatch_hardening.sql`
@@ -150,12 +168,16 @@ Representative of hosted: foundation + invitations + **legacy stubs matching hos
 | `generate_ticket_number` | false | false | false |
 | `claim_whatsapp_batch` | false | false | true |
 | `finalize_whatsapp_dispatch` | false | false | true |
+| `renew_whatsapp_claims` | false | false | true |
+| `residents` TABLE SELECT | **false** | **false** | — |
 | `residents.pin` SELECT | false | false | — |
 | `residents.pin_hash` SELECT | false | false | — |
 | `residents.portal_pin` SELECT | false | false | — |
 | `residents.id_number` SELECT | false | false | — |
 | `residents.id_document_url` SELECT | false | false | — |
 | `residents.id_type` SELECT | false | false | — |
+| `residents.name` SELECT | false | **true** | — |
+| `residents.phone` SELECT | false | **true** | — |
 
 ### Authenticated regression (disposable)
 
@@ -166,8 +188,9 @@ Representative of hosted: foundation + invitations + **legacy stubs matching hos
 | Invoice number trigger | INSERT assigns `INV/…` without client EXECUTE on generator |
 | Ticket number trigger | INSERT assigns `TKT-…` without client EXECUTE on generator |
 | WhatsApp queue insert | INSERT + no-op `trigger_send_whatsapp` OK |
-| Service-role claim/finalize | Claim, active-lease block, stale recovery, attempt cap, society isolation OK |
-| Client blocked from dispatch RPCs | `authenticated`/`anon` permission denied on claim/finalize |
+| Effective pin deny | `SET ROLE authenticated; SELECT pin …` → permission denied; `SELECT name, phone` allowed |
+| **`SET ROLE service_role` claim/renew/finalize** | Claim, renew advances `claimed_at`, wrong-token renew=0, active-lease block, stale recovery, attempt cap, society isolation OK |
+| Client blocked from dispatch RPCs | `authenticated`/`anon` permission denied on claim/finalize/renew |
 
 **Read-only SQL for hosted re-check after apply:**
 
@@ -187,10 +210,13 @@ WHERE n.nspname IN ('public')
   )
 ORDER BY 1;
 
+SELECT has_table_privilege('anon', 'public.residents', 'SELECT') AS anon_table,
+       has_table_privilege('authenticated', 'public.residents', 'SELECT') AS auth_table;
+
 SELECT col,
        has_column_privilege('anon', 'public.residents', col, 'SELECT') AS anon_sel,
        has_column_privilege('authenticated', 'public.residents', col, 'SELECT') AS auth_sel
-FROM unnest(ARRAY['pin','pin_hash','portal_pin','id_number','id_document_url','id_type']) AS col;
+FROM unnest(ARRAY['pin','pin_hash','portal_pin','id_number','id_document_url','id_type','name','phone']) AS col;
 
 SELECT polname, pg_get_expr(polqual, polrelid)
 FROM pg_policy
@@ -219,7 +245,7 @@ Unchanged intent: `auth-login` → 410; PIN column revoke; `ai-proxy` JWT + getU
 ## Remaining risks (explicit)
 
 1. **Hosted still vulnerable** until human applies migrations + deploys functions — repo green ≠ production safe.
-2. **Plaintext PIN values** remain stored; revoke only blocks PostgREST SELECT for anon/authenticated.
+2. **Plaintext PIN values** remain stored; privilege fix blocks PostgREST SELECT of secrets for anon/authenticated (table SELECT removed; non-secret columns re-granted to authenticated only).
 3. **At-least-once WhatsApp delivery** — Graph accept + lost finalize can duplicate after lease reclaim. Not exactly-once.
 4. **Legacy RLS** still allows committee to read non-secret resident fields society-wide; multi-society adversarial tests are Phase 1.
 5. **Cron must be society-scoped**; missing `society_id` → 400.
