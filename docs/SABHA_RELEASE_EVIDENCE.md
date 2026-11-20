@@ -42,8 +42,10 @@ Edge Functions (after authorization): `ai-proxy`, `send-whatsapp`, any payment w
 | --- | --- |
 | Local production build | Verified |
 | Local Vite preview (`127.0.0.1:4173`) | Available in agent environment |
+| Cloudflare branch preview | `https://cursor-sabha-product-deliver.societyos.pages.dev` (HTTP 200) |
+| Cloudflare commit preview | `https://b7607362.societyos.pages.dev` (commit `2351fdb`; later commits may refresh) |
 | Cloudflare Pages production | `https://societyos.pages.dev` — **not redeployed** from this branch without authorization |
-| Existing SABHA preview host | `https://cursor-transparency-platform.societyos.pages.dev` (prior preview; rebuild of this branch not triggered here) |
+| Prior SABHA preview host | `https://cursor-transparency-platform.societyos.pages.dev` |
 | Hosted Supabase migrations | **Not applied** — requires explicit production authorization |
 
 ## Single external actions still required
