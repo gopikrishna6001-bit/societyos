@@ -42,24 +42,41 @@ describe("Phase 0 edge function hardening", () => {
 });
 
 describe("Phase 0 database migration", () => {
-  test("phase0 migration revokes pin column selects and anon executes", () => {
+  test("phase0 migration revokes all secret column selects and anon executes", () => {
     const body = source("supabase/migrations/20261120163000_phase0_security.sql");
-    expect(body).toContain("REVOKE SELECT (pin, pin_hash, portal_pin");
+    for (const col of ["pin", "pin_hash", "portal_pin", "id_number", "id_document_url", "id_type"]) {
+      expect(body).toContain(`'${col}'`);
+    }
     expect(body).toContain("trigger_send_whatsapp");
     expect(body).toContain("account_balances");
     expect(body).toContain("resident_dashboard");
     expect(body).toContain("REVOKE ALL ON FUNCTION");
   });
 
-  test("whatsapp dispatch migration claims atomically and no-ops the HTTP trigger", () => {
+  test("whatsapp dispatch migration claims atomically with stale lease recovery", () => {
     const body = source("supabase/migrations/20261120170000_whatsapp_dispatch_hardening.sql");
     expect(body).toContain("FOR UPDATE SKIP LOCKED");
     expect(body).toContain("claim_whatsapp_batch");
     expect(body).toContain("finalize_whatsapp_dispatch");
+    expect(body).toContain("stale_claim_recovered");
+    expect(body).toContain("app.wa_claim_lease_seconds");
+    expect(body).toContain("p_lease_seconds");
     expect(body).toContain("GRANT EXECUTE ON FUNCTION public.claim_whatsapp_batch");
     expect(body).toContain("RETURN NEW;");
     expect(body).not.toContain("http_post");
     expect(body).not.toContain("WA_DISPATCH_SECRET");
+  });
+});
+
+describe("Phase 0 send-whatsapp finalisation", () => {
+  test("dispatcher inspects finalize results and documents at-least-once risk", () => {
+    const body = source("supabase/functions/send-whatsapp/index.ts");
+    expect(body).toContain("finalizeDispatch");
+    expect(body).toContain("finalize_false");
+    expect(body).toContain("finalize_error");
+    expect(body).toContain("at_least_once_risk");
+    expect(body).toContain("exactly-once");
+    expect(body).toContain("diagnostics");
   });
 });
 

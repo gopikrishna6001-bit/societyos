@@ -50,8 +50,10 @@ WHERE n.nspname = 'public'
     'claim_whatsapp_batch','finalize_whatsapp_dispatch'
   )
 ORDER BY p.proname;
-SELECT 'pin_anon|' || has_column_privilege('anon', 'public.residents', 'pin', 'SELECT')
-    || '|pin_auth|' || has_column_privilege('authenticated', 'public.residents', 'pin', 'SELECT');
+SELECT col || '|anon|' || has_column_privilege('anon', 'public.residents', col, 'SELECT')
+    || '|auth|' || has_column_privilege('authenticated', 'public.residents', col, 'SELECT')
+FROM unnest(ARRAY['pin','pin_hash','portal_pin','id_number','id_document_url','id_type']) AS col
+ORDER BY 1;
 SQL
 
 echo "phase0 disposable database tests passed"

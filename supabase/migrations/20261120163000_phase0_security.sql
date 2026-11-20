@@ -3,15 +3,25 @@
 -- Do not replay the full platform foundation migration beside this file.
 
 -- 1) Credential columns on legacy residents must not be selectable by clients.
+-- Revoke per column so a missing column on a divergent schema cannot abort the rest.
 DO $$
+DECLARE
+  v_col text;
 BEGIN
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public' AND table_name = 'residents' AND column_name = 'pin'
-  ) THEN
-    REVOKE SELECT (pin, pin_hash, portal_pin, id_number, id_document_url, id_type)
-      ON public.residents FROM PUBLIC, anon, authenticated;
-  END IF;
+  FOREACH v_col IN ARRAY ARRAY[
+    'pin', 'pin_hash', 'portal_pin', 'id_number', 'id_document_url', 'id_type'
+  ]
+  LOOP
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'residents' AND column_name = v_col
+    ) THEN
+      EXECUTE format(
+        'REVOKE SELECT (%I) ON public.residents FROM PUBLIC, anon, authenticated',
+        v_col
+      );
+    END IF;
+  END LOOP;
 END $$;
 
 -- 2) Anonymous callers cannot execute messaging, number generators, or policy helpers.

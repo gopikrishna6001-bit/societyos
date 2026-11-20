@@ -167,4 +167,36 @@ GRANT EXECUTE ON FUNCTION public.trigger_send_whatsapp() TO PUBLIC, anon, authen
 GRANT EXECUTE ON FUNCTION public.generate_invoice_number() TO PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.generate_ticket_number() TO PUBLIC, anon, authenticated;
 
-GRANT SELECT (pin, pin_hash, portal_pin, id_number) ON public.residents TO anon, authenticated;
+GRANT SELECT (pin, pin_hash, portal_pin, id_number, id_document_url, id_type)
+  ON public.residents TO anon, authenticated;
+
+-- Minimal invoice / ticket tables so generator triggers stay exercisable after EXECUTE revoke.
+CREATE TABLE IF NOT EXISTS public.invoices (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  society_id uuid,
+  invoice_number text,
+  total_amount numeric DEFAULT 0,
+  amount_paid numeric DEFAULT 0,
+  balance_due numeric DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS public.tickets_legacy (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  society_id uuid,
+  ticket_number text
+);
+
+DROP TRIGGER IF EXISTS trg_generate_invoice_number ON public.invoices;
+CREATE TRIGGER trg_generate_invoice_number
+  BEFORE INSERT ON public.invoices
+  FOR EACH ROW EXECUTE FUNCTION public.generate_invoice_number();
+
+DROP TRIGGER IF EXISTS trg_generate_ticket_number ON public.tickets_legacy;
+CREATE TRIGGER trg_generate_ticket_number
+  BEFORE INSERT ON public.tickets_legacy
+  FOR EACH ROW EXECUTE FUNCTION public.generate_ticket_number();
+
+DROP TRIGGER IF EXISTS trg_whatsapp_queue ON public.whatsapp_log;
+CREATE TRIGGER trg_whatsapp_queue
+  AFTER INSERT ON public.whatsapp_log
+  FOR EACH ROW EXECUTE FUNCTION public.trigger_send_whatsapp();
