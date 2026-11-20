@@ -33,6 +33,7 @@ Unified SABHA Platform at `/` with operational workflows:
 3. `20261120180000_payment_proofs_action_centre.sql`
 4. `20261120190000_notices_visitors_amenities.sql`
 5. `20261120200000_governance_ops_assistant.sql`
+6. `20261120210000_collection_register_and_period_facts.sql`
 
 Edge Functions (after authorization): `ai-proxy`, `send-whatsapp`, any payment webhook when credentials exist.
 

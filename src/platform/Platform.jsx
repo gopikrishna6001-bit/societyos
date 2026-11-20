@@ -11,9 +11,6 @@ import { Field, PageStatus, control } from "./ui.jsx";
 import { brand } from "../brand.js";
 import { passwordRule, signInMessage } from "../lib/authPolicy.js";
 import { Mark, Wordmark } from "../brand/Mark.jsx";
-import { DemoApp } from "./demo/DemoApp.jsx";
-import { isDemoEmail } from "./demo/data.js";
-
 export default function Platform() {
   if (!isSupabaseConfigured) return <ConfigRequired />;
   return <SignedInApp />;
@@ -122,8 +119,13 @@ function DemoAccounts({ onPick }) {
   if (!accounts) return null;
   return (
     <section className="mt-4 border border-slate-800 bg-white p-4">
-      <h2 className="font-display text-lg font-semibold">DEMO accounts</h2>
-      <p className="mt-1 text-sm text-slate-400">Palm Court opens as a demo on this device. Its figures are not posted to a community ledger. Shared password: {sharedPassword}.</p>
+      <h2 className="font-display text-lg font-semibold">Isolated demo accounts</h2>
+      <p className="mt-1 text-sm text-slate-400">
+        These credentials are for the Palm Court fixture only. After sign-in, open{" "}
+        <Link className="font-semibold text-[#0878E8]" to="/demo">/demo</Link>{" "}
+        to see device-local sample figures. Live SABHA at <code>/</code> never posts demo money to a ledger.
+        Shared password: {sharedPassword}.
+      </p>
       <div className="mt-3 grid gap-2">
         {accounts.map((account) => (
           <button
@@ -141,9 +143,8 @@ function DemoAccounts({ onPick }) {
 }
 
 function CommunityApp({ session }) {
-  if (isDemoEmail(session.user.email)) {
-    return <DemoApp email={session.user.email} onSignOut={() => supabase.auth.signOut()} />;
-  }
+  // Live product always uses authenticated community memberships and ledger data.
+  // Palm Court DemoApp is isolated at /demo and only when VITE_ENABLE_DEMO_LOGIN=true.
   return <LiveCommunity session={session} />;
 }
 
@@ -220,7 +221,7 @@ function canSee(roles, id) {
   if (id === "staff") return committee || treasurer;
   if (id === "funds") return financeOps;
   if (id === "collections") return true; // residents submit proofs; treasurers verify
-  if (id === "reconciliation" || id === "expenses" || id === "reviews" || id === "history") return financeOps || auditor;
+  if (id === "reconciliation" || id === "expenses" || id === "reviews" || id === "history" || id === "transactions") return financeOps || auditor;
   return ["home", "finance", "concerns", "decisions", "documents", "notifications", "profile", "notices", "visitors", "amenities", "assets", "assistant"].includes(id);
 }
 
@@ -243,6 +244,7 @@ const MORE = [
   ["profile", "Profile"],
   ["collections", "Collections"],
   ["expenses", "Expenses"],
+  ["transactions", "Transactions"],
   ["funds", "Funds"],
   ["reconciliation", "Reconciliation"],
   ["reviews", "Reviews"],
@@ -326,7 +328,7 @@ function Shell({ email, community, communities, communityId, onCommunity, roles,
 
 function Screen({ page, communityId, roles, email, onSignOut, onOpen }) {
   if (page === "home") return <HomeScreen communityId={communityId} roles={roles} onOpen={onOpen} />;
-  if (["finance", "collections", "expenses", "funds", "reconciliation", "reviews"].includes(page)) {
+  if (["finance", "collections", "expenses", "funds", "reconciliation", "reviews", "transactions"].includes(page)) {
     return <FinanceScreen communityId={communityId} roles={roles} focus={page} />;
   }
   if (page === "concerns") return <ConcernsScreen communityId={communityId} roles={roles} />;

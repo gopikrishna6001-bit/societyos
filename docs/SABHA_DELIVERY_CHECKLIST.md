@@ -8,6 +8,7 @@ Single consolidated checklist. Updated as work lands. Branch: `cursor/sabha-prod
 - [x] Disposable DB privilege + service_role claim tests
 - [ ] Hosted apply of Phase 0 migrations + Edge deploys (**requires production authorization**)
 - [x] Primary product surface is SABHA Platform at `/` (legacy retained at `/legacy`)
+- [x] Palm Court DemoApp isolated at `/demo` only when `VITE_ENABLE_DEMO_LOGIN=true` — live `/` never shows fabricated Palm Court figures
 
 ## Stage B — Core transactions
 

@@ -93,4 +93,12 @@ describe("Phase 0 demo credential exposure", () => {
     expect(body).toContain('VITE_ENABLE_DEMO_LOGIN !== "true"');
     expect(body).toContain('import("../demoAccounts.js")');
   });
+
+  test("authenticated sessions are not routed into the Palm Court DemoApp", () => {
+    const body = source("src/platform/Platform.jsx");
+    expect(body).not.toContain("isDemoEmail(session.user.email)");
+    expect(body).toContain("LiveCommunity");
+    const entry = source("src/main.jsx");
+    expect(entry).toContain('path="/demo/*"');
+  });
 });

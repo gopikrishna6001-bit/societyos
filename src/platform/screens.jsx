@@ -21,29 +21,70 @@ export function HomeScreen({ communityId, roles = [], onOpen }) {
   const query = useLoad(() => rpc("resident_dashboard", { p_community: communityId }), [communityId]);
   const actions = useLoad(() => rpc("action_centre", { p_community: communityId }), [communityId]);
   const dues = useLoad(() => rpc("my_unit_demands", { p_community: communityId }), [communityId]);
+  const periods = useLoad(
+    () => rows(supabase.from("collection_periods").select("id,financial_year,period_month,due_on").eq("community_id", communityId).order("period_month", { ascending: false })),
+    [communityId],
+  );
+  const [periodId, setPeriodId] = useState("");
+  useEffect(() => {
+    if (!periodId && periods.data?.[0]?.id) setPeriodId(periods.data[0].id);
+  }, [periods.data, periodId]);
+  const financial = roles.some((role) => ["treasurer", "resident_auditor", "committee_admin", "platform_admin"].includes(role));
+  const summary = useLoad(
+    () => (financial && periodId
+      ? rpc("collection_summary", { p_community: communityId, p_period: periodId }).then((result) => (Array.isArray(result) ? result[0] || null : result))
+      : Promise.resolve(null)),
+    [communityId, periodId, financial],
+  );
+  const ledger = useLoad(
+    () => (financial ? rpc("recent_ledger_entries", { p_community: communityId, p_limit: 8 }) : Promise.resolve([])),
+    [communityId, financial],
+  );
+  const periodExpenses = useLoad(() => {
+    if (!financial || !periods.data?.length || !periodId) return Promise.resolve([]);
+    const period = periods.data.find((row) => row.id === periodId);
+    if (!period?.period_month) return Promise.resolve([]);
+    const start = period.period_month;
+    const endDate = new Date(`${start}T00:00:00Z`);
+    endDate.setUTCMonth(endDate.getUTCMonth() + 1);
+    endDate.setUTCDate(0);
+    const end = endDate.toISOString().slice(0, 10);
+    return rpc("period_expense_register", { p_community: communityId, p_start: start, p_end: end });
+  }, [communityId, periodId, periods.data, financial]);
+
   const dash = query.data;
   const funds = dash?.funds || [];
-  const balance = funds.reduce((sum, fund) => sum + Number(fund.closing || 0), 0);
-  const receipts = funds.reduce((sum, fund) => sum + Number(fund.receipts || 0), 0);
-  const payments = funds.reduce((sum, fund) => sum + Number(fund.payments || 0), 0);
+  const banks = dash?.banks || [];
+  const corpus = funds.filter((fund) => fund.fund_kind === "corpus");
+  const reserve = funds.filter((fund) => fund.fund_kind === "special" || fund.fund_kind === "emergency" || fund.fund_kind === "other");
+  const maintenance = funds.filter((fund) => fund.fund_kind === "maintenance" || !fund.fund_kind);
+  const bankTotal = banks.reduce((sum, row) => sum + Number(row.book_balance || 0), 0);
+  const corpusTotal = corpus.reduce((sum, row) => sum + Number(row.closing || 0), 0);
+  const reserveTotal = reserve.reduce((sum, row) => sum + Number(row.closing || 0), 0);
+  const expenseTotal = asList(periodExpenses.data).reduce((sum, row) => sum + Number(row.amount || 0), 0);
   const nextMeeting = dash?.upcoming_meetings?.[0];
   const statement = dash?.latest_statement;
-  const financial = roles.some((role) => ["treasurer", "resident_auditor", "committee_admin", "platform_admin"].includes(role));
   const outstanding = asList(dues.data).filter((row) => Number(row?.outstanding_amount) > 0);
   const actionItems = asList(actions.data?.items);
+  const selectedPeriod = (periods.data || []).find((row) => row.id === periodId);
+  const collected = Number(summary.data?.collected || 0);
+  const billed = Number(summary.data?.expected || 0);
+  const periodOutstanding = Number(summary.data?.outstanding || 0);
+  const progress = billed > 0 ? Math.round((collected / billed) * 1000) / 10 : 0;
+
   return (
     <section>
-      <h2 className="mb-1 font-display text-2xl font-semibold">Home</h2>
-      <p className="mb-4 text-sm text-slate-400">Your action centre and ledger-backed balances. Every rupee. Every decision. Accounted for.</p>
+      <h2 className="mb-1 font-display text-2xl font-semibold">Action centre</h2>
+      <p className="mb-4 text-sm text-slate-400">Live society records only. Every figure opens the working register — nothing here is decorative.</p>
 
       <div className="mb-6 grid gap-2 sm:grid-cols-2">
-        <button type="button" className="min-h-12 bg-[#0878E8] px-3 font-semibold text-white" onClick={() => onOpen?.("collections")}>Pay maintenance</button>
+        <button type="button" className="min-h-12 bg-[#0878E8] px-3 font-semibold text-white" onClick={() => onOpen?.("collections")}>Pay / verify maintenance</button>
         <button type="button" className="min-h-12 border border-slate-600 px-3 font-semibold" onClick={() => onOpen?.("concerns")}>Raise concern</button>
-        <button type="button" className="min-h-12 border border-slate-600 px-3 font-semibold" onClick={() => onOpen?.("documents")}>Request / view documents</button>
+        <button type="button" className="min-h-12 border border-slate-600 px-3 font-semibold" onClick={() => onOpen?.("notices")}>Notices</button>
         <button type="button" className="min-h-12 border border-slate-600 px-3 font-semibold" onClick={() => onOpen?.("decisions")}>Meetings &amp; votes</button>
       </div>
 
-      <h3 className="mb-2 font-semibold">Action centre</h3>
+      <h3 className="mb-2 font-semibold">Needs your attention</h3>
       <PageStatus loading={actions.loading} error={actions.error} onRetry={actions.reload} empty={!actions.loading && !actions.error && actionItems.length === 0} title="Nothing waiting for you" body="When dues, proofs, concerns or meetings need attention, they appear here." />
       {!!actionItems.length && (
         <ul className="mb-6 border border-slate-800 bg-white">
@@ -74,41 +115,159 @@ export function HomeScreen({ communityId, roles = [], onOpen }) {
         </div>
       )}
 
-      <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && funds.length === 0} title="No fund balances yet" body="The treasurer posts an opening balance before these rows show an amount." />
-      {!!funds.length && (
-        <dl className="border border-slate-800 bg-white">
-          <Row term="Available balance" value={inr(balance)} />
-          <Row term="Receipts posted" value={inr(receipts)} />
-          <Row term="Payments posted" value={inr(payments)} />
-        </dl>
-      )}
-      {dash && (
-        <div className="mt-4 border border-slate-800 bg-white">
-          <div className="border-b border-slate-800 px-3 py-3">
-            <p className="text-sm text-slate-400">Latest statement</p>
-            <p className="font-semibold">{statement ? `${statement.status} · due ${statement.due_on}` : "None published"}</p>
+      {financial && (
+        <div className="mb-6">
+          <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+            <h3 className="font-semibold">Period control</h3>
+            <Field label="Billing period">
+              <select className={control} value={periodId} onChange={(event) => setPeriodId(event.target.value)} aria-label="Billing period">
+                {(periods.data || []).length === 0 && <option value="">No period opened</option>}
+                {(periods.data || []).map((period) => (
+                  <option key={period.id} value={period.id}>{period.financial_year} · {period.period_month}</option>
+                ))}
+              </select>
+            </Field>
           </div>
-          <div className="border-b border-slate-800 px-3 py-3">
-            <p className="text-sm text-slate-400">Open public concerns</p>
-            <p className="tabular font-semibold">{dash.open_public_concerns ?? 0}</p>
-          </div>
-          <div className="px-3 py-3">
-            <p className="text-sm text-slate-400">Next meeting</p>
-            <p className="font-semibold">{nextMeeting ? `${nextMeeting.title} · ${new Date(nextMeeting.held_on).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}` : "No upcoming meeting."}</p>
-          </div>
+          <PageStatus loading={periods.loading || summary.loading} error={periods.error || summary.error} onRetry={() => { periods.reload(); summary.reload(); }} empty={!periods.loading && !(periods.data || []).length} title="No collection period" body="Open a billing month under Collections before period metrics appear." />
+          {selectedPeriod && (
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              <MetricButton label="Collected" value={inr(collected)} hint={`${progress}% of billed`} onClick={() => onOpen?.("collections")} />
+              <MetricButton label="Outstanding" value={inr(periodOutstanding)} hint="Unit register (authorized)" onClick={() => onOpen?.("collections")} />
+              <MetricButton label="Expenses" value={inr(expenseTotal)} hint={selectedPeriod.period_month} onClick={() => onOpen?.("expenses")} />
+              <MetricButton label="Bank balance" value={inr(bankTotal)} hint="Reconciliation" onClick={() => onOpen?.("reconciliation")} />
+              <MetricButton label="Corpus" value={inr(corpusTotal)} hint="Fund statement" onClick={() => onOpen?.("funds")} />
+              <MetricButton label="Reserve / other" value={inr(reserveTotal)} hint="Fund statement" onClick={() => onOpen?.("funds")} />
+            </div>
+          )}
+          {selectedPeriod && (
+            <button type="button" className="mt-3 min-h-12 w-full border border-slate-600 px-3 text-left" onClick={() => onOpen?.("collections")}>
+              <span className="block text-sm text-slate-400">Collection progress · click for register</span>
+              <span className="mt-1 block h-2 w-full bg-slate-800">
+                <span className="block h-2 bg-[#00D4E8]" style={{ width: `${Math.min(progress, 100)}%` }} />
+              </span>
+              <span className="mt-2 text-sm">{inr(collected)} of {inr(billed)} billed · due {selectedPeriod.due_on}</span>
+            </button>
+          )}
+          {selectedPeriod && (
+            <div className="mt-4 border border-slate-800 bg-white p-3">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="font-semibold">Income and expenditure · {selectedPeriod.period_month}</h3>
+                <button type="button" className="text-sm font-semibold text-[#0878E8]" onClick={() => onOpen?.("expenses")}>Open expenses</button>
+              </div>
+              <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+                <div className="border border-slate-800 p-3"><dt className="text-slate-400">Maintenance collected</dt><dd className="tabular text-lg font-semibold">{inr(collected)}</dd></div>
+                <div className="border border-slate-800 p-3"><dt className="text-slate-400">Expenses in period</dt><dd className="tabular text-lg font-semibold">{inr(expenseTotal)}</dd></div>
+              </dl>
+              <PageStatus loading={periodExpenses.loading} error={periodExpenses.error} onRetry={periodExpenses.reload} empty={!periodExpenses.loading && !asList(periodExpenses.data).length} title="No expenses in this period" body="Create an expense under Expenses — the chart updates from posted records." />
+              <ul className="mt-2 space-y-2 text-sm">
+                {asList(periodExpenses.data).slice(0, 5).map((row) => (
+                  <li key={row.expense_id}>
+                    <button type="button" className="w-full border border-slate-800 bg-white px-3 py-2 text-left" onClick={() => onOpen?.("expenses")}>
+                      {row.occurred_on} · {row.expense_number} · {row.category} · {inr(row.amount)}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
-      {dash && financial && statement && !["published", "published_with_exceptions"].includes(statement.status) && (
-        <button type="button" className="mt-4 min-h-12 w-full bg-[#252525] px-3 font-semibold text-white" onClick={() => onOpen?.("finance")}>Review the latest statement</button>
+
+      {!financial && (
+        <div className="mb-6 border border-slate-800 bg-white p-3 text-sm text-slate-400">
+          Community fund totals and unit collection registers are available to treasurer, committee and auditor roles. Your own dues and public notices remain available below.
+        </div>
       )}
+
+      <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && funds.length === 0 && !financial} title="No fund balances yet" body="When the treasurer opens funds and posts balances, community totals appear for authorized roles." />
+      {!!maintenance.length && financial && (
+        <button type="button" className="mb-4 w-full border border-slate-800 bg-white px-3 py-3 text-left" onClick={() => onOpen?.("funds")}>
+          <span className="text-sm text-slate-400">Maintenance funds · open statement</span>
+          <span className="mt-1 block tabular text-xl font-semibold">{inr(maintenance.reduce((sum, row) => sum + Number(row.closing || 0), 0))}</span>
+        </button>
+      )}
+
+      {financial && (
+        <div className="mb-6">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <h3 className="font-semibold">Recent ledger transactions</h3>
+            <button type="button" className="text-sm font-semibold text-[#0878E8]" onClick={() => onOpen?.("history")}>Full audit history</button>
+          </div>
+          <PageStatus loading={ledger.loading} error={ledger.error} onRetry={ledger.reload} empty={!ledger.loading && !asList(ledger.data).length} title="No journal entries yet" body="Receipts, payments and adjustments appear here after they are posted." />
+          <ul className="border border-slate-800 bg-white text-sm">
+            {asList(ledger.data).map((entry) => (
+              <li key={entry.entry_id} className="border-b border-slate-800 px-3 py-3 last:border-b-0">
+                <button type="button" className="w-full text-left" onClick={() => onOpen?.(entry.entry_type === "payment" ? "expenses" : "collections")}>
+                  <div className="flex justify-between gap-3">
+                    <strong>{entry.entry_type}</strong>
+                    <span className="tabular">{inr(entry.amount)}</span>
+                  </div>
+                  <p className="text-slate-400">{entry.occurred_on} · {entry.narration}</p>
+                  <p className="font-mono text-xs text-slate-500">{entry.entry_id}</p>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div className="mb-6 grid gap-4 lg:grid-cols-2">
+        <div className="border border-slate-800 bg-white p-3">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="font-semibold">Announcements</h3>
+            <button type="button" className="text-sm font-semibold text-[#0878E8]" onClick={() => onOpen?.("notices")}>All notices</button>
+          </div>
+          <PageStatus loading={query.loading} error={null} empty={!query.loading && !(dash?.announcements || []).length} title="No announcements" body="Published notices and notifications appear here." />
+          <ul className="mt-2 space-y-2 text-sm">
+            {(dash?.announcements || []).map((item, index) => (
+              <li key={`${item.title}-${index}`}>
+                <button type="button" className="w-full border border-slate-800 px-3 py-2 text-left" onClick={() => onOpen?.(item.event_type ? "notifications" : "notices")}>
+                  <strong>{item.title}</strong>
+                  <p className="text-slate-400">{item.body}</p>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="border border-slate-800 bg-white p-3">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="font-semibold">Upcoming meetings</h3>
+            <button type="button" className="text-sm font-semibold text-[#0878E8]" onClick={() => onOpen?.("decisions")}>Meetings</button>
+          </div>
+          <PageStatus loading={query.loading} error={null} empty={!query.loading && !(dash?.upcoming_meetings || []).length} title="No upcoming meetings" body="Schedule a meeting from Meetings when the committee is ready." />
+          <ul className="mt-2 space-y-2 text-sm">
+            {(dash?.upcoming_meetings || []).map((meeting, index) => (
+              <li key={`${meeting.title}-${index}`}>
+                <button type="button" className="w-full border border-slate-800 px-3 py-2 text-left" onClick={() => onOpen?.("decisions")}>
+                  <strong>{meeting.title}</strong>
+                  <p className="text-slate-400">{new Date(meeting.held_on).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} · {meeting.venue || "Venue TBA"}</p>
+                </button>
+              </li>
+            ))}
+          </ul>
+          {nextMeeting && financial && statement && !["published", "published_with_exceptions"].includes(statement.status) && (
+            <button type="button" className="mt-3 min-h-12 w-full bg-[#252525] px-3 font-semibold text-white" onClick={() => onOpen?.("finance")}>Review latest statement</button>
+          )}
+        </div>
+      </div>
+
       {dash && (
-        <div className="mt-6 grid gap-6">
-          <List title="Recent updates" items={dash.announcements} render={(item) => item.title} empty="No notifications yet." />
+        <div className="grid gap-6">
           <List title="Recently resolved concerns" items={dash.recently_resolved} render={(item) => `${item.number}: ${item.subject}`} empty="No resolved public concerns yet." />
-          <List title="Bank book balances" items={dash.banks} render={(item) => `${item.name}: ${inr(item.book_balance)}`} empty="No bank ledger has been opened." />
+          {financial && <List title="Bank book balances" items={dash.banks} render={(item) => `${item.name}: ${inr(item.book_balance)}`} empty="No bank ledger has been opened." />}
         </div>
       )}
     </section>
+  );
+}
+
+function MetricButton({ label, value, hint, onClick }) {
+  return (
+    <button type="button" className="border border-slate-800 bg-white p-3 text-left" onClick={onClick}>
+      <span className="text-sm text-slate-400">{label}</span>
+      <span className="mt-1 block tabular text-xl font-semibold">{value}</span>
+      {hint && <span className="mt-1 block text-xs text-slate-500">{hint} · open</span>}
+    </button>
   );
 }
 
@@ -159,10 +318,22 @@ export function FinanceScreen({ communityId, roles, focus }) {
   const [section, setSection] = useState(focus === "finance" ? "funds" : focus);
   useEffect(() => { setSection(focus === "finance" ? "funds" : focus); }, [focus]);
   const show = (name) => section === name;
+  const entries = useLoad(
+    () => rows(supabase.from("journal_entries").select("id,occurred_on,entry_type,narration,idempotency_key,reverses_entry_id,created_at").eq("community_id", communityId).order("occurred_on", { ascending: false }).limit(40)),
+    [communityId],
+  );
+  const [openEntry, setOpenEntry] = useState("");
+  const entryLines = useLoad(
+    () => (openEntry
+      ? rows(supabase.from("journal_lines").select("id,direction,amount,accounts(name,code,account_type)").eq("entry_id", openEntry))
+      : Promise.resolve([])),
+    [openEntry],
+  );
   const sections = [
     ["funds", "Funds"],
     ["collections", "Collections"],
     ["expenses", "Expenses"],
+    ["transactions", "Transactions"],
     ...(canSeeRecon ? [["reconciliation", "Reconciliation"]] : []),
     ["reviews", "Reviews"],
     ["statements", "Statements"],
@@ -246,6 +417,39 @@ export function FinanceScreen({ communityId, roles, focus }) {
         <Expenses communityId={communityId} canPost={canPost} canReview={canReview} expenses={expenses} funds={accountsOf(ledger.data, "fund")} banks={accountsOf(ledger.data, "bank")} onPosted={funds.reload} />
       )}
 
+      {show("transactions") && (
+        <div>
+          <h2 className="mb-3 text-xl font-semibold">Ledger transactions</h2>
+          <p className="mb-3 text-sm text-slate-400">Posted journal entries. Corrections use reversals — originals are never deleted.</p>
+          <PageStatus loading={entries.loading} error={entries.error} onRetry={entries.reload} empty={!entries.loading && !(entries.data || []).length} title="No transactions posted" body="Collections, expenses and opening balances create journal entries here." />
+          <ul className="space-y-2 text-sm">
+            {(entries.data || []).map((entry) => (
+              <li key={entry.id} className="border border-slate-800 bg-white p-3">
+                <button type="button" className="w-full text-left" onClick={() => setOpenEntry(openEntry === entry.id ? "" : entry.id)}>
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <strong>{entry.entry_type}</strong>
+                    <span>{entry.occurred_on}</span>
+                  </div>
+                  <p>{entry.narration}</p>
+                  <p className="font-mono text-xs text-slate-500">{entry.id}</p>
+                </button>
+                {openEntry === entry.id && (
+                  <div className="mt-3 border-t border-slate-800 pt-3">
+                    <p className="text-slate-400">Idempotency {entry.idempotency_key}</p>
+                    {entry.reverses_entry_id && <p className="text-slate-400">Reverses {entry.reverses_entry_id}</p>}
+                    <PageStatus loading={entryLines.loading} error={entryLines.error} onRetry={entryLines.reload} empty={!entryLines.loading && !(entryLines.data || []).length} title="No lines" />
+                    <ul className="mt-2 space-y-1">
+                      {(entryLines.data || []).map((line) => (
+                        <li key={line.id}>{line.direction} · {line.accounts?.code} {line.accounts?.name} · {inr(line.amount)}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {show("reconciliation") && canSeeRecon && <Reconciliation communityId={communityId} banks={accountsOf(ledger.data, "bank")} canPost={canPost} />}
       {show("reviews") && <Reviews communityId={communityId} roles={roles} />}
       {show("statements") && <Statements communityId={communityId} canPost={canPost} canReview={canReview} />}
@@ -423,6 +627,7 @@ function Collections({ communityId, canPost, periods, ledger, onPosted }) {
           <Card label="Unpaid units" value={String(summary.data.unpaid_units ?? 0)} />
         </div>
       )}
+      {canPost && periodId && <CollectionRegister communityId={communityId} periodId={periodId} />}
       {canPost && (
         <div className="mt-4 space-y-4">
           <SaveForm submitLabel="Open collection period" onSubmit={(data) => rpc("open_collection_period", {
@@ -477,6 +682,70 @@ function AccountSelect({ label, name, accounts }) {
         {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
       </select>
     </Field>
+  );
+}
+
+function CollectionRegister({ communityId, periodId }) {
+  const [status, setStatus] = useState("all");
+  const [queryText, setQueryText] = useState("");
+  const register = useLoad(
+    () => rpc("period_collection_register", { p_community: communityId, p_period: periodId }),
+    [communityId, periodId],
+  );
+  const rowsList = asList(register.data).filter((row) => {
+    const matchesStatus = status === "all" || row.payment_status === status;
+    const haystack = `${row.unit_number} ${row.last_receipt_number || ""} ${row.last_bank_reference || ""}`.toLowerCase();
+    return matchesStatus && haystack.includes(queryText.trim().toLowerCase());
+  });
+  return (
+    <div className="mt-6">
+      <h3 className="mb-2 font-semibold">Collection register</h3>
+      <p className="mb-3 text-sm text-slate-400">Unit-level dues for authorized finance roles. Residents only see their own units above.</p>
+      <div className="mb-3 grid gap-3 sm:grid-cols-2">
+        <Field label="Search"><input className={control} value={queryText} onChange={(event) => setQueryText(event.target.value)} placeholder="Unit, receipt, reference" /></Field>
+        <Field label="Status">
+          <select className={control} value={status} onChange={(event) => setStatus(event.target.value)}>
+            <option value="all">All</option>
+            <option value="paid">Paid</option>
+            <option value="partial">Partial</option>
+            <option value="outstanding">Outstanding</option>
+          </select>
+        </Field>
+      </div>
+      <PageStatus loading={register.loading} error={register.error} onRetry={register.reload} empty={!register.loading && !rowsList.length} title="No demands in this period" body="Open the period for occupied units first." />
+      <ul className="space-y-2 text-sm">
+        {rowsList.map((row) => (
+          <li key={row.demand_id} className="border border-slate-800 bg-white p-3">
+            <div className="flex flex-wrap justify-between gap-2">
+              <strong>Unit {row.unit_number}</strong>
+              <span className="uppercase tracking-wide text-xs">{row.payment_status}</span>
+            </div>
+            <p>Billed {inr(row.billed_amount)} · Received {inr(row.collected_amount)} · Outstanding {inr(row.outstanding_amount)}</p>
+            <p className="text-slate-400">Due {row.due_on} · {row.days_overdue > 0 ? `${row.days_overdue} days overdue` : "not overdue"}</p>
+            <p className="text-slate-400">Last payment {row.last_paid_on || "—"} · {row.last_payment_mode || "—"} · receipt {row.last_receipt_number || "—"}</p>
+            <p className="font-mono text-xs text-slate-500">Demand {row.demand_id}</p>
+          </li>
+        ))}
+      </ul>
+      {!!rowsList.length && (
+        <button
+          type="button"
+          className="mt-3 min-h-12 border border-slate-600 px-3"
+          onClick={() => downloadText("collection-register.csv", toCsv(rowsList.map((row) => ({
+            unit: row.unit_number,
+            billed: row.billed_amount,
+            collected: row.collected_amount,
+            outstanding: row.outstanding_amount,
+            due_on: row.due_on,
+            status: row.payment_status,
+            receipt: row.last_receipt_number,
+            reference: row.last_bank_reference,
+          }))))}
+        >
+          Export register CSV
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -830,8 +1099,9 @@ export function ConcernsScreen({ communityId, roles }) {
 
 export function DecisionsScreen({ communityId, roles }) {
   const committee = roles.includes("committee_admin") || roles.includes("platform_admin");
+  const [openMeeting, setOpenMeeting] = useState("");
   const meetings = useLoad(() => rows(supabase.from("meetings").select("id,title,meeting_type,held_on,venue,minutes").eq("community_id", communityId).order("held_on", { ascending: false })), [communityId]);
-  const resolutions = useLoad(() => rows(supabase.from("resolutions").select("id,title,description,status,voting_starts_at,voting_ends_at").eq("community_id", communityId).order("created_at", { ascending: false })), [communityId]);
+  const resolutions = useLoad(() => rows(supabase.from("resolutions").select("id,title,description,status,voting_starts_at,voting_ends_at,meeting_id").eq("community_id", communityId).order("created_at", { ascending: false })), [communityId]);
   return (
     <section className="space-y-6">
       <div>
@@ -839,7 +1109,23 @@ export function DecisionsScreen({ communityId, roles }) {
         <PageStatus loading={meetings.loading} error={meetings.error} onRetry={meetings.reload} empty={!meetings.loading && !meetings.error && !(meetings.data || []).length} title="No meetings recorded" body="Committee, general body, emergency, and special meetings are listed after they are scheduled." />
         <ul className="space-y-2 text-sm">{(meetings.data || []).map((meeting) => {
           const upcoming = new Date(meeting.held_on).getTime() >= Date.now();
-          return <li key={meeting.id} className="border border-slate-800 bg-white p-3"><p className="text-sm text-slate-400">{upcoming ? "Upcoming" : "Past"} · {meeting.meeting_type}</p><strong>{meeting.title}</strong><p className="text-slate-400">{new Date(meeting.held_on).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} · {meeting.venue || "Venue not recorded"}</p>{meeting.minutes && <p className="mt-2">{meeting.minutes}</p>}</li>;
+          const linked = (resolutions.data || []).filter((row) => row.meeting_id === meeting.id);
+          return (
+            <li key={meeting.id} className="border border-slate-800 bg-white p-3">
+              <button type="button" className="w-full text-left" onClick={() => setOpenMeeting(openMeeting === meeting.id ? "" : meeting.id)}>
+                <p className="text-sm text-slate-400">{upcoming ? "Upcoming" : "Past"} · {meeting.meeting_type}</p>
+                <strong>{meeting.title}</strong>
+                <p className="text-slate-400">{new Date(meeting.held_on).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} · {meeting.venue || "Venue not recorded"}</p>
+              </button>
+              {openMeeting === meeting.id && (
+                <div className="mt-3 border-t border-slate-800 pt-3">
+                  <p className="font-mono text-xs text-slate-500">Meeting {meeting.id}</p>
+                  <p className="mt-2"><span className="text-slate-400">Minutes / agenda: </span>{meeting.minutes || "Not published yet"}</p>
+                  <p className="mt-2 text-slate-400">Linked resolutions: {linked.length ? linked.map((row) => row.title).join("; ") : "None yet"}</p>
+                </div>
+              )}
+            </li>
+          );
         })}</ul>
         {committee && (
           <SaveForm submitLabel="Schedule meeting" onSubmit={(data) => rpc("create_meeting", { p_community: communityId, p_type: data.type, p_title: data.title, p_held_on: new Date(data.when).toISOString(), p_venue: data.venue }).then(meetings.reload)}>

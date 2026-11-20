@@ -145,7 +145,7 @@ function Shell() {
             </div>
           )}
         </header>
-        <p className="app-note">Demo mode. Palm Court figures stay on this device and are not written to a community ledger.</p>
+        <p className="app-note">ISOLATED DEMO — Palm Court fixture only. Figures stay on this device and are never written to a community ledger. Live SABHA is at <a href="/">/</a>.</p>
         <main className="app-main">
           <Outlet />
         </main>
