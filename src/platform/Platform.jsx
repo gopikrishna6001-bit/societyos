@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { isSupabaseConfigured, rpc, rows, supabase } from "./api.js";
+import { isSupabaseConfigured, rpc, rows, supabase, withTimeout } from "./api.js";
 import { explain } from "./api.js";
+import { isDemoEmail } from "./demo/data.js";
 import {
   AmenitiesScreen, AssetsScreen, AssistantScreen, ConcernsScreen, DecisionsScreen, DocumentsScreen,
   FinanceScreen, HistoryScreen, HomeScreen, NoticesScreen, NotificationsScreen, ProfileScreen,
@@ -148,35 +149,142 @@ function CommunityApp({ session }) {
   return <LiveCommunity session={session} />;
 }
 
+async function loadMyMemberships(userId) {
+  // Prefer RPC (no nested embed; avoids PostgREST/RLS hangs on some hosted schemas).
+  try {
+    const data = await withTimeout(rpc("my_memberships"), 10000, "Loading communities");
+    return asMembershipRows(data);
+  } catch (rpcError) {
+    // Fallback for hosts that have not applied the my_memberships migration yet.
+    const plain = await withTimeout(
+      rows(
+        supabase
+          .from("community_memberships")
+          .select("community_id, role")
+          .eq("profile_id", userId)
+          .eq("status", "active"),
+      ),
+      10000,
+      "Loading communities",
+    );
+    const ids = [...new Set(plain.map((row) => row.community_id).filter(Boolean))];
+    let names = {};
+    if (ids.length) {
+      try {
+        const communities = await withTimeout(
+          rows(supabase.from("communities").select("id, name").in("id", ids)),
+          8000,
+          "Loading community names",
+        );
+        names = Object.fromEntries(communities.map((row) => [row.id, row.name]));
+      } catch {
+        names = {};
+      }
+    }
+    return plain.map((row) => ({
+      community_id: row.community_id,
+      role: row.role,
+      communities: { name: names[row.community_id] || "Community" },
+    }));
+  }
+}
+
+function asMembershipRows(data) {
+  return (Array.isArray(data) ? data : []).map((row) => ({
+    community_id: row.community_id,
+    role: row.role,
+    communities: { name: row.community_name || row.communities?.name || "Community" },
+  }));
+}
+
 function LiveCommunity({ session }) {
   const [memberships, setMemberships] = useState(undefined);
   const [error, setError] = useState("");
   const [communityId, setCommunityId] = useState("");
+  const [slow, setSlow] = useState(false);
   const load = () => {
     setError("");
-    rows(supabase.from("community_memberships").select("community_id, role, communities(name)").eq("profile_id", session.user.id).eq("status", "active"))
+    setMemberships(undefined);
+    setSlow(false);
+    const slowTimer = setTimeout(() => setSlow(true), 4000);
+    loadMyMemberships(session.user.id)
       .then((data) => {
         setMemberships(data);
         setCommunityId((current) => current || data[0]?.community_id || "");
       })
-      .catch((cause) => { setMemberships([]); setError(explain(cause)); });
+      .catch((cause) => {
+        setMemberships([]);
+        setError(explain(cause));
+      })
+      .finally(() => clearTimeout(slowTimer));
   };
   useEffect(load, [session.user.id]);
-  if (memberships === undefined) return <p className="p-6 text-[#5C5852]">Loading your communities…</p>;
-  if (error) return <main className="p-6"><PageStatus error={error} onRetry={load} /></main>;
+  if (memberships === undefined) {
+    return (
+      <main className="mx-auto max-w-lg px-4 py-16 text-[#252525]">
+        <Wordmark />
+        <p className="mt-6 text-[#5C5852]">Loading your communities…</p>
+        {slow && (
+          <p className="mt-3 text-sm text-[#5C5852]">
+            This is taking longer than expected. If it stays here, the membership lookup may be blocked or the hosted schema may be missing a migration.
+          </p>
+        )}
+        <button type="button" className="mt-6 min-h-12 border border-[#031D27]/30 bg-white px-3" onClick={() => supabase.auth.signOut()}>
+          Sign out
+        </button>
+        {slow && (
+          <button type="button" className="mt-3 min-h-12 bg-[#0878E8] px-3 font-semibold text-white" onClick={load}>
+            Retry
+          </button>
+        )}
+      </main>
+    );
+  }
+  if (error) {
+    return (
+      <main className="mx-auto max-w-lg p-6 text-[#252525]">
+        <PageStatus error={error} onRetry={load} />
+        <button type="button" className="mt-4 min-h-12 border border-[#031D27]/30 bg-white px-3" onClick={() => supabase.auth.signOut()}>
+          Sign out
+        </button>
+      </main>
+    );
+  }
   const mine = memberships.filter((row) => row.community_id === communityId);
-  if (!mine.length) return <Setup onCreated={(id) => { setCommunityId(id); load(); }} />;
+  if (!mine.length) {
+    return (
+      <Setup
+        email={session.user.email}
+        onCreated={(id) => { setCommunityId(id); load(); }}
+        onSignOut={() => supabase.auth.signOut()}
+      />
+    );
+  }
   const roles = mine.map((row) => row.role);
   return <Shell email={session.user.email} community={mine[0].communities} communities={memberships} communityId={communityId} onCommunity={setCommunityId} roles={roles} onSignOut={() => supabase.auth.signOut()} />;
 }
 
-function Setup({ onCreated }) {
+function Setup({ onCreated, email, onSignOut }) {
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+  const demo = isDemoEmail(email);
   return (
     <main className="mx-auto max-w-lg px-4 py-10 text-[#252525]">
       <Wordmark />
-      <h1 className="mt-4 text-2xl font-semibold text-[#031D27]">Set up your community</h1>
+      <h1 className="mt-4 text-2xl font-semibold text-[#031D27]">No society membership yet</h1>
+      <p className="mt-2 text-sm text-[#5C5852]">
+        Signed in as {email}. This account is not linked to a community membership in the live ledger.
+        {demo
+          ? " Demo fixture accounts use the isolated Palm Court preview, or create a real community below."
+          : " Create a community below, or ask your committee to invite this email."}
+      </p>
+      {demo && (
+        <p className="mt-3 text-sm">
+          <Link className="font-semibold text-[#0878E8]" to="/demo">Open isolated Palm Court demo</Link>
+          {" "}(device-local figures only; not live society data).
+        </p>
+      )}
+      <h2 className="mt-8 text-lg font-semibold text-[#031D27]">Create a community</h2>
       <p className="mt-2 text-sm text-[#5C5852]">Approval limits are required. Leave them as the amounts your community has actually agreed. The statement deadline defaults to the 10th of the next month and can be changed.</p>
       <form className="mt-4 grid gap-3" onSubmit={async (event) => {
         event.preventDefault();
@@ -208,6 +316,11 @@ function Setup({ onCreated }) {
         {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
         <button disabled={pending} className="min-h-12 rounded-lg bg-[#0878E8] px-3 py-3 font-semibold text-white" type="submit">{pending ? "Saving…" : "Create community"}</button>
       </form>
+      {onSignOut && (
+        <button type="button" className="mt-6 min-h-12 w-full border border-[#031D27]/30 bg-white px-3" onClick={onSignOut}>
+          Sign out
+        </button>
+      )}
     </main>
   );
 }

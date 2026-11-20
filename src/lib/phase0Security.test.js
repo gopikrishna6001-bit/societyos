@@ -94,9 +94,10 @@ describe("Phase 0 demo credential exposure", () => {
     expect(body).toContain('import("../demoAccounts.js")');
   });
 
-  test("authenticated sessions are not routed into the Palm Court DemoApp", () => {
+  test("authenticated sessions use LiveCommunity; Palm Court DemoApp is a separate route", () => {
     const body = source("src/platform/Platform.jsx");
-    expect(body).not.toContain("isDemoEmail(session.user.email)");
+    expect(body).toContain("return <LiveCommunity session={session} />");
+    expect(body).not.toContain("return <DemoApp");
     expect(body).toContain("LiveCommunity");
     const entry = source("src/main.jsx");
     expect(entry).toContain('path="/demo/*"');

@@ -13,20 +13,29 @@ vi.mock("../lib/supabase.js", () => ({
       signOut: (...args) => signOut(...args),
     },
     from() {
-      const result = { data: [{ community_id: "community-1", role: "resident", communities: { name: "Palm Court" } }], error: null };
+      const result = { data: [{ community_id: "community-1", role: "resident" }], error: null };
       const query = {
         select: () => query,
         eq: () => query,
+        in: () => query,
         order: () => query,
         limit: () => query,
         then: (resolve, reject) => Promise.resolve(result).then(resolve, reject),
       };
       return query;
     },
-    rpc: () => Promise.resolve({
-      data: { funds: [], banks: [], open_public_concerns: 0, recently_resolved: [], upcoming_meetings: [], latest_statement: null, announcements: [] },
-      error: null,
-    }),
+    rpc: (name) => {
+      if (name === "my_memberships") {
+        return Promise.resolve({
+          data: [{ community_id: "community-1", role: "resident", community_name: "Palm Court" }],
+          error: null,
+        });
+      }
+      return Promise.resolve({
+        data: { funds: [], banks: [], open_public_concerns: 0, recently_resolved: [], upcoming_meetings: [], latest_statement: null, announcements: [], items: [] },
+        error: null,
+      });
+    },
   },
 }));
 

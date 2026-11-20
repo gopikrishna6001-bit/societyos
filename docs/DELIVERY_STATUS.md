@@ -68,6 +68,11 @@ Architecture shell/demo separation done; preview verified.
 
 `supabase/tests/payment_proofs.sql` asserts: invoice demand → resident `submit_payment_proof` (stays pending) → resident blocked from verify → treasurer `review_payment_proof` → receipt + journal entry → `period_collection_register` + resident `my_unit_demands` updated.
 
+## Membership load hang (user report)
+
+Symptom: stuck on “Loading your communities…”.
+Fix on branch: `my_memberships` RPC + 10s timeout + Retry/Sign out + empty membership → setup (demo users get `/demo` link). Nested `communities(name)` embed removed from the critical path.
+
 ## Exact next implementation task
 
-Expense workflow E2E (create → approve → pay → ledger) on disposable DB; then concerns lifecycle. Hosted migration apply still needs authorization.
+Apply hosted migrations through `20261120220000_my_memberships.sql` (authorization required). Expense workflow E2E next on disposable DB.

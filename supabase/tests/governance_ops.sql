@@ -75,5 +75,13 @@ BEGIN
 END;
 $$;
 
+-- Membership bootstrap RPC returns the caller's rows.
+SELECT set_config('request.jwt.claim.sub', '11111111-1111-1111-1111-111111111111', false);
+SET ROLE authenticated;
+SELECT public._assert(
+  (SELECT count(*) FROM public.my_memberships()) >= 1,
+  'creator sees membership via my_memberships'
+);
 RESET ROLE;
+
 SELECT 'governance ops assertions passed' AS result;
