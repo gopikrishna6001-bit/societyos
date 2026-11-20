@@ -23,7 +23,8 @@ test("a failed saved session opens the sign-in form", async () => {
   render(<MemoryRouter><Platform /></MemoryRouter>);
   expect(await screen.findByRole("button", { name: "Sign in" })).toBeInTheDocument();
   expect(screen.queryByText(/timed out/i)).not.toBeInTheDocument();
-  expect(screen.queryByRole("heading", { name: "DEMO accounts" })).not.toBeInTheDocument();
-  expect(screen.queryByText(demoPassword)).not.toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Demo logins" })).toBeInTheDocument();
+  expect(screen.getByText(demoPassword)).toBeInTheDocument();
+  expect(screen.getByText("resident@demo.sabha.app")).toBeInTheDocument();
   expect(signOut).toHaveBeenCalledWith({ scope: "local" });
 });

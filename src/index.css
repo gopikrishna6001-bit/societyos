@@ -184,6 +184,81 @@ textarea {
   font-weight: 600;
 }
 
+.auth-demo {
+  width: 100%;
+  min-width: 0;
+  margin-top: 1.25rem;
+  padding: 1rem;
+  background: #ffffff;
+  border: 1px solid #d5e2e6;
+  border-radius: 16px;
+}
+
+.auth-demo h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #031d27;
+}
+
+.auth-demo > p {
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: #1f3d48;
+}
+
+.auth-demo-note {
+  color: #5c5852 !important;
+  font-size: 0.85rem !important;
+}
+
+.auth-demo code {
+  display: inline-block;
+  padding: 0.1rem 0.4rem;
+  border-radius: 6px;
+  background: #e7f7fa;
+  color: #031d27;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem;
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.auth-demo ul {
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.auth-demo li button {
+  display: grid;
+  gap: 0.15rem;
+  width: 100%;
+  min-height: 48px;
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #d5e2e6;
+  border-radius: 12px;
+  background: #f7f5f0;
+  color: #031d27;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.auth-demo li button strong {
+  font-size: 0.95rem;
+}
+
+.auth-demo li button span {
+  color: #5c5852;
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
 .app-shell,
 .app-shell *,
 .app-shell *::before,

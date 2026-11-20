@@ -12,6 +12,7 @@ import { passwordRule, signInMessage } from "../lib/authPolicy.js";
 import { Mark, Wordmark } from "../brand/Mark.jsx";
 import { DemoApp } from "./demo/DemoApp.jsx";
 import { isDemoEmail } from "./demo/data.js";
+import { demoAccounts, demoPassword } from "../demoAccounts.js";
 
 export default function Platform() {
   if (!isSupabaseConfigured) return <ConfigRequired />;
@@ -106,35 +107,25 @@ function AuthScreen() {
 }
 
 function DemoAccounts({ onPick }) {
-  const [accounts, setAccounts] = useState(null);
-  const [sharedPassword, setSharedPassword] = useState("");
-  useEffect(() => {
-    if (import.meta.env.VITE_ENABLE_DEMO_LOGIN !== "true") return undefined;
-    let live = true;
-    import("../demoAccounts.js").then((mod) => {
-      if (!live) return;
-      setAccounts(mod.demoAccounts);
-      setSharedPassword(mod.demoPassword);
-    });
-    return () => { live = false; };
-  }, []);
-  if (!accounts) return null;
   return (
-    <section className="mt-4 border border-slate-800 bg-white p-4">
-      <h2 className="font-display text-lg font-semibold">DEMO accounts</h2>
-      <p className="mt-1 text-sm text-slate-400">Palm Court opens as a demo on this device. Its figures are not posted to a community ledger. Shared password: {sharedPassword}.</p>
-      <div className="mt-3 grid gap-2">
-        {accounts.map((account) => (
-          <button
-            key={account.email}
-            type="button"
-            className="min-h-12 border border-slate-800 px-3 text-left text-sm"
-            onClick={() => onPick(account)}
-          >
-            {account.role}<span className="mt-0.5 block text-slate-400">{account.email}</span>
-          </button>
+    <section className="auth-demo" aria-label="Demo sign-in accounts">
+      <h2>Demo logins</h2>
+      <p>
+        Tap a role to fill the form. Shared password:
+        {" "}
+        <code>{demoPassword}</code>
+      </p>
+      <p className="auth-demo-note">Palm Court opens on this device only. Nothing is written to a community ledger.</p>
+      <ul>
+        {demoAccounts.map((account) => (
+          <li key={account.email}>
+            <button type="button" onClick={() => onPick(account)}>
+              <strong>{account.role}</strong>
+              <span>{account.email}</span>
+            </button>
+          </li>
         ))}
-      </div>
+      </ul>
     </section>
   );
 }
