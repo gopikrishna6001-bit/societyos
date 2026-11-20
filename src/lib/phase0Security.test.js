@@ -24,12 +24,20 @@ describe("Phase 0 edge function hardening", () => {
     expect(body).not.toContain("Gemini error:");
   });
 
-  test("send-whatsapp requires WA_DISPATCH_SECRET and is not a public client call", () => {
+  test("send-whatsapp requires WA_DISPATCH_SECRET, society scope, and blocks browsers", () => {
     const body = source("supabase/functions/send-whatsapp/index.ts");
     expect(body).toContain("WA_DISPATCH_SECRET");
     expect(body).toContain("Unauthorized.");
+    expect(body).toContain("society_id");
+    expect(body).toContain("claim_whatsapp_batch");
+    expect(body).toContain("finalize_whatsapp_dispatch");
+    expect(body).toContain("Browser access denied.");
+    expect(body).toContain("timingSafeEqual");
+    expect(body).not.toMatch(/Access-Control-Allow-Origin\s*:/);
     const centre = source("src/components/WhatsAppCentre.jsx");
     expect(centre).not.toMatch(/functions\/v1\/send-whatsapp/);
+    expect(centre).not.toContain("WA_DISPATCH_SECRET");
+    expect(source("src/components/Finances.jsx")).not.toContain("WA_DISPATCH_SECRET");
   });
 });
 
@@ -41,6 +49,17 @@ describe("Phase 0 database migration", () => {
     expect(body).toContain("account_balances");
     expect(body).toContain("resident_dashboard");
     expect(body).toContain("REVOKE ALL ON FUNCTION");
+  });
+
+  test("whatsapp dispatch migration claims atomically and no-ops the HTTP trigger", () => {
+    const body = source("supabase/migrations/20261120170000_whatsapp_dispatch_hardening.sql");
+    expect(body).toContain("FOR UPDATE SKIP LOCKED");
+    expect(body).toContain("claim_whatsapp_batch");
+    expect(body).toContain("finalize_whatsapp_dispatch");
+    expect(body).toContain("GRANT EXECUTE ON FUNCTION public.claim_whatsapp_batch");
+    expect(body).toContain("RETURN NEW;");
+    expect(body).not.toContain("http_post");
+    expect(body).not.toContain("WA_DISPATCH_SECRET");
   });
 });
 

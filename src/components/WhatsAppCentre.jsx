@@ -92,8 +92,8 @@ export default function WhatsAppCentre() {
     const { error } = await supabase.from("whatsapp_log").insert(rows);
     if (error) { toast(error.message, "#f87171"); setSaving(false); return; }
 
-    // Delivery is dispatched by an approved operator/cron with WA_DISPATCH_SECRET.
-    // The browser must not call send-whatsapp anonymously.
+    // Delivery is dispatched by an approved operator/cron (server secret).
+    // The browser must not call the dispatcher.
     toast(`✓ Broadcast queued for ${rows.length} residents. Delivery waits for an authorised dispatch.`);
     setShowBroadcast(false);
     setBroadcastForm({ message: "", target: "all", template_id: "" });
