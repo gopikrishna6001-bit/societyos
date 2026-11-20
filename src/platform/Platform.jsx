@@ -216,7 +216,8 @@ function canSee(roles, id) {
   const auditor = roles.includes("resident_auditor");
   const financeOps = committee || treasurer;
   if (id === "units" || id === "settings") return committee;
-  if (id === "collections" || id === "funds") return financeOps;
+  if (id === "funds") return financeOps;
+  if (id === "collections") return true; // residents submit proofs; treasurers verify
   if (id === "reconciliation" || id === "expenses" || id === "reviews" || id === "history") return financeOps || auditor;
   return ["home", "finance", "concerns", "decisions", "documents", "notifications", "profile"].includes(id);
 }

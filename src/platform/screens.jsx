@@ -12,8 +12,15 @@ function accountsOf(list, type) {
   return (list || []).filter((account) => account.account_type === type);
 }
 
+function asList(data) {
+  if (!data) return [];
+  return Array.isArray(data) ? data : [data];
+}
+
 export function HomeScreen({ communityId, roles = [], onOpen }) {
   const query = useLoad(() => rpc("resident_dashboard", { p_community: communityId }), [communityId]);
+  const actions = useLoad(() => rpc("action_centre", { p_community: communityId }), [communityId]);
+  const dues = useLoad(() => rpc("my_unit_demands", { p_community: communityId }), [communityId]);
   const dash = query.data;
   const funds = dash?.funds || [];
   const balance = funds.reduce((sum, fund) => sum + Number(fund.closing || 0), 0);
@@ -22,10 +29,51 @@ export function HomeScreen({ communityId, roles = [], onOpen }) {
   const nextMeeting = dash?.upcoming_meetings?.[0];
   const statement = dash?.latest_statement;
   const financial = roles.some((role) => ["treasurer", "resident_auditor", "committee_admin", "platform_admin"].includes(role));
+  const outstanding = asList(dues.data).filter((row) => Number(row?.outstanding_amount) > 0);
+  const actionItems = asList(actions.data?.items);
   return (
     <section>
       <h2 className="mb-1 font-display text-2xl font-semibold">Home</h2>
-      <p className="mb-4 text-sm text-slate-400">Balances come from posted ledger entries. Transfers between funds are not counted as income or spending. Receipts and payments are the full posted totals, not a separate calendar month.</p>
+      <p className="mb-4 text-sm text-slate-400">Your action centre and ledger-backed balances. Every rupee. Every decision. Accounted for.</p>
+
+      <div className="mb-6 grid gap-2 sm:grid-cols-2">
+        <button type="button" className="min-h-12 bg-[#0878E8] px-3 font-semibold text-white" onClick={() => onOpen?.("collections")}>Pay maintenance</button>
+        <button type="button" className="min-h-12 border border-slate-600 px-3 font-semibold" onClick={() => onOpen?.("concerns")}>Raise concern</button>
+        <button type="button" className="min-h-12 border border-slate-600 px-3 font-semibold" onClick={() => onOpen?.("documents")}>Request / view documents</button>
+        <button type="button" className="min-h-12 border border-slate-600 px-3 font-semibold" onClick={() => onOpen?.("decisions")}>Meetings &amp; votes</button>
+      </div>
+
+      <h3 className="mb-2 font-semibold">Action centre</h3>
+      <PageStatus loading={actions.loading} error={actions.error} onRetry={actions.reload} empty={!actions.loading && !actions.error && actionItems.length === 0} title="Nothing waiting for you" body="When dues, proofs, concerns or meetings need attention, they appear here." />
+      {!!actionItems.length && (
+        <ul className="mb-6 border border-slate-800 bg-white">
+          {actionItems.map((item) => (
+            <li key={`${item.module}-${item.id}`} className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 px-3 py-3 last:border-b-0">
+              <div>
+                <p className="font-semibold">{item.title}</p>
+                <p className="text-sm text-slate-400">{item.module} · {item.status}{item.due_on ? ` · due ${item.due_on}` : ""}</p>
+              </div>
+              <button type="button" className="min-h-10 border border-slate-600 px-3 text-sm font-semibold" onClick={() => onOpen?.(item.page || "home")}>{item.action || "Open"}</button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {!!outstanding.length && (
+        <div className="mb-6 border border-amber-700/40 bg-white p-3">
+          <h3 className="font-semibold">Your outstanding dues</h3>
+          <ul className="mt-2 space-y-2 text-sm">
+            {outstanding.map((row) => (
+              <li key={row.demand_id} className="flex justify-between gap-3">
+                <span>Unit {row.unit_number} · {row.financial_year} · due {row.due_on}</span>
+                <strong className="tabular">{inr(row.outstanding_amount)}</strong>
+              </li>
+            ))}
+          </ul>
+          <button type="button" className="mt-3 min-h-12 w-full bg-[#0878E8] px-3 font-semibold text-white" onClick={() => onOpen?.("collections")}>Submit payment proof</button>
+        </div>
+      )}
+
       <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && funds.length === 0} title="No fund balances yet" body="The treasurer posts an opening balance before these rows show an amount." />
       {!!funds.length && (
         <dl className="border border-slate-800 bg-white">
@@ -207,6 +255,8 @@ export function FinanceScreen({ communityId, roles, focus }) {
 
 function Collections({ communityId, canPost, periods, ledger, onPosted }) {
   const [periodId, setPeriodId] = useState("");
+  const [proofBusy, setProofBusy] = useState(false);
+  const [proofMessage, setProofMessage] = useState("");
   const summary = useLoad(
     () => periodId ? rpc("collection_summary", { p_community: communityId, p_period: periodId }).then((result) => Array.isArray(result) ? (result[0] || null) : result) : Promise.resolve(null),
     [communityId, periodId],
@@ -217,12 +267,146 @@ function Collections({ communityId, canPost, periods, ledger, onPosted }) {
       : Promise.resolve([]),
     [periodId, canPost],
   );
+  const myDues = useLoad(() => rpc("my_unit_demands", { p_community: communityId }), [communityId]);
+  const proofs = useLoad(
+    () => rows(supabase.from("payment_proofs").select("id,demand_id,amount,paid_on,payment_mode,bank_reference,status,rejection_reason,storage_path,created_at").eq("community_id", communityId).order("created_at", { ascending: false }).limit(50)),
+    [communityId],
+  );
+  const outstanding = asList(myDues.data).filter((row) => Number(row?.outstanding_amount) > 0);
+  const pendingProofs = asList(proofs.data).filter((row) => row.status === "pending");
+
+  const submitProof = async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = Object.fromEntries(new FormData(form));
+    const file = form.querySelector('input[type="file"]')?.files?.[0];
+    if (!file) {
+      setProofMessage("Choose a payment proof image or PDF.");
+      return;
+    }
+    setProofBusy(true);
+    setProofMessage("");
+    try {
+      const path = `${communityId}/payment-proofs/${data.demand}/${crypto.randomUUID()}-${file.name.replace(/[^\w.\-]+/g, "_")}`;
+      const upload = await supabase.storage.from("community-originals").upload(path, file, { upsert: false });
+      if (upload.error) throw upload.error;
+      await rpc("submit_payment_proof", {
+        p_demand: data.demand,
+        p_amount: data.amount,
+        p_paid_on: data.paid,
+        p_mode: data.mode,
+        p_bank_reference: data.reference || null,
+        p_storage_path: path,
+        p_notes: data.notes || null,
+      });
+      form.reset();
+      setProofMessage("Proof submitted. The treasurer must verify before the ledger updates.");
+      myDues.reload();
+      proofs.reload();
+    } catch (cause) {
+      setProofMessage(cause?.message || "Could not submit proof.");
+    } finally {
+      setProofBusy(false);
+    }
+  };
+
   return (
     <div>
-      <h2 className="mb-3 text-xl font-semibold">Collections</h2>
+      <h2 className="mb-3 text-xl font-semibold">Collections &amp; payments</h2>
+      <p className="mb-4 text-sm text-slate-400">Uploading a UPI or bank transfer screenshot does not mark dues paid. The treasurer verifies the proof, then the ledger posts.</p>
+
+      <h3 className="mb-2 font-semibold">Your unit dues</h3>
+      <PageStatus loading={myDues.loading} error={myDues.error} onRetry={myDues.reload} empty={!myDues.loading && !myDues.error && !asList(myDues.data).length} title="No demands on your units" body="When the treasurer opens a collection period for your flat, it appears here." />
+      {!!asList(myDues.data).length && (
+        <ul className="mb-4 border border-slate-800 bg-white text-sm">
+          {asList(myDues.data).map((row) => (
+            <li key={row.demand_id} className="border-b border-slate-800 px-3 py-3 last:border-b-0">
+              <div className="flex justify-between gap-3">
+                <span>Unit {row.unit_number} · {row.financial_year} · due {row.due_on}</span>
+                <strong className="tabular">{inr(row.outstanding_amount)} due</strong>
+              </div>
+              <p className="text-slate-400">Expected {inr(row.expected_amount)} · Collected {inr(row.collected_amount)}</p>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {!!outstanding.length && (
+        <form className="mb-6 grid gap-3 border border-slate-800 bg-white p-3" onSubmit={submitProof}>
+          <h3 className="font-semibold">Submit payment proof</h3>
+          <Field label="Demand">
+            <select className={control} name="demand" required>
+              {outstanding.map((row) => (
+                <option key={row.demand_id} value={row.demand_id}>
+                  Unit {row.unit_number} · outstanding {inr(row.outstanding_amount)}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Amount paid"><input className={control} name="amount" inputMode="decimal" required /></Field>
+          <Field label="Payment date"><input className={control} type="date" name="paid" required /></Field>
+          <Field label="Mode">
+            <select className={control} name="mode" defaultValue="upi">
+              <option value="upi">UPI</option>
+              <option value="bank_transfer">Bank transfer</option>
+              <option value="cheque">Cheque</option>
+              <option value="cash">Cash (offline)</option>
+            </select>
+          </Field>
+          <Field label="UPI / bank reference"><input className={control} name="reference" /></Field>
+          <Field label="Proof file (image or PDF)"><input className={control} type="file" accept="image/*,application/pdf" required /></Field>
+          <Field label="Notes"><input className={control} name="notes" /></Field>
+          {proofMessage && <p role="status" className="text-sm text-slate-600">{proofMessage}</p>}
+          <button disabled={proofBusy} type="submit" className="min-h-12 bg-[#0878E8] px-3 font-semibold text-white">{proofBusy ? "Uploading…" : "Submit proof for verification"}</button>
+        </form>
+      )}
+
+      {canPost && (
+        <div className="mb-6">
+          <h3 className="mb-2 font-semibold">Pending proofs to verify</h3>
+          <PageStatus loading={proofs.loading} error={proofs.error} onRetry={proofs.reload} empty={!proofs.loading && !pendingProofs.length} title="No pending proofs" body="Resident submissions awaiting verification appear here." />
+          <ul className="space-y-3">
+            {pendingProofs.map((proof) => (
+              <li key={proof.id} className="border border-slate-800 bg-white p-3 text-sm">
+                <p className="font-semibold">{inr(proof.amount)} · {proof.payment_mode} · {proof.paid_on}</p>
+                <p className="text-slate-400">{proof.bank_reference || "No reference"} · {proof.storage_path}</p>
+                <SaveForm
+                  confirmMessage="Verify this proof and post the collection to the ledger?"
+                  submitLabel="Verify and post ledger"
+                  onSubmit={(data) => rpc("review_payment_proof", {
+                    p_proof: proof.id,
+                    p_decision: "verified",
+                    p_receipt_number: data.receipt,
+                    p_bank_account: data.bank,
+                    p_fund_account: data.fund,
+                    p_key: data.key || `proof:${proof.id}`,
+                  }).then(() => { proofs.reload(); summary.reload(); onPosted(); myDues.reload(); })}
+                >
+                  <Field label="Receipt number"><input className={control} name="receipt" required /></Field>
+                  <AccountSelect label="Bank ledger" name="bank" accounts={accountsOf(ledger, "bank")} />
+                  <AccountSelect label="Fund" name="fund" accounts={accountsOf(ledger, "fund")} />
+                  <Field label="Idempotency key"><input className={control} name="key" placeholder="Leave blank" /></Field>
+                </SaveForm>
+                <SaveForm
+                  confirmMessage="Reject this payment proof?"
+                  submitLabel="Reject proof"
+                  onSubmit={(data) => rpc("review_payment_proof", {
+                    p_proof: proof.id,
+                    p_decision: "rejected",
+                    p_rejection_reason: data.reason,
+                  }).then(() => { proofs.reload(); myDues.reload(); })}
+                >
+                  <Field label="Rejection reason"><input className={control} name="reason" required /></Field>
+                </SaveForm>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <PageStatus loading={periods.loading} error={periods.error} onRetry={periods.reload} empty={!periods.loading && !periods.error && !(periods.data || []).length} title="No collection period" body="A treasurer opens a month before payments can be recorded." />
       {(periods.data || []).length > 0 && (
-        <Field label="Period">
+        <Field label="Period summary">
           <select className={control} value={periodId} onChange={(event) => setPeriodId(event.target.value)}>
             <option value="">Select a month</option>
             {periods.data.map((period) => <option key={period.id} value={period.id}>{period.financial_year} · {period.period_month}</option>)}
@@ -239,7 +423,6 @@ function Collections({ communityId, canPost, periods, ledger, onPosted }) {
           <Card label="Unpaid units" value={String(summary.data.unpaid_units ?? 0)} />
         </div>
       )}
-      <p className="mt-2 text-xs text-slate-500">This summary is aggregated. A resident can see their own demand, and the committee can see each unit.</p>
       {canPost && (
         <div className="mt-4 space-y-4">
           <SaveForm submitLabel="Open collection period" onSubmit={(data) => rpc("open_collection_period", {
@@ -255,7 +438,7 @@ function Collections({ communityId, canPost, periods, ledger, onPosted }) {
             <Field label="Amount per unit"><input className={control} name="amount" inputMode="decimal" required /></Field>
           </SaveForm>
           {!!(demands.data || []).length && (
-            <SaveForm submitLabel="Record payment" onSubmit={(data) => rpc("record_collection", {
+            <SaveForm submitLabel="Record offline payment" onSubmit={(data) => rpc("record_collection", {
               p_demand: data.demand,
               p_amount: data.amount,
               p_paid_on: data.paid,
@@ -265,7 +448,7 @@ function Collections({ communityId, canPost, periods, ledger, onPosted }) {
               p_key: data.key || crypto.randomUUID(),
               p_bank_account: data.bank,
               p_fund_account: data.fund,
-            }).then(() => { summary.reload(); onPosted(); })}>
+            }).then(() => { summary.reload(); onPosted(); myDues.reload(); })}>
               <Field label="Unit demand">
                 <select className={control} name="demand" required>
                   {(demands.data || []).map((demand) => <option key={demand.id} value={demand.id}>{demand.units?.number} · {inr(Number(demand.expected_amount) + Number(demand.additional_amount))}</option>)}
