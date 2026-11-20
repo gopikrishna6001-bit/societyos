@@ -24,27 +24,34 @@ Single consolidated checklist. Updated as work lands. Branch: `cursor/sabha-prod
 
 - [x] Platform visitor passes + check-in/out (Gate remains available at `/legacy`)
 - [x] Platform amenity catalogue + booking RPC
-- [ ] Staff attendance in Platform
-- [ ] Assets / vendors / PM schedules in Platform
+- [x] Staff directory + attendance in Platform
+- [x] Community assets register in Platform (vendors/PM deep schedules deferred)
 
 ## Stage D — Governance
 
 - [x] Meetings / resolutions / votes (existing platform Decisions)
 - [x] Auditor statement review/publish (existing)
-- [ ] Auditor observation workflow table + UI
-- [ ] Configurable election seats > 1
+- [x] Auditor observation workflow table + UI
+- [x] Configurable auditor seats via `update_community_settings`
 
 ## Stage E — Modern capabilities
 
-- [ ] Society configuration UI beyond create_community limits
-- [ ] Razorpay gateway (boundary only until credentials)
-- [ ] AI assistant permission-bound live queries
+- [x] Society configuration UI (`update_community_settings` + audit log)
+- [x] Razorpay gateway boundary (`payment_gateway_settings`; no secret key storage)
+- [x] Permission-bound society assistant (`society_assistant_facts`)
 - [ ] Preview + production release evidence
 
 ## Release gates
 
-- [ ] `npm test` green on delivery branch
-- [ ] `npm run test:db` / phase0 disposable green
-- [ ] `npm run build` green
+- [x] `npm test` green on delivery branch
+- [x] `npm run test:db` / phase0 disposable green
+- [x] `npm run build` green
 - [ ] Preview URL verified
 - [ ] Production deploy authorized and smoke-tested
+
+## Deferred / external
+
+- Live Razorpay webhook + secret key (needs credentials)
+- Third-party generative AI with society PII (needs approved data-handling config; record facts path ships)
+- Hosted Phase 0 + delivery migrations apply (**production authorization**)
+- Deep vendor/PM work-order automation beyond asset register

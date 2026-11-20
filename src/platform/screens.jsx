@@ -247,7 +247,7 @@ export function FinanceScreen({ communityId, roles, focus }) {
       )}
 
       {show("reconciliation") && canSeeRecon && <Reconciliation communityId={communityId} banks={accountsOf(ledger.data, "bank")} canPost={canPost} />}
-      {show("reviews") && <Reviews communityId={communityId} />}
+      {show("reviews") && <Reviews communityId={communityId} roles={roles} />}
       {show("statements") && <Statements communityId={communityId} canPost={canPost} canReview={canReview} />}
     </section>
   );
@@ -653,13 +653,66 @@ function parseStatement(text) {
   return { lines: parsed, error: "" };
 }
 
-function Reviews({ communityId }) {
-  const query = useLoad(() => rows(supabase.from("audit_reviews").select("id,subject_type,status,comments,created_at").eq("community_id", communityId).order("created_at", { ascending: false })), [communityId]);
+function Reviews({ communityId, roles = [] }) {
+  const canRaise = roles.includes("resident_auditor");
+  const canRespond = roles.some((role) => ["treasurer", "committee_admin", "platform_admin"].includes(role));
+  const reviews = useLoad(() => rows(supabase.from("audit_reviews").select("id,subject_type,status,comments,created_at").eq("community_id", communityId).order("created_at", { ascending: false })), [communityId]);
+  const observations = useLoad(() => rows(supabase.from("audit_observations").select("id,title,body,status,subject_type,response_body,resolution_note,created_at,responded_at").eq("community_id", communityId).order("created_at", { ascending: false })), [communityId]);
   return (
-    <div>
-      <h2 className="mb-3 text-xl font-semibold">Audit reviews</h2>
-      <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && !(query.data || []).length} title="No auditor reviews yet" body="An elected resident auditor records verification, clarification, or a dispute here." />
-      <ul className="space-y-2 text-sm">{(query.data || []).map((review) => <li key={review.id} className="rounded-lg border border-slate-800 p-3">{review.subject_type} · {review.status} · {review.comments || "No comment"}</li>)}</ul>
+    <div className="space-y-8">
+      <div>
+        <h2 className="mb-3 text-xl font-semibold">Audit observations</h2>
+        <p className="mb-3 text-sm text-slate-400">Independent findings. Auditors raise them; treasurers respond; auditors close them. Ledger rows are never edited from here.</p>
+        <PageStatus loading={observations.loading} error={observations.error} onRetry={observations.reload} empty={!observations.loading && !observations.error && !(observations.data || []).length} title="No observations yet" body="Raise a finding when a statement, expense, or bank line needs clarification." />
+        <ul className="space-y-2 text-sm">
+          {(observations.data || []).map((row) => (
+            <li key={row.id} className="border border-slate-800 bg-white p-3">
+              <p className="font-semibold">{row.title}</p>
+              <p className="text-slate-400">{row.subject_type} · {row.status}</p>
+              <p className="mt-2">{row.body}</p>
+              {row.response_body && <p className="mt-2 border-t border-slate-800 pt-2"><span className="text-slate-400">Response: </span>{row.response_body}</p>}
+              {row.resolution_note && <p className="mt-1 text-slate-400">Closure note: {row.resolution_note}</p>}
+              {canRespond && ["open", "awaiting_response"].includes(row.status) && (
+                <SaveForm submitLabel="Send response" onSubmit={(data) => rpc("respond_audit_observation", { p_observation: row.id, p_response: data.response }).then(observations.reload)}>
+                  <Field label="Response"><textarea className={control} name="response" rows={3} required /></Field>
+                </SaveForm>
+              )}
+              {canRaise && row.status === "responded" && (
+                <SaveForm submitLabel="Close observation" onSubmit={(data) => rpc("resolve_audit_observation", { p_observation: row.id, p_status: data.status, p_note: data.note || null }).then(observations.reload)}>
+                  <Field label="Outcome">
+                    <select className={control} name="status" defaultValue="resolved">
+                      <option value="resolved">Resolved</option>
+                      <option value="unresolved">Unresolved</option>
+                    </select>
+                  </Field>
+                  <Field label="Note"><input className={control} name="note" /></Field>
+                </SaveForm>
+              )}
+            </li>
+          ))}
+        </ul>
+        {canRaise && (
+          <SaveForm submitLabel="Raise observation" onSubmit={(data) => rpc("raise_audit_observation", {
+            p_community: communityId,
+            p_title: data.title,
+            p_body: data.body,
+            p_subject_type: data.subject_type,
+          }).then(observations.reload)}>
+            <Field label="Title"><input className={control} name="title" required /></Field>
+            <Field label="Subject type">
+              <select className={control} name="subject_type" defaultValue="general">
+                {["general", "expense", "statement", "collection", "journal", "bank"].map((value) => <option key={value}>{value}</option>)}
+              </select>
+            </Field>
+            <Field label="Finding"><textarea className={control} name="body" rows={4} required /></Field>
+          </SaveForm>
+        )}
+      </div>
+      <div>
+        <h2 className="mb-3 text-xl font-semibold">Subject reviews</h2>
+        <PageStatus loading={reviews.loading} error={reviews.error} onRetry={reviews.reload} empty={!reviews.loading && !reviews.error && !(reviews.data || []).length} title="No auditor reviews yet" body="An elected resident auditor records verification, clarification, or a dispute here." />
+        <ul className="space-y-2 text-sm">{(reviews.data || []).map((review) => <li key={review.id} className="rounded-lg border border-slate-800 p-3">{review.subject_type} · {review.status} · {review.comments || "No comment"}</li>)}</ul>
+      </div>
     </div>
   );
 }
@@ -977,25 +1030,98 @@ export function NotificationsScreen({ communityId }) {
 }
 
 export function SettingsScreen({ communityId, roles = [] }) {
+  const canEdit = roles.some((role) => ["committee_admin", "platform_admin"].includes(role));
   const query = useLoad(() => rows(supabase.from("community_settings").select("*").eq("community_id", communityId)), [communityId]);
+  const gateway = useLoad(() => rows(supabase.from("payment_gateway_settings").select("enabled,key_id,mode,webhook_configured,provider").eq("community_id", communityId)), [communityId]);
   const settings = query.data?.[0];
+  const pay = gateway.data?.[0];
   return (
-    <section>
-      <h2 className="mb-3 text-xl font-semibold">Community settings</h2>
-      <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && !settings} title="Settings are not available" />
-      {settings && (
-        <dl className="grid gap-2 text-sm sm:grid-cols-2">
-          <Item term="Treasurer approval limit" value={inr(settings.treasurer_approval_limit)} />
-          <Item term="Committee approval limit" value={inr(settings.committee_approval_limit)} />
-          <Item term="Statement due day" value={String(settings.statement_due_day)} />
-          <Item term="Committee quorum" value={String(settings.committee_quorum)} />
-          <Item term="Auditor seats" value={String(settings.auditor_seats)} />
-          <Item term="Election quorum" value={`${settings.election_quorum_percent}%`} />
-          <Item term="Voting basis" value={settings.voting_unit} />
-          <Item term="Timezone" value={settings.timezone} />
-        </dl>
-      )}
-      <p className="mt-3 text-sm text-slate-400">These values were set for this community. Changing them is a governed action and is not a silent edit from this screen.</p>
+    <section className="space-y-8">
+      <div>
+        <h2 className="mb-3 text-xl font-semibold">Community settings</h2>
+        <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && !settings} title="Settings are not available" />
+        {settings && (
+          <dl className="grid gap-2 text-sm sm:grid-cols-2">
+            <Item term="Treasurer approval limit" value={inr(settings.treasurer_approval_limit)} />
+            <Item term="Committee approval limit" value={inr(settings.committee_approval_limit)} />
+            <Item term="Statement due day" value={String(settings.statement_due_day)} />
+            <Item term="Committee quorum" value={String(settings.committee_quorum)} />
+            <Item term="Auditor seats" value={String(settings.auditor_seats)} />
+            <Item term="Election quorum" value={`${settings.election_quorum_percent}%`} />
+            <Item term="Voting basis" value={settings.voting_unit} />
+            <Item term="Timezone" value={settings.timezone} />
+          </dl>
+        )}
+        {canEdit && settings && (
+          <SaveForm submitLabel="Save settings" onSubmit={(data) => rpc("update_community_settings", {
+            p_community: communityId,
+            p_treasurer_limit: Number(data.treasurer),
+            p_committee_limit: Number(data.committee),
+            p_statement_due_day: Number(data.due),
+            p_committee_quorum: Number(data.quorum),
+            p_auditor_seats: Number(data.seats),
+            p_election_quorum_percent: Number(data.election),
+            p_voting_unit: data.voting,
+          }).then(query.reload)}>
+            <Field label="Treasurer approval limit"><input className={control} name="treasurer" inputMode="decimal" defaultValue={settings.treasurer_approval_limit} required /></Field>
+            <Field label="Committee approval limit"><input className={control} name="committee" inputMode="decimal" defaultValue={settings.committee_approval_limit} required /></Field>
+            <Field label="Statement due day"><input className={control} name="due" type="number" min="1" max="28" defaultValue={settings.statement_due_day} required /></Field>
+            <Field label="Committee quorum"><input className={control} name="quorum" type="number" min="1" defaultValue={settings.committee_quorum} required /></Field>
+            <Field label="Auditor seats"><input className={control} name="seats" type="number" min="1" defaultValue={settings.auditor_seats} required /></Field>
+            <Field label="Election quorum %"><input className={control} name="election" inputMode="decimal" defaultValue={settings.election_quorum_percent} required /></Field>
+            <Field label="Voting basis">
+              <select className={control} name="voting" defaultValue={settings.voting_unit}>
+                <option value="unit">Per unit</option>
+                <option value="member">Per member</option>
+              </select>
+            </Field>
+          </SaveForm>
+        )}
+        <p className="mt-3 text-sm text-slate-400">Every settings change is written to the audit log.</p>
+      </div>
+      <div>
+        <h2 className="mb-3 text-xl font-semibold">Payment gateway</h2>
+        <p className="mb-3 text-sm text-slate-400">Razorpay boundary only. Secret keys stay in server secrets — never in this form. Offline payment proof remains available when the gateway is off.</p>
+        <PageStatus loading={gateway.loading} error={gateway.error} onRetry={gateway.reload} empty={!gateway.loading && !gateway.error && !pay} title="Gateway not configured" body="Enable Razorpay when key_id and webhook secrets are ready in the project." />
+        {pay && (
+          <dl className="mb-3 grid gap-2 text-sm sm:grid-cols-2">
+            <Item term="Provider" value={pay.provider} />
+            <Item term="Status" value={pay.enabled ? `Enabled · ${pay.mode}` : `Disabled · ${pay.mode}`} />
+            <Item term="Key id" value={pay.key_id || "—"} />
+            <Item term="Webhook" value={pay.webhook_configured ? "Configured" : "Not configured"} />
+          </dl>
+        )}
+        {canEdit && (
+          <SaveForm submitLabel="Save gateway settings" onSubmit={(data) => rpc("configure_payment_gateway", {
+            p_community: communityId,
+            p_enabled: data.enabled === "true",
+            p_key_id: data.key_id || null,
+            p_mode: data.mode,
+            p_webhook_configured: data.webhook === "true",
+          }).then(gateway.reload)}>
+            <Field label="Enabled">
+              <select className={control} name="enabled" defaultValue={pay?.enabled ? "true" : "false"}>
+                <option value="false">Disabled</option>
+                <option value="true">Enabled</option>
+              </select>
+            </Field>
+            <Field label="Mode">
+              <select className={control} name="mode" defaultValue={pay?.mode || "unconfigured"}>
+                <option value="unconfigured">Unconfigured</option>
+                <option value="test">Test</option>
+                <option value="live">Live</option>
+              </select>
+            </Field>
+            <Field label="Razorpay key id (public)"><input className={control} name="key_id" defaultValue={pay?.key_id || ""} placeholder="rzp_test_…" /></Field>
+            <Field label="Webhook configured on server">
+              <select className={control} name="webhook" defaultValue={pay?.webhook_configured ? "true" : "false"}>
+                <option value="false">No</option>
+                <option value="true">Yes</option>
+              </select>
+            </Field>
+          </SaveForm>
+        )}
+      </div>
       <InviteResident communityId={communityId} roles={roles} />
     </section>
   );
@@ -1205,6 +1331,210 @@ export function AmenitiesScreen({ communityId, roles }) {
           </li>
         ))}
       </ul>
+    </section>
+  );
+}
+
+export function StaffScreen({ communityId, roles }) {
+  const canManage = roles.some((role) => ["committee_admin", "platform_admin"].includes(role));
+  const staff = useLoad(
+    () => rows(supabase.from("community_staff").select("id,full_name,role_title,phone,status").eq("community_id", communityId).order("full_name")),
+    [communityId],
+  );
+  const attendance = useLoad(
+    () => rows(supabase.from("staff_attendance").select("id,staff_id,attended_on,status,notes,community_staff(full_name)").eq("community_id", communityId).order("attended_on", { ascending: false }).limit(40)),
+    [communityId],
+  );
+  if (!canManage && !roles.includes("treasurer")) {
+    return <section><h2 className="mb-2 font-display text-xl font-semibold">Staff</h2><p className="text-sm text-slate-400">Staff records are restricted to committee and treasurer roles.</p></section>;
+  }
+  return (
+    <section>
+      <h2 className="mb-1 font-display text-xl font-semibold">Staff</h2>
+      <p className="mb-4 text-sm text-slate-400">Directory and daily attendance. Compensation details are not stored on this screen.</p>
+      {canManage && (
+        <SaveForm submitLabel="Add staff member" onSubmit={async (data) => {
+          const { error } = await supabase.from("community_staff").insert({
+            community_id: communityId,
+            full_name: data.name,
+            role_title: data.role,
+            phone: data.phone || null,
+          });
+          if (error) throw new Error(error.message);
+          staff.reload();
+        }}>
+          <Field label="Name"><input className={control} name="name" required /></Field>
+          <Field label="Role / title"><input className={control} name="role" required /></Field>
+          <Field label="Phone"><input className={control} name="phone" inputMode="tel" /></Field>
+        </SaveForm>
+      )}
+      <PageStatus loading={staff.loading} error={staff.error} onRetry={staff.reload} empty={!staff.loading && !staff.error && !(staff.data || []).length} title="No staff listed" body="Add security, housekeeping and facility staff to mark attendance." />
+      <ul className="mb-6 space-y-2 text-sm">
+        {(staff.data || []).map((member) => (
+          <li key={member.id} className="border border-slate-800 bg-white p-3">
+            <strong>{member.full_name}</strong>
+            <p className="text-slate-400">{member.role_title} · {member.status} · {member.phone || "no phone"}</p>
+            {canManage && (
+              <SaveForm submitLabel="Mark attendance" onSubmit={(data) => rpc("mark_staff_attendance", {
+                p_staff: member.id,
+                p_date: data.date,
+                p_status: data.status,
+                p_notes: data.notes || null,
+              }).then(attendance.reload)}>
+                <Field label="Date"><input className={control} type="date" name="date" required defaultValue={new Date().toISOString().slice(0, 10)} /></Field>
+                <Field label="Status">
+                  <select className={control} name="status" defaultValue="present">
+                    {["present", "absent", "leave", "half_day"].map((value) => <option key={value}>{value}</option>)}
+                  </select>
+                </Field>
+                <Field label="Notes"><input className={control} name="notes" /></Field>
+              </SaveForm>
+            )}
+          </li>
+        ))}
+      </ul>
+      <h3 className="mb-2 font-semibold">Recent attendance</h3>
+      <ul className="space-y-2 text-sm">
+        {(attendance.data || []).map((row) => (
+          <li key={row.id} className="border border-slate-800 bg-white px-3 py-2">
+            {row.attended_on} · {row.community_staff?.full_name || "Staff"} · {row.status}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+export function AssetsScreen({ communityId, roles }) {
+  const canEdit = roles.some((role) => ["committee_admin", "platform_admin", "treasurer"].includes(role));
+  const query = useLoad(
+    () => rows(supabase.from("community_assets").select("id,name,category,location,vendor_name,warranty_ends_on,amc_ends_on,status,notes").eq("community_id", communityId).order("name")),
+    [communityId],
+  );
+  return (
+    <section>
+      <h2 className="mb-1 font-display text-xl font-semibold">Assets</h2>
+      <p className="mb-4 text-sm text-slate-400">Common-area equipment register. Preventive schedules and AMC dates stay visible to members.</p>
+      {canEdit && (
+        <SaveForm submitLabel="Add asset" onSubmit={async (data) => {
+          const { error } = await supabase.from("community_assets").insert({
+            community_id: communityId,
+            name: data.name,
+            category: data.category,
+            location: data.location || null,
+            vendor_name: data.vendor || null,
+            warranty_ends_on: data.warranty || null,
+            amc_ends_on: data.amc || null,
+            status: data.status,
+            notes: data.notes || null,
+          });
+          if (error) throw new Error(error.message);
+          query.reload();
+        }}>
+          <Field label="Name"><input className={control} name="name" required /></Field>
+          <Field label="Category">
+            <select className={control} name="category" defaultValue="lift">
+              {["lift", "pump", "dg", "stp", "wtp", "fire", "cctv", "solar", "other"].map((value) => <option key={value}>{value}</option>)}
+            </select>
+          </Field>
+          <Field label="Location"><input className={control} name="location" /></Field>
+          <Field label="Vendor"><input className={control} name="vendor" /></Field>
+          <Field label="Warranty ends"><input className={control} type="date" name="warranty" /></Field>
+          <Field label="AMC ends"><input className={control} type="date" name="amc" /></Field>
+          <Field label="Status">
+            <select className={control} name="status" defaultValue="operational">
+              {["operational", "under_maintenance", "down", "retired"].map((value) => <option key={value}>{value}</option>)}
+            </select>
+          </Field>
+          <Field label="Notes"><input className={control} name="notes" /></Field>
+        </SaveForm>
+      )}
+      <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && !(query.data || []).length} title="No assets registered" body="Register lifts, pumps, DG sets and other common equipment." />
+      <ul className="mt-4 space-y-2 text-sm">
+        {(query.data || []).map((asset) => (
+          <li key={asset.id} className="border border-slate-800 bg-white p-3">
+            <strong>{asset.name}</strong>
+            <p className="text-slate-400">{asset.category} · {asset.status} · {asset.location || "location unset"}</p>
+            <p className="text-slate-400">Vendor {asset.vendor_name || "—"} · Warranty {asset.warranty_ends_on || "—"} · AMC {asset.amc_ends_on || "—"}</p>
+            {asset.notes && <p className="mt-1">{asset.notes}</p>}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+export function AssistantScreen({ communityId }) {
+  const [question, setQuestion] = useState("");
+  const [answer, setAnswer] = useState("");
+  const [busy, setBusy] = useState(false);
+  const facts = useLoad(() => rpc("society_assistant_facts", { p_community: communityId }), [communityId]);
+
+  const answerFromFacts = (q, data) => {
+    const text = q.toLowerCase();
+    const lines = [];
+    lines.push("Verified society records (not generated advice):");
+    if (text.includes("complaint") || text.includes("concern")) {
+      lines.push(`Open public concerns: ${data.open_public_concerns ?? 0}`);
+      lines.push(`Your open concerns: ${data.my_open_concerns ?? 0}`);
+    }
+    if (text.includes("meeting") || text.includes("agm")) {
+      const meetings = data.upcoming_meetings || [];
+      lines.push(meetings.length ? `Upcoming meetings: ${meetings.map((m) => `${m.title} on ${m.held_on}`).join("; ")}` : "No upcoming meetings on record.");
+    }
+    if (text.includes("notice")) {
+      lines.push(`Published notices: ${data.published_notices ?? 0}`);
+    }
+    if (text.includes("expense") || text.includes("approval") || text.includes("outstanding") || text.includes("fund") || text.includes("statement") || text.includes("audit") || text.includes("payment")) {
+      if (data.financial_detail === "restricted") {
+        lines.push(data.note || "Financial detail is restricted for your role.");
+      } else {
+        if (data.pending_expenses != null) lines.push(`Expenses awaiting approval: ${data.pending_expenses}`);
+        if (data.pending_payment_proofs != null) lines.push(`Payment proofs awaiting verification: ${data.pending_payment_proofs}`);
+        if (data.open_audit_observations != null) lines.push(`Open audit observations: ${data.open_audit_observations}`);
+        if (data.latest_statement) lines.push(`Latest statement: ${data.latest_statement.status} · period ending ${data.latest_statement.period_end} · due ${data.latest_statement.due_on}`);
+        const funds = data.fund_balances || [];
+        if (funds.length) lines.push(`Fund closings: ${funds.map((f) => `${f.name} ${inr(f.closing)}`).join("; ")}`);
+      }
+    }
+    if (lines.length === 1) {
+      lines.push(`Open public concerns: ${data.open_public_concerns ?? 0}`);
+      lines.push(`Your open concerns: ${data.my_open_concerns ?? 0}`);
+      lines.push(`Published notices: ${data.published_notices ?? 0}`);
+      lines.push("Ask about concerns, meetings, notices, expenses, payments, funds, statements, or audit observations.");
+    }
+    lines.push("The assistant cannot approve expenses, post ledger entries, change roles, or close concerns.");
+    return lines.join("\n");
+  };
+
+  const ask = async (event) => {
+    event?.preventDefault?.();
+    const q = question.trim();
+    if (!q || busy) return;
+    setBusy(true);
+    try {
+      const data = facts.data || await rpc("society_assistant_facts", { p_community: communityId });
+      setAnswer(answerFromFacts(q, data));
+      facts.reload();
+    } catch (error) {
+      setAnswer(error.message || "Could not load society facts.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section>
+      <h2 className="mb-1 font-display text-xl font-semibold">Society assistant</h2>
+      <p className="mb-4 text-sm text-slate-400">Answers from permission-scoped SABHA records. Financial claims cite verified counts and balances only.</p>
+      <PageStatus loading={facts.loading} error={facts.error} onRetry={facts.reload} empty={false} />
+      <form className="grid gap-3" onSubmit={ask}>
+        <Field label="Question">
+          <textarea className={control} rows={3} value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="e.g. Which invoices are awaiting approval?" required />
+        </Field>
+        <button type="submit" disabled={busy} className="min-h-12 bg-[#0878E8] px-3 font-semibold text-white">{busy ? "Looking up…" : "Ask from records"}</button>
+      </form>
+      {answer && <pre className="mt-4 whitespace-pre-wrap border border-slate-800 bg-white p-3 text-sm">{answer}</pre>}
     </section>
   );
 }

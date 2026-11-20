@@ -3,9 +3,9 @@ import { Link } from "react-router-dom";
 import { isSupabaseConfigured, rpc, rows, supabase } from "./api.js";
 import { explain } from "./api.js";
 import {
-  AmenitiesScreen, ConcernsScreen, DecisionsScreen, DocumentsScreen, FinanceScreen, HistoryScreen,
-  HomeScreen, NoticesScreen, NotificationsScreen, ProfileScreen, SettingsScreen, UnitsScreen,
-  VisitorsScreen,
+  AmenitiesScreen, AssetsScreen, AssistantScreen, ConcernsScreen, DecisionsScreen, DocumentsScreen,
+  FinanceScreen, HistoryScreen, HomeScreen, NoticesScreen, NotificationsScreen, ProfileScreen,
+  SettingsScreen, StaffScreen, UnitsScreen, VisitorsScreen,
 } from "./screens.jsx";
 import { Field, PageStatus, control } from "./ui.jsx";
 import { brand } from "../brand.js";
@@ -217,10 +217,11 @@ function canSee(roles, id) {
   const auditor = roles.includes("resident_auditor");
   const financeOps = committee || treasurer;
   if (id === "units" || id === "settings") return committee;
+  if (id === "staff") return committee || treasurer;
   if (id === "funds") return financeOps;
   if (id === "collections") return true; // residents submit proofs; treasurers verify
   if (id === "reconciliation" || id === "expenses" || id === "reviews" || id === "history") return financeOps || auditor;
-  return ["home", "finance", "concerns", "decisions", "documents", "notifications", "profile", "notices", "visitors", "amenities"].includes(id);
+  return ["home", "finance", "concerns", "decisions", "documents", "notifications", "profile", "notices", "visitors", "amenities", "assets", "assistant"].includes(id);
 }
 
 const PRIMARY = [
@@ -234,6 +235,9 @@ const MORE = [
   ["notices", "Notices"],
   ["visitors", "Visitors"],
   ["amenities", "Amenities"],
+  ["assets", "Assets"],
+  ["staff", "Staff"],
+  ["assistant", "Assistant"],
   ["documents", "Documents"],
   ["notifications", "Notifications"],
   ["profile", "Profile"],
@@ -330,6 +334,9 @@ function Screen({ page, communityId, roles, email, onSignOut, onOpen }) {
   if (page === "notices") return <NoticesScreen communityId={communityId} roles={roles} />;
   if (page === "visitors") return <VisitorsScreen communityId={communityId} roles={roles} />;
   if (page === "amenities") return <AmenitiesScreen communityId={communityId} roles={roles} />;
+  if (page === "assets") return <AssetsScreen communityId={communityId} roles={roles} />;
+  if (page === "staff") return <StaffScreen communityId={communityId} roles={roles} />;
+  if (page === "assistant") return <AssistantScreen communityId={communityId} />;
   if (page === "documents") return <DocumentsScreen communityId={communityId} roles={roles} />;
   if (page === "units") return <UnitsScreen communityId={communityId} />;
   if (page === "notifications") return <NotificationsScreen communityId={communityId} />;
