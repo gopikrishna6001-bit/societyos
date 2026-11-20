@@ -12,6 +12,7 @@ PSQL=(sudo -u postgres psql -v ON_ERROR_STOP=1)
 "${PSQL[@]}" -d "$DB_NAME" -f supabase/migrations/20261118120000_platform_foundation.sql
 "${PSQL[@]}" -d "$DB_NAME" -f supabase/migrations/20261119120000_invitations.sql
 "${PSQL[@]}" -d "$DB_NAME" -f supabase/migrations/20261120180000_payment_proofs_action_centre.sql
+"${PSQL[@]}" -d "$DB_NAME" -f supabase/migrations/20261120190000_notices_visitors_amenities.sql
 "${PSQL[@]}" -d "$DB_NAME" -f supabase/tests/ledger_rls.sql
 "${PSQL[@]}" -d "$DB_NAME" -f supabase/tests/invitations.sql
 "${PSQL[@]}" -d "$DB_NAME" -f supabase/tests/payment_proofs.sql

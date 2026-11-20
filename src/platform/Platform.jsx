@@ -3,8 +3,9 @@ import { Link } from "react-router-dom";
 import { isSupabaseConfigured, rpc, rows, supabase } from "./api.js";
 import { explain } from "./api.js";
 import {
-  ConcernsScreen, DecisionsScreen, DocumentsScreen, FinanceScreen, HistoryScreen,
-  HomeScreen, NotificationsScreen, ProfileScreen, SettingsScreen, UnitsScreen,
+  AmenitiesScreen, ConcernsScreen, DecisionsScreen, DocumentsScreen, FinanceScreen, HistoryScreen,
+  HomeScreen, NoticesScreen, NotificationsScreen, ProfileScreen, SettingsScreen, UnitsScreen,
+  VisitorsScreen,
 } from "./screens.jsx";
 import { Field, PageStatus, control } from "./ui.jsx";
 import { brand } from "../brand.js";
@@ -219,7 +220,7 @@ function canSee(roles, id) {
   if (id === "funds") return financeOps;
   if (id === "collections") return true; // residents submit proofs; treasurers verify
   if (id === "reconciliation" || id === "expenses" || id === "reviews" || id === "history") return financeOps || auditor;
-  return ["home", "finance", "concerns", "decisions", "documents", "notifications", "profile"].includes(id);
+  return ["home", "finance", "concerns", "decisions", "documents", "notifications", "profile", "notices", "visitors", "amenities"].includes(id);
 }
 
 const PRIMARY = [
@@ -230,6 +231,9 @@ const PRIMARY = [
 ];
 
 const MORE = [
+  ["notices", "Notices"],
+  ["visitors", "Visitors"],
+  ["amenities", "Amenities"],
   ["documents", "Documents"],
   ["notifications", "Notifications"],
   ["profile", "Profile"],
@@ -323,6 +327,9 @@ function Screen({ page, communityId, roles, email, onSignOut, onOpen }) {
   }
   if (page === "concerns") return <ConcernsScreen communityId={communityId} roles={roles} />;
   if (page === "decisions") return <DecisionsScreen communityId={communityId} roles={roles} />;
+  if (page === "notices") return <NoticesScreen communityId={communityId} roles={roles} />;
+  if (page === "visitors") return <VisitorsScreen communityId={communityId} roles={roles} />;
+  if (page === "amenities") return <AmenitiesScreen communityId={communityId} roles={roles} />;
   if (page === "documents") return <DocumentsScreen communityId={communityId} roles={roles} />;
   if (page === "units") return <UnitsScreen communityId={communityId} />;
   if (page === "notifications") return <NotificationsScreen communityId={communityId} />;

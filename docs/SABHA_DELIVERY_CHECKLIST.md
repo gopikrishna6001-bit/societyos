@@ -17,13 +17,13 @@ Single consolidated checklist. Updated as work lands. Branch: `cursor/sabha-prod
 - [x] Concerns raise/track/transition (existing platform tickets)
 - [x] Expenses create/decide/pay (existing platform RPCs)
 - [x] Documents register + signed URL (existing)
-- [ ] Notices publish in Platform (legacy Notices still at `/legacy`)
+- [x] Notices publish in Platform (`community_notices` + `publish_community_notice`)
 - [x] Unified Action Centre (Home)
 
 ## Stage C — Operations
 
-- [ ] Platform visitor/guard workspace (Gate remains `/legacy`)
-- [ ] Platform amenity booking (ResidentPortal note still points to secretary)
+- [x] Platform visitor passes + check-in/out (Gate remains available at `/legacy`)
+- [x] Platform amenity catalogue + booking RPC
 - [ ] Staff attendance in Platform
 - [ ] Assets / vendors / PM schedules in Platform
 

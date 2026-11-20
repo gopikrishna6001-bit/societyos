@@ -1027,3 +1027,184 @@ export function ProfileScreen({ email, roles, onSignOut }) {
     </section>
   );
 }
+
+export function NoticesScreen({ communityId, roles }) {
+  const committee = roles.includes("committee_admin") || roles.includes("platform_admin");
+  const query = useLoad(
+    () => rows(supabase.from("community_notices").select("id,title,body,audience,pinned,published_at,created_at").eq("community_id", communityId).order("pinned", { ascending: false }).order("published_at", { ascending: false })),
+    [communityId],
+  );
+  return (
+    <section>
+      <h2 className="mb-1 font-display text-xl font-semibold">Notices</h2>
+      <p className="mb-4 text-sm text-slate-400">Official society notices live here. WhatsApp is only a delivery channel.</p>
+      {committee && (
+        <SaveForm submitLabel="Publish notice" onSubmit={(data) => rpc("publish_community_notice", {
+          p_community: communityId,
+          p_title: data.title,
+          p_body: data.body,
+          p_audience: data.audience,
+          p_pinned: data.pinned === "true",
+        }).then(query.reload)}>
+          <Field label="Title"><input className={control} name="title" required /></Field>
+          <Field label="Audience">
+            <select className={control} name="audience" defaultValue="all">
+              <option value="all">All residents</option>
+              <option value="owners">Owners</option>
+              <option value="tenants">Tenants</option>
+              <option value="committee">Committee</option>
+            </select>
+          </Field>
+          <Field label="Pin">
+            <select className={control} name="pinned" defaultValue="false">
+              <option value="false">No</option>
+              <option value="true">Yes</option>
+            </select>
+          </Field>
+          <Field label="Body"><textarea className={control} name="body" rows={5} required /></Field>
+        </SaveForm>
+      )}
+      <div className="mt-4">
+        <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && !(query.data || []).length} title="No notices yet" body="When the secretary publishes a notice, it appears here for every member." />
+        <ul className="space-y-3">
+          {(query.data || []).map((notice) => (
+            <li key={notice.id} className="border border-slate-800 bg-white p-3">
+              <div className="flex justify-between gap-3">
+                <strong>{notice.title}</strong>
+                {notice.pinned && <span className="text-xs font-semibold text-[#0878E8]">Pinned</span>}
+              </div>
+              <p className="mt-2 whitespace-pre-wrap text-sm">{notice.body}</p>
+              <p className="mt-2 text-xs text-slate-400">{notice.audience} · {notice.published_at ? new Date(notice.published_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) : "draft"}</p>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+export function VisitorsScreen({ communityId, roles }) {
+  const committee = roles.includes("committee_admin") || roles.includes("platform_admin");
+  const query = useLoad(
+    () => rows(supabase.from("visitor_passes").select("id,visitor_name,visitor_phone,purpose,pass_code,status,expected_at,checked_in_at,checked_out_at,created_at").eq("community_id", communityId).order("created_at", { ascending: false }).limit(40)),
+    [communityId],
+  );
+  return (
+    <section>
+      <h2 className="mb-1 font-display text-xl font-semibold">Visitors</h2>
+      <p className="mb-4 text-sm text-slate-400">Pre-approve guests with a pass code. Gate staff check visitors in and out. No financial data is shown here.</p>
+      <SaveForm submitLabel="Create visitor pass" onSubmit={async (data) => {
+        const result = await rpc("create_visitor_pass", {
+          p_community: communityId,
+          p_visitor_name: data.name,
+          p_visitor_phone: data.phone || null,
+          p_purpose: data.purpose || null,
+          p_unit_number: data.unit || null,
+          p_vehicle_number: data.vehicle || null,
+          p_expected_at: data.expected || null,
+        });
+        window.alert(`Pass created. Code: ${result?.pass_code || result}`);
+        query.reload();
+      }}>
+        <Field label="Visitor name"><input className={control} name="name" required /></Field>
+        <Field label="Phone"><input className={control} name="phone" inputMode="tel" /></Field>
+        <Field label="Unit number"><input className={control} name="unit" /></Field>
+        <Field label="Purpose"><input className={control} name="purpose" /></Field>
+        <Field label="Vehicle"><input className={control} name="vehicle" /></Field>
+        <Field label="Expected at"><input className={control} type="datetime-local" name="expected" /></Field>
+      </SaveForm>
+      <div className="mt-4">
+        <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && !(query.data || []).length} title="No visitor passes" body="Create a pass for an expected guest. The gate uses the pass code at entry." />
+        <ul className="space-y-2 text-sm">
+          {(query.data || []).map((pass) => (
+            <li key={pass.id} className="border border-slate-800 bg-white p-3">
+              <div className="flex flex-wrap justify-between gap-2">
+                <strong>{pass.visitor_name}</strong>
+                <span className="font-mono">{pass.pass_code}</span>
+              </div>
+              <p className="text-slate-400">{pass.status} · {pass.purpose || "Visit"} · {pass.visitor_phone || "no phone"}</p>
+              {committee && pass.status === "expected" && (
+                <button type="button" className="mt-2 min-h-10 border border-slate-600 px-3" onClick={() => rpc("check_in_visitor", { p_pass: pass.id }).then(query.reload)}>Check in</button>
+              )}
+              {committee && pass.status === "checked_in" && (
+                <button type="button" className="mt-2 min-h-10 border border-slate-600 px-3" onClick={() => rpc("check_out_visitor", { p_pass: pass.id }).then(query.reload)}>Check out</button>
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+export function AmenitiesScreen({ communityId, roles }) {
+  const committee = roles.includes("committee_admin") || roles.includes("platform_admin");
+  const amenities = useLoad(
+    () => rows(supabase.from("amenities").select("id,name,description,requires_approval,slot_minutes,is_active").eq("community_id", communityId).eq("is_active", true).order("name")),
+    [communityId],
+  );
+  const bookings = useLoad(
+    () => rows(supabase.from("amenity_bookings").select("id,amenity_id,starts_at,ends_at,purpose,status,amenities(name)").eq("community_id", communityId).order("starts_at", { ascending: false }).limit(30)),
+    [communityId],
+  );
+  return (
+    <section>
+      <h2 className="mb-1 font-display text-xl font-semibold">Amenities</h2>
+      <p className="mb-4 text-sm text-slate-400">Book community spaces. Overlapping confirmed bookings are rejected.</p>
+      {committee && (
+        <SaveForm submitLabel="Add amenity" onSubmit={async (data) => {
+          const { error } = await supabase.from("amenities").insert({
+            community_id: communityId,
+            name: data.name,
+            description: data.description || null,
+            requires_approval: data.approval === "true",
+            slot_minutes: Number(data.minutes) || 60,
+          });
+          if (error) throw new Error(error.message);
+          amenities.reload();
+        }}>
+          <Field label="Name"><input className={control} name="name" required /></Field>
+          <Field label="Description"><input className={control} name="description" /></Field>
+          <Field label="Slot minutes"><input className={control} name="minutes" type="number" defaultValue="60" min="15" /></Field>
+          <Field label="Needs approval">
+            <select className={control} name="approval" defaultValue="false">
+              <option value="false">No — confirm immediately</option>
+              <option value="true">Yes — pending until committee approves</option>
+            </select>
+          </Field>
+        </SaveForm>
+      )}
+      <PageStatus loading={amenities.loading} error={amenities.error} onRetry={amenities.reload} empty={!amenities.loading && !amenities.error && !(amenities.data || []).length} title="No amenities configured" body="Committee can add clubhouse, courts, guest rooms and other bookable spaces." />
+      {!!(amenities.data || []).length && (
+        <SaveForm submitLabel="Request booking" onSubmit={(data) => rpc("book_amenity", {
+          p_amenity: data.amenity,
+          p_starts_at: new Date(data.start).toISOString(),
+          p_ends_at: new Date(data.end).toISOString(),
+          p_purpose: data.purpose || null,
+          p_unit_number: data.unit || null,
+        }).then(bookings.reload)}>
+          <Field label="Amenity">
+            <select className={control} name="amenity" required>
+              {(amenities.data || []).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+            </select>
+          </Field>
+          <Field label="Starts"><input className={control} type="datetime-local" name="start" required /></Field>
+          <Field label="Ends"><input className={control} type="datetime-local" name="end" required /></Field>
+          <Field label="Unit number"><input className={control} name="unit" /></Field>
+          <Field label="Purpose"><input className={control} name="purpose" /></Field>
+        </SaveForm>
+      )}
+      <h3 className="mb-2 mt-6 font-semibold">Recent bookings</h3>
+      <PageStatus loading={bookings.loading} error={bookings.error} onRetry={bookings.reload} empty={!bookings.loading && !bookings.error && !(bookings.data || []).length} title="No bookings yet" body="Your confirmed and pending amenity bookings appear here." />
+      <ul className="space-y-2 text-sm">
+        {(bookings.data || []).map((booking) => (
+          <li key={booking.id} className="border border-slate-800 bg-white p-3">
+            <strong>{booking.amenities?.name || "Amenity"}</strong>
+            <p>{new Date(booking.starts_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} → {new Date(booking.ends_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</p>
+            <p className="text-slate-400">{booking.status} · {booking.purpose || "No purpose noted"}</p>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
