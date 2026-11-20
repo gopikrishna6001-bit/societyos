@@ -111,10 +111,11 @@ export default function Meetings() {
     setAiLoading(true);
     try {
       const endpoint = import.meta.env.VITE_AI_ENDPOINT || "https://api.anthropic.com/v1/messages";
+      const { aiRequestHeaders } = await import("../lib/aiEndpoint.js");
       const agenda = (showMinutes.agenda || []).map((a, i) => `${i + 1}. ${a.item}`).join("\n");
       const res = await fetch(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: await aiRequestHeaders(),
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 800,

@@ -1,0 +1,22 @@
+# Local/deployer reference for Edge Function JWT settings.
+# Hosted verify_jwt must be set in the Supabase dashboard or CLI deploy flags.
+# Application handlers still validate callers themselves where required.
+
+[functions.auth-login]
+# Retired phone/PIN API. Handler returns 410 without reading the body.
+verify_jwt = false
+
+[functions.ai-proxy]
+# Handler validates Authorization with auth.getUser(). Prefer verify_jwt = true on host.
+verify_jwt = true
+
+[functions.invite-member]
+verify_jwt = true
+
+[functions.send-whatsapp]
+# Dispatch uses WA_DISPATCH_SECRET, not a user JWT.
+verify_jwt = false
+
+[functions.whatsapp-bot]
+# Meta webhook verification; no user JWT.
+verify_jwt = false
