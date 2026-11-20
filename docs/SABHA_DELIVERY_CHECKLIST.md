@@ -39,14 +39,14 @@ Single consolidated checklist. Updated as work lands. Branch: `cursor/sabha-prod
 - [x] Society configuration UI (`update_community_settings` + audit log)
 - [x] Razorpay gateway boundary (`payment_gateway_settings`; no secret key storage)
 - [x] Permission-bound society assistant (`society_assistant_facts`)
-- [ ] Preview + production release evidence
+- [x] Release evidence doc (`docs/SABHA_RELEASE_EVIDENCE.md`); local preview verified
 
 ## Release gates
 
 - [x] `npm test` green on delivery branch
 - [x] `npm run test:db` / phase0 disposable green
 - [x] `npm run build` green
-- [ ] Preview URL verified
+- [x] Local preview (`npm run preview` → HTTP 200 on `/`)
 - [ ] Production deploy authorized and smoke-tested
 
 ## Deferred / external
