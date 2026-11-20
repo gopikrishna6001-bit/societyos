@@ -106,6 +106,7 @@ export default function Committee() {
     setAiLoading(true);
     try {
       const endpoint = import.meta.env.VITE_AI_ENDPOINT || "https://api.anthropic.com/v1/messages";
+      const { aiRequestHeaders } = await import("../lib/aiEndpoint.js");
       const [complaints, invoices, maintenance] = await Promise.all([
         supabase.from("complaints").select("status, category").eq("society_id", SOCIETY_ID),
         supabase.from("invoices").select("status, total_amount, amount_paid").eq("society_id", SOCIETY_ID).ilike("month", `${new Date().toISOString().slice(0, 7)}%`),
@@ -118,7 +119,7 @@ export default function Committee() {
 
       const res = await fetch(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: await aiRequestHeaders(),
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 600,

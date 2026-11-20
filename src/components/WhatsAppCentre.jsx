@@ -92,12 +92,9 @@ export default function WhatsAppCentre() {
     const { error } = await supabase.from("whatsapp_log").insert(rows);
     if (error) { toast(error.message, "#f87171"); setSaving(false); return; }
 
-    // Trigger send function
-    try {
-      await fetch(`https://wzchqxwwezklxsxmjvyt.supabase.co/functions/v1/send-whatsapp`, { method: "POST" });
-    } catch (e) { /* silent fail — messages queued */ }
-
-    toast(`✓ Broadcast queued for ${rows.length} residents`);
+    // Delivery is dispatched by an approved operator/cron with WA_DISPATCH_SECRET.
+    // The browser must not call send-whatsapp anonymously.
+    toast(`✓ Broadcast queued for ${rows.length} residents. Delivery waits for an authorised dispatch.`);
     setShowBroadcast(false);
     setBroadcastForm({ message: "", target: "all", template_id: "" });
     await load();
@@ -117,8 +114,7 @@ export default function WhatsAppCentre() {
 
   const retryFailed = async () => {
     await supabase.from("whatsapp_log").update({ status: "pending" }).eq("society_id", SOCIETY_ID).eq("status", "failed");
-    try { await fetch(`https://wzchqxwwezklxsxmjvyt.supabase.co/functions/v1/send-whatsapp`, { method: "POST" }); } catch (e) {}
-    toast("Retrying failed messages…");
+    toast("Failed messages set to pending. An authorised dispatch is required to send them.");
     await load();
   };
 

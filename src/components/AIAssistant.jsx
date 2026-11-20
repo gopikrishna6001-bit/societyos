@@ -47,6 +47,7 @@ export default function AIAssistant() {
 
     try {
       const endpoint = import.meta.env.VITE_AI_ENDPOINT || "https://api.anthropic.com/v1/messages";
+      const { aiRequestHeaders } = await import("../lib/aiEndpoint.js");
       const contextStr = societyContext
         ? `Society: ${societyContext.name}, ${societyContext.city}. ${societyContext.total_flats} flats. Monthly fee: ₹${societyContext.monthly_fee}. Balance: ₹${societyContext.balance?.toLocaleString("en-IN")}.`
         : "";
@@ -55,7 +56,7 @@ export default function AIAssistant() {
 
       const res = await fetch(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: await aiRequestHeaders(),
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 1000,
