@@ -33,9 +33,11 @@ The product is not a full apartment-management suite. It answers ten resident qu
 - Documents with public, committee, and unit-private access. A public invoice must be a separate redacted file.
 - In-app notifications.
 
-## Deferred from the earlier navigation
+## Operational modules (SocietyOS)
 
-Gate and staff, amenities, volunteers, the WhatsApp centre, and the AI assistant stay in the repository and remain reachable from the legacy route. They are not primary navigation for the new platform. WhatsApp is a future notification channel only.
+Gate and staff, amenities, volunteers, the WhatsApp centre, maintenance assets/AMC, and related apartment-ops modules remain in the repository under `/legacy` today. **They are in scope for SABHA** as one integrated community platform (see `SABHA_PRODUCT_ROADMAP.md`). They stay on the legacy route only until each module is verified inside the SABHA shell. WhatsApp and email are integrations that must report real delivery status; a button alone is not success.
+
+Financial transparency and governance remain a required differentiator; they do not replace operational coverage.
 
 ## Fixed decisions
 

@@ -1,0 +1,192 @@
+[
+  {
+    "workflow": "resident-login",
+    "status": "FAIL",
+    "detail": "Did not reach demo"
+  },
+  {
+    "workflow": "2-create-expense",
+    "status": "DEMO ONLY",
+    "detail": "Treasurer submitted demo expense"
+  },
+  {
+    "workflow": "2-approve-expense",
+    "status": "DEMO ONLY",
+    "detail": "Expense approved locally"
+  },
+  {
+    "workflow": "3-auditor-observation",
+    "status": "DEMO ONLY",
+    "detail": "Observation saved locally"
+  },
+  {
+    "workflow": "4-committee-sees-private",
+    "status": "FAIL",
+    "detail": "Private missing"
+  },
+  {
+    "workflow": "committee-workflows",
+    "status": "FAIL",
+    "detail": "locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for getByRole('button', { name: /Committee/ }).first()\n"
+  },
+  {
+    "workflow": "6-demo-invite",
+    "status": "DEMO ONLY",
+    "detail": "Invitation stored locally only"
+  },
+  {
+    "ui": "/@360x800",
+    "status": "PASS",
+    "detail": "scroll=360 client=360"
+  },
+  {
+    "ui": "/@390x844",
+    "status": "PASS",
+    "detail": "scroll=390 client=390"
+  },
+  {
+    "ui": "/@430x932",
+    "status": "PASS",
+    "detail": "scroll=430 client=430"
+  },
+  {
+    "ui": "/@768x1024",
+    "status": "PASS",
+    "detail": "scroll=768 client=768"
+  },
+  {
+    "ui": "/@1366x768",
+    "status": "PASS",
+    "detail": "scroll=1366 client=1366"
+  },
+  {
+    "ui": "/@1440x900",
+    "status": "PASS",
+    "detail": "scroll=1440 client=1440"
+  },
+  {
+    "ui": "/community@360x800",
+    "status": "PASS",
+    "detail": "scroll=360 client=360"
+  },
+  {
+    "ui": "/community@390x844",
+    "status": "PASS",
+    "detail": "scroll=390 client=390"
+  },
+  {
+    "ui": "/community@430x932",
+    "status": "PASS",
+    "detail": "scroll=430 client=430"
+  },
+  {
+    "ui": "/community@768x1024",
+    "status": "PASS",
+    "detail": "scroll=768 client=768"
+  },
+  {
+    "ui": "/community@1366x768",
+    "status": "PASS",
+    "detail": "scroll=1366 client=1366"
+  },
+  {
+    "ui": "/community@1440x900",
+    "status": "PASS",
+    "detail": "scroll=1440 client=1440"
+  },
+  {
+    "ui": "/finance@360x800",
+    "status": "PASS",
+    "detail": "scroll=360 client=360"
+  },
+  {
+    "ui": "/finance@390x844",
+    "status": "PASS",
+    "detail": "scroll=390 client=390"
+  },
+  {
+    "ui": "/finance@430x932",
+    "status": "PASS",
+    "detail": "scroll=430 client=430"
+  },
+  {
+    "ui": "/finance@768x1024",
+    "status": "PASS",
+    "detail": "scroll=768 client=768"
+  },
+  {
+    "ui": "/finance@1366x768",
+    "status": "PASS",
+    "detail": "scroll=1366 client=1366"
+  },
+  {
+    "ui": "/finance@1440x900",
+    "status": "PASS",
+    "detail": "scroll=1440 client=1440"
+  },
+  {
+    "ui": "/concerns@360x800",
+    "status": "PASS",
+    "detail": "scroll=360 client=360"
+  },
+  {
+    "ui": "/concerns@390x844",
+    "status": "PASS",
+    "detail": "scroll=390 client=390"
+  },
+  {
+    "ui": "/concerns@430x932",
+    "status": "PASS",
+    "detail": "scroll=430 client=430"
+  },
+  {
+    "ui": "/concerns@768x1024",
+    "status": "PASS",
+    "detail": "scroll=768 client=768"
+  },
+  {
+    "ui": "/concerns@1366x768",
+    "status": "PASS",
+    "detail": "scroll=1366 client=1366"
+  },
+  {
+    "ui": "/concerns@1440x900",
+    "status": "PASS",
+    "detail": "scroll=1440 client=1440"
+  },
+  {
+    "ui": "/more@360x800",
+    "status": "PASS",
+    "detail": "scroll=360 client=360"
+  },
+  {
+    "ui": "/more@390x844",
+    "status": "PASS",
+    "detail": "scroll=390 client=390"
+  },
+  {
+    "ui": "/more@430x932",
+    "status": "PASS",
+    "detail": "scroll=430 client=430"
+  },
+  {
+    "ui": "/more@768x1024",
+    "status": "PASS",
+    "detail": "scroll=768 client=768"
+  },
+  {
+    "ui": "/more@1366x768",
+    "status": "PASS",
+    "detail": "scroll=1366 client=1366"
+  },
+  {
+    "ui": "/more@1440x900",
+    "status": "PASS",
+    "detail": "scroll=1440 client=1440"
+  },
+  {
+    "ui": "/legacy",
+    "status": "PASS",
+    "detail": "SABHA  Clarity in Community.  A transparent platform for community finances, decisions and accountability.  Email Passwo"
+  }
+]

@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { amenities, buildHouseholds, committee, flats, meetings, notices, resolutions, staff } from "./data.js";
 import { useDemo } from "./context.js";
@@ -8,10 +9,28 @@ const TABS = ["Directory", "Units", "Committee", "Staff", "Notices", "Meetings",
 
 export function Community() {
   const { state, dispatch } = useDemo();
-  const [tab, setTab] = useState("Directory");
+  const [params, setParams] = useSearchParams();
+  const requestedTab = params.get("tab");
+  const [tab, setTab] = useState(TABS.includes(requestedTab) ? requestedTab : "Directory");
   const [query, setQuery] = useState("");
-  const [selectedNotice, setSelectedNotice] = useState(null);
-  const [selectedMeeting, setSelectedMeeting] = useState(null);
+  const [selectedNotice, setSelectedNotice] = useState(params.get("notice"));
+  const [selectedMeeting, setSelectedMeeting] = useState(params.get("meeting"));
+  const [selectedPerson, setSelectedPerson] = useState(null);
+
+  useEffect(() => {
+    const nextTab = params.get("tab");
+    if (TABS.includes(nextTab)) setTab(nextTab);
+    if (params.get("notice")) setSelectedNotice(params.get("notice"));
+    if (params.get("meeting")) setSelectedMeeting(params.get("meeting"));
+  }, [params]);
+
+  const openTab = (name) => {
+    setTab(name);
+    setSelectedNotice(null);
+    setSelectedMeeting(null);
+    setSelectedPerson(null);
+    setParams(name === "Directory" ? {} : { tab: name });
+  };
   const people = useMemo(() => buildHouseholds(), []);
   const homes = useMemo(() => flats(), []);
   const found = people.filter((person) => `${person.name} ${person.flat}`.toLowerCase().includes(query.trim().toLowerCase()));
@@ -24,7 +43,7 @@ export function Community() {
       <h1>Community</h1>
       <p className="demo-secondary">Fictional residents of Palm Court. No phone numbers are stored in this preview.</p>
       <div className="demo-tabs" role="tablist" aria-label="Community">
-        {TABS.map((name) => <button key={name} type="button" role="tab" aria-selected={tab === name} onClick={() => { setTab(name); setSelectedNotice(null); setSelectedMeeting(null); }}>{name}</button>)}
+        {TABS.map((name) => <button key={name} type="button" role="tab" aria-selected={tab === name} onClick={() => openTab(name)}>{name}</button>)}
       </div>
       <div className="demo-panel">
         {tab === "Directory" && (
@@ -32,9 +51,24 @@ export function Community() {
             <h2>Resident directory</h2>
             <input aria-label="Search residents" placeholder="Search a name or flat" value={query} onChange={(event) => setQuery(event.target.value)} />
             {found.length === 0 && <Empty title="No resident matches" body="Try a flat such as A-402." />}
-            <ul>
-              {found.slice(0, 20).map((person) => <li key={person.id}>{person.name} · {person.flat} · {person.relationship}</li>)}
-            </ul>
+            {selectedPerson ? (
+              <article className="demo-detail">
+                <button type="button" className="demo-text-button" onClick={() => setSelectedPerson(null)}><ArrowLeft size={16} aria-hidden="true" /> All residents</button>
+                <h2>{selectedPerson.name}</h2>
+                <p>{selectedPerson.flat} · {selectedPerson.relationship}</p>
+                <p className="demo-secondary">Phone numbers are not stored in this preview. Private dues stay off the directory.</p>
+              </article>
+            ) : (
+              <ul>
+                {found.slice(0, 20).map((person) => (
+                  <li key={person.id}>
+                    <button type="button" className="demo-text-button" onClick={() => setSelectedPerson(person)}>
+                      {person.name} · {person.flat} · {person.relationship}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
             <p className="demo-secondary">{people.length} residents across 108 occupied homes. Showing {Math.min(20, found.length)} matches.</p>
           </>
         )}
@@ -49,23 +83,58 @@ export function Community() {
               })}
             </ul>
             <p className="demo-secondary">120 units. D-701 through D-1003 are the 12 vacant homes.</p>
+            <button type="button" className="demo-text-button" onClick={() => openTab("Directory")}>Open the resident directory</button>
           </>
         )}
-        {tab === "Committee" && (
-          <>
-            <h2>Committee</h2>
-            <ul>{committee.map((member) => <li key={member.name}><strong>{member.name}</strong>, {member.title} · {member.flat}. {member.focus}</li>)}</ul>
-          </>
-        )}
-        {tab === "Staff" && (
-          <>
-            <h2>Staff</h2>
-            <ul>{staff.map((member) => <li key={member.id}>{member.name} · {member.role}</li>)}</ul>
-          </>
-        )}
+        {tab === "Committee" && (() => {
+          const member = committee.find((row) => row.name === selectedPerson);
+          if (member) {
+            return (
+              <article>
+                <button type="button" className="demo-text-button" onClick={() => setSelectedPerson(null)}><ArrowLeft size={16} aria-hidden="true" /> All committee</button>
+                <h2>{member.name}</h2>
+                <p>{member.title} · {member.flat}</p>
+                <p>{member.focus}</p>
+              </article>
+            );
+          }
+          return (
+            <>
+              <h2>Committee</h2>
+              {committee.map((row) => (
+                <button key={row.name} type="button" className="demo-row" onClick={() => setSelectedPerson(row.name)}>
+                  <span><strong>{row.name}</strong>, {row.title}<br /><span className="demo-secondary">{row.flat} · {row.focus}</span></span>
+                </button>
+              ))}
+            </>
+          );
+        })()}
+        {tab === "Staff" && (() => {
+          const member = staff.find((row) => row.id === selectedPerson);
+          if (member) {
+            return (
+              <article>
+                <button type="button" className="demo-text-button" onClick={() => setSelectedPerson(null)}><ArrowLeft size={16} aria-hidden="true" /> All staff</button>
+                <h2>{member.name}</h2>
+                <p>{member.role}</p>
+                <p className="demo-secondary">Palm Court staff listing for this demo only. Attendance and payroll stay on the earlier SocietyOS screens.</p>
+              </article>
+            );
+          }
+          return (
+            <>
+              <h2>Staff</h2>
+              {staff.map((row) => (
+                <button key={row.id} type="button" className="demo-row" onClick={() => setSelectedPerson(row.id)}>
+                  <span>{row.name}<br /><span className="demo-secondary">{row.role}</span></span>
+                </button>
+              ))}
+            </>
+          );
+        })()}
         {tab === "Notices" && (notice ? (
           <article>
-            <button type="button" className="demo-text-button" onClick={() => setSelectedNotice(null)}><ArrowLeft size={16} aria-hidden="true" /> All notices</button>
+            <button type="button" className="demo-text-button" onClick={() => { setSelectedNotice(null); setParams({ tab: "Notices" }); }}><ArrowLeft size={16} aria-hidden="true" /> All notices</button>
             <h2>{notice.title}</h2>
             <p>{notice.date}</p>
             <p>{notice.body}</p>
@@ -73,12 +142,12 @@ export function Community() {
         ) : (
           <>
             <h2>Notices</h2>
-            {notices.map((item) => <button key={item.id} type="button" className="demo-row" onClick={() => setSelectedNotice(item.id)}><span>{item.title}<br /><span className="demo-secondary">{item.date}</span></span></button>)}
+            {notices.map((item) => <button key={item.id} type="button" className="demo-row" onClick={() => { setSelectedNotice(item.id); setParams({ tab: "Notices", notice: item.id }); }}><span>{item.title}<br /><span className="demo-secondary">{item.date}</span></span></button>)}
           </>
         ))}
         {tab === "Meetings" && (meeting ? (
           <article>
-            <button type="button" className="demo-text-button" onClick={() => setSelectedMeeting(null)}><ArrowLeft size={16} aria-hidden="true" /> All meetings</button>
+            <button type="button" className="demo-text-button" onClick={() => { setSelectedMeeting(null); setParams({ tab: "Meetings" }); }}><ArrowLeft size={16} aria-hidden="true" /> All meetings</button>
             <h2>{meeting.title}</h2>
             <p>{meeting.when} · {meeting.venue} · {meeting.status}</p>
             <h3>Agenda</h3>
@@ -95,7 +164,7 @@ export function Community() {
         ) : (
           <>
             <h2>Meetings</h2>
-            {meetings.map((item) => <button key={item.id} type="button" className="demo-row" onClick={() => setSelectedMeeting(item.id)}><span>{item.title}<br /><span className="demo-secondary">{item.when} · {item.status}</span></span></button>)}
+            {meetings.map((item) => <button key={item.id} type="button" className="demo-row" onClick={() => { setSelectedMeeting(item.id); setParams({ tab: "Meetings", meeting: item.id }); }}><span>{item.title}<br /><span className="demo-secondary">{item.when} · {item.status}</span></span></button>)}
           </>
         ))}
         {tab === "Polls" && (

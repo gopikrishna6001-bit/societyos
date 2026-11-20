@@ -8,10 +8,27 @@ import {
 } from "./screens.jsx";
 import { Field, PageStatus, control } from "./ui.jsx";
 import { brand } from "../brand.js";
-import { passwordRule, signInMessage } from "../lib/authPolicy.js";
+import { isNetworkAuthError, passwordRule, signInMessage } from "../lib/authPolicy.js";
 import { Mark, Wordmark } from "../brand/Mark.jsx";
 import { DemoApp } from "./demo/DemoApp.jsx";
 import { isDemoEmail } from "./demo/data.js";
+import { demoAccounts, demoPassword } from "../demoAccounts.js";
+
+async function signInWithPasswordOnce(email, password) {
+  const result = await supabase.auth.signInWithPassword({ email, password });
+  if (result.error) throw result.error;
+  return result;
+}
+
+async function signInWithPasswordRetry(email, password) {
+  try {
+    return await signInWithPasswordOnce(email, password);
+  } catch (cause) {
+    if (!isNetworkAuthError(cause)) throw cause;
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    return signInWithPasswordOnce(email, password);
+  }
+}
 
 export default function Platform() {
   if (!isSupabaseConfigured) return <ConfigRequired />;
@@ -63,23 +80,27 @@ function AuthScreen() {
   const [pending, setPending] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const submit = async (event) => {
-    event.preventDefault();
-    const data = Object.fromEntries(new FormData(event.currentTarget));
+  const attemptSignIn = async ({ email: nextEmail, password: nextPassword, website = "" }) => {
     setPending(true);
     setError("");
+    setEmail(nextEmail);
+    setPassword(nextPassword);
     try {
-      if (String(data.website || "").trim()) throw new Error("credentials");
-      const rule = passwordRule(String(data.password || ""));
+      if (String(website || "").trim()) throw new Error("credentials");
+      const rule = passwordRule(String(nextPassword || ""));
       if (rule) throw new Error(rule);
-      const result = await supabase.auth.signInWithPassword({ email: data.email, password: data.password });
-      if (result.error) throw result.error;
+      await signInWithPasswordRetry(String(nextEmail || "").trim(), String(nextPassword || ""));
     } catch (cause) {
       const text = String(cause?.message || "");
       setError(text === "Use at least 8 characters." ? text : signInMessage(cause));
     } finally {
       setPending(false);
     }
+  };
+  const submit = async (event) => {
+    event.preventDefault();
+    const data = Object.fromEntries(new FormData(event.currentTarget));
+    await attemptSignIn({ email: data.email, password: data.password, website: data.website });
   };
   return (
     <main className="auth-screen">
@@ -98,43 +119,33 @@ function AuthScreen() {
           {pending ? "Please wait…" : "Sign in"}
         </button>
       </form>
-      <DemoAccounts onPick={(account) => { setEmail(account.email); setPassword(account.password); }} />
+      <DemoAccounts disabled={pending} onPick={(account) => attemptSignIn(account)} />
       <p className="auth-forgot"><Link to="/reset">Forgot password</Link></p>
       <p className="auth-note">Sign in with the email your community issued. This form does not ask for a phone number or a PIN, and it does not create accounts.</p>
     </main>
   );
 }
 
-function DemoAccounts({ onPick }) {
-  const [accounts, setAccounts] = useState(null);
-  const [sharedPassword, setSharedPassword] = useState("");
-  useEffect(() => {
-    if (import.meta.env.VITE_ENABLE_DEMO_LOGIN !== "true") return undefined;
-    let live = true;
-    import("../demoAccounts.js").then((mod) => {
-      if (!live) return;
-      setAccounts(mod.demoAccounts);
-      setSharedPassword(mod.demoPassword);
-    });
-    return () => { live = false; };
-  }, []);
-  if (!accounts) return null;
+function DemoAccounts({ onPick, disabled }) {
   return (
-    <section className="mt-4 border border-slate-800 bg-white p-4">
-      <h2 className="font-display text-lg font-semibold">DEMO accounts</h2>
-      <p className="mt-1 text-sm text-slate-400">Palm Court opens as a demo on this device. Its figures are not posted to a community ledger. Shared password: {sharedPassword}.</p>
-      <div className="mt-3 grid gap-2">
-        {accounts.map((account) => (
-          <button
-            key={account.email}
-            type="button"
-            className="min-h-12 border border-slate-800 px-3 text-left text-sm"
-            onClick={() => onPick(account)}
-          >
-            {account.role}<span className="mt-0.5 block text-slate-400">{account.email}</span>
-          </button>
+    <section className="auth-demo" aria-label="Demo sign-in accounts">
+      <h2>Demo logins</h2>
+      <p>
+        Tap a role to sign in. Shared password:
+        {" "}
+        <code>{demoPassword}</code>
+      </p>
+      <p className="auth-demo-note">Palm Court opens on this device only. Nothing is written to a community ledger.</p>
+      <ul>
+        {demoAccounts.map((account) => (
+          <li key={account.email}>
+            <button type="button" disabled={disabled} onClick={() => onPick(account)}>
+              <strong>{account.role}</strong>
+              <span>{account.email}</span>
+            </button>
+          </li>
         ))}
-      </div>
+      </ul>
     </section>
   );
 }
