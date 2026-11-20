@@ -8,11 +8,27 @@ import {
 } from "./screens.jsx";
 import { Field, PageStatus, control } from "./ui.jsx";
 import { brand } from "../brand.js";
-import { passwordRule, signInMessage } from "../lib/authPolicy.js";
+import { isNetworkAuthError, passwordRule, signInMessage } from "../lib/authPolicy.js";
 import { Mark, Wordmark } from "../brand/Mark.jsx";
 import { DemoApp } from "./demo/DemoApp.jsx";
 import { isDemoEmail } from "./demo/data.js";
 import { demoAccounts, demoPassword } from "../demoAccounts.js";
+
+async function signInWithPasswordOnce(email, password) {
+  const result = await supabase.auth.signInWithPassword({ email, password });
+  if (result.error) throw result.error;
+  return result;
+}
+
+async function signInWithPasswordRetry(email, password) {
+  try {
+    return await signInWithPasswordOnce(email, password);
+  } catch (cause) {
+    if (!isNetworkAuthError(cause)) throw cause;
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    return signInWithPasswordOnce(email, password);
+  }
+}
 
 export default function Platform() {
   if (!isSupabaseConfigured) return <ConfigRequired />;
@@ -64,23 +80,27 @@ function AuthScreen() {
   const [pending, setPending] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const submit = async (event) => {
-    event.preventDefault();
-    const data = Object.fromEntries(new FormData(event.currentTarget));
+  const attemptSignIn = async ({ email: nextEmail, password: nextPassword, website = "" }) => {
     setPending(true);
     setError("");
+    setEmail(nextEmail);
+    setPassword(nextPassword);
     try {
-      if (String(data.website || "").trim()) throw new Error("credentials");
-      const rule = passwordRule(String(data.password || ""));
+      if (String(website || "").trim()) throw new Error("credentials");
+      const rule = passwordRule(String(nextPassword || ""));
       if (rule) throw new Error(rule);
-      const result = await supabase.auth.signInWithPassword({ email: data.email, password: data.password });
-      if (result.error) throw result.error;
+      await signInWithPasswordRetry(String(nextEmail || "").trim(), String(nextPassword || ""));
     } catch (cause) {
       const text = String(cause?.message || "");
       setError(text === "Use at least 8 characters." ? text : signInMessage(cause));
     } finally {
       setPending(false);
     }
+  };
+  const submit = async (event) => {
+    event.preventDefault();
+    const data = Object.fromEntries(new FormData(event.currentTarget));
+    await attemptSignIn({ email: data.email, password: data.password, website: data.website });
   };
   return (
     <main className="auth-screen">
@@ -99,19 +119,19 @@ function AuthScreen() {
           {pending ? "Please wait…" : "Sign in"}
         </button>
       </form>
-      <DemoAccounts onPick={(account) => { setEmail(account.email); setPassword(account.password); }} />
+      <DemoAccounts disabled={pending} onPick={(account) => attemptSignIn(account)} />
       <p className="auth-forgot"><Link to="/reset">Forgot password</Link></p>
       <p className="auth-note">Sign in with the email your community issued. This form does not ask for a phone number or a PIN, and it does not create accounts.</p>
     </main>
   );
 }
 
-function DemoAccounts({ onPick }) {
+function DemoAccounts({ onPick, disabled }) {
   return (
     <section className="auth-demo" aria-label="Demo sign-in accounts">
       <h2>Demo logins</h2>
       <p>
-        Tap a role to fill the form. Shared password:
+        Tap a role to sign in. Shared password:
         {" "}
         <code>{demoPassword}</code>
       </p>
@@ -119,7 +139,7 @@ function DemoAccounts({ onPick }) {
       <ul>
         {demoAccounts.map((account) => (
           <li key={account.email}>
-            <button type="button" onClick={() => onPick(account)}>
+            <button type="button" disabled={disabled} onClick={() => onPick(account)}>
               <strong>{account.role}</strong>
               <span>{account.email}</span>
             </button>

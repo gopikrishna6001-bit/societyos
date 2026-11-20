@@ -249,6 +249,11 @@ textarea {
   font: inherit;
 }
 
+.auth-demo li button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
 .auth-demo li button strong {
   font-size: 0.95rem;
 }

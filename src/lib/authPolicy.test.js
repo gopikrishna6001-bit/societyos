@@ -5,13 +5,15 @@ import { describe, expect, test } from "vitest";
 function source(path) {
   return readFileSync(join(process.cwd(), path), "utf8");
 }
-import { GENERIC_AUTH_ERROR, NETWORK_AUTH_ERROR, signInMessage } from "./authPolicy.js";
+import { GENERIC_AUTH_ERROR, NETWORK_AUTH_ERROR, isNetworkAuthError, signInMessage } from "./authPolicy.js";
 import { roleFromResident, withoutResidentSecrets } from "./residentAccess.js";
 
 test("sign-in failures do not distinguish a missing account from a wrong password", () => {
   expect(signInMessage({ message: "Invalid login credentials" })).toBe(GENERIC_AUTH_ERROR);
   expect(signInMessage({ message: "User not found" })).toBe(GENERIC_AUTH_ERROR);
   expect(signInMessage({ message: "Failed to fetch" })).toBe(NETWORK_AUTH_ERROR);
+  expect(isNetworkAuthError({ name: "AuthRetryableFetchError", message: "FetchError: Load failed" })).toBe(true);
+  expect(isNetworkAuthError({ message: "Invalid login credentials" })).toBe(false);
 });
 
 test("resident role mapping does not trust a client-supplied role field", () => {
