@@ -6,8 +6,8 @@ Updated: 20 November 2026 (Asia/Calcutta)
 
 ## Current milestone
 
-**Milestone 1 — Architecture stabilization** (in progress)  
-Next product workflow after shell is usable: **maintenance billing and payment** (Milestone 4).
+**Milestone 4 — Maintenance billing and payment** (disposable DB journey green)  
+Architecture shell/demo separation done; preview verified.
 
 ## Preview / production
 
@@ -64,6 +64,10 @@ Next product workflow after shell is usable: **maintenance billing and payment**
 - `npm run test:db` — disposable Postgres.
 - `npm run build` — required before push.
 
+## Payment journey evidence (disposable DB)
+
+`supabase/tests/payment_proofs.sql` asserts: invoice demand → resident `submit_payment_proof` (stays pending) → resident blocked from verify → treasurer `review_payment_proof` → receipt + journal entry → `period_collection_register` + resident `my_unit_demands` updated.
+
 ## Exact next implementation task
 
-Run maintenance billing/payment end-to-end on disposable DB (and preview with a real community account): invoice → resident proof → treasurer verify → ledger → receipt.
+Expense workflow E2E (create → approve → pay → ledger) on disposable DB; then concerns lifecycle. Hosted migration apply still needs authorization.

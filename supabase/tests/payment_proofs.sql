@@ -98,6 +98,35 @@ BEGIN
     (SELECT collection_id FROM public.payment_proofs WHERE id = v_proof) IS NOT NULL,
     'collection linked'
   );
+  PERFORM public._assert(
+    (SELECT receipt_number FROM public.collections WHERE id = (
+      SELECT collection_id FROM public.payment_proofs WHERE id = v_proof
+    )) = 'RCP-PROOF-1',
+    'receipt issued on collection'
+  );
+  PERFORM public._assert(
+    (SELECT journal_entry_id FROM public.collections WHERE id = (
+      SELECT collection_id FROM public.payment_proofs WHERE id = v_proof
+    )) IS NOT NULL,
+    'ledger journal entry created'
+  );
+
+  -- Register shows the unit after verification (treasurer).
+  PERFORM public._assert(
+    (SELECT count(*) FROM public.period_collection_register(v_community, (
+      SELECT period_id FROM public.maintenance_demands WHERE id = v_demand
+    )) WHERE demand_id = v_demand AND collected_amount >= 50) = 1,
+    'collection register reflects verified payment'
+  );
+
+  -- Resident balance updated for that demand.
+  RESET ROLE;
+  PERFORM set_config('request.jwt.claim.sub', '33333333-3333-3333-3333-333333333333', false);
+  SET ROLE authenticated;
+  PERFORM public._assert(
+    (SELECT collected_amount FROM public.my_unit_demands(v_community) WHERE demand_id = v_demand) >= 50,
+    'resident sees updated collected amount'
+  );
 
   PERFORM public.action_centre(v_community);
 END $$;
