@@ -1,113 +1,77 @@
 # SABHA release readiness report
 
-Date: 19 November 2026 (Asia/Calcutta). Branch: `cursor/sabha-functional-audit-fe89`. **No merge and no production deploy were performed for this audit.**
+Date: 20 November 2026 (Asia/Calcutta). Branch: `cursor/sabha-functional-audit-fe89`. **No merge and no production deploy.**
 
-Companion docs: `SABHA_SCREEN_INVENTORY.md`, `SABHA_FUNCTIONAL_AUDIT.md`, `SABHA_ROLE_ACCESS_MATRIX.md`, `SABHA_SMOKE_TEST_REPORT.md`, `SABHA_UI_AUDIT.md`, `SABHA_BACKEND_DEPENDENCY_MATRIX.md`. Evidence: `docs/audit-evidence/`.
+Verdict: **NOT production-ready.** Demo walkthrough is usable for Palm Court. Live writes and shell unification are incomplete. Security P0 items remain on the host.
 
-Statuses: **PASS** / **FAIL** / **BLOCKED** / **NOT TESTED** / **DEMO ONLY**.
+---
 
-## Counts
+## 1. What we know (definition of completion checklist)
+
+| Question | Answer |
+| --- | --- |
+| Every screen? | Auth + Demo + Live + Legacy inventoried (`SABHA_SCREEN_AUDIT.md`, feature map). Legacy E2E mostly **NOT TESTED**. |
+| Every feature status? | Domain A–L scored in feature map + gap analysis. |
+| Every role permission? | Matrix drafted; **DB NOT TESTED** on host. |
+| Every major drill-down? | Demo Home/Finance/Community/Documents verified; live Home partial. |
+| Every E2E journey? | 20 listed; many **NOT TESTED** or **LIVE WRITE BLOCKED**. |
+| Broken UI? | A1/A2 fixed; legacy mobile FAIL; live metric drills weak. |
+| Backend dependencies? | `SABHA_BACKEND_DEPENDENCY_MATRIX.md`. |
+| Security issues? | `SABHA_SECURITY_AUDIT.md` — auth-login/PIN/ai-proxy OPEN on host. |
+| Competitive gaps? | `SABHA_COMPETITIVE_BENCHMARK.md` + gap analysis. |
+| Roadmap? | `SABHA_PRODUCT_ROADMAP.md` Phases 0–5. |
+
+---
+
+## 2. Counts
 
 | Metric | Count |
 | --- | --- |
-| Screens / major surfaces identified (auth + live + demo tabs + legacy) | 60+ (see inventory) |
-| Demo primary routes audited in browser | 5 (`/`, `/community`, `/finance`, `/concerns`, `/more`) |
-| Demo screens passed for load + navigation | 5 |
-| Demo screens failed load | 0 |
-| Live write workflows passed on host | 0 |
-| Live write workflows **BLOCKED** | Expense post, collection, statement publish/certify, invite email, ticket create |
-| Legacy module workflows fully smoke-tested | 0 (**NOT TESTED**) |
-| Features with drill-down after remediation (demo Home/Finance/Community) | Covered for listed metrics/lists |
-| Role personas exercised in demo | 5 / 5 |
-| Smoke workflows executed | 6 (results mix **DEMO ONLY** / **PASS** / **BLOCKED** / **NOT TESTED**) |
-| UI viewport checks (5 routes × 6 sizes) | 30 / 30 overflow **PASS** |
-| Unit tests | 35 passing (`npm test`) |
-| Production build | `npm run build` required green before PR |
+| Demo primary routes browser-checked | 5 |
+| Playwright critical paths PASS this pass | Sign-in, Home drill, pay, community, documents |
+| Live write workflows PASS on host | 0 |
+| Legacy modules fully smoke-tested | 0 |
+| Competitive platforms benchmarked | 4 |
+| P0 open items | Dual shell, host writes/security |
 
-## Drill-down coverage
+---
 
-| Surface | Status |
+## 3. Go / no-go
+
+| Gate | Status |
 | --- | --- |
-| Demo Home metrics → Finance/Community | **PASS** |
-| Demo recent transactions → expense detail | **PASS** |
-| Demo invoices → detail + payment | **PASS** / **DEMO ONLY** |
-| Demo concerns list → detail | **PASS** |
-| Live Home summary → Finance/Concerns/Meetings | **PASS** navigation |
-| Live empty fund cards → deeper ledgers | **PASS** navigation when funds exist |
+| Demo investor walkthrough | **GO** with DEMO WORKING disclaimer |
+| Live financial operations | **NO-GO** |
+| Replace `/legacy` | **NO-GO** |
+| Production deploy | **NO-GO** |
+| Merge this PR | Human decision only — docs + demo fixes; no auto-merge |
 
-## Role access results
+---
 
-| Role | Demo smoke | Live enforcement proven on host |
-| --- | --- | --- |
-| Resident | **DEMO ONLY** + private isolation **PASS** | RLS **NOT TESTED** |
-| Treasurer | **DEMO ONLY** expense create/approve | Writes **BLOCKED** |
-| Auditor | **DEMO ONLY** observation | Writes **BLOCKED** |
-| Committee | **PASS** private visibility + reply **DEMO ONLY** | Writes **BLOCKED** |
-| Platform admin | **DEMO ONLY** invitation | Edge invite **BLOCKED** |
+## 4. Work required before production
 
-## Smoke-test results (headline)
+1. Phase 0 security deploys (auth-login, PIN revoke, ai-proxy).
+2. Disposable project: apply write RPCs; pass resident/treasurer/auditor journeys.
+3. Port Notices/Gate/Residents into SABHA shell; retire `/legacy` module-by-module.
+4. Payment gateway + recon.
+5. Full smoke table green or explicitly deferred with owner.
+6. Hosted RLS adversarial tests.
+7. Human approval to promote Pages production.
 
-| Workflow | Status |
-| --- | --- |
-| 1 Resident payment | **DEMO ONLY** (dashboard updated locally) |
-| 2 Expense approval | **DEMO ONLY** |
-| 3 Statement review/certify | Observation **DEMO ONLY**; publish/certify **BLOCKED** |
-| 4 Concerns | Raise/reply **DEMO ONLY**; isolation **PASS** |
-| 5 Meetings | Detail **DEMO ONLY**; create **NOT TESTED** |
-| 6 Onboarding | Demo invite **DEMO ONLY**; live **BLOCKED** |
+---
 
-## UI defects
+## 5. Companion docs
 
-| Item | Status |
-| --- | --- |
-| Horizontal overflow on demo routes | **PASS** |
-| Decorative Home metrics | **FAIL** → fixed |
-| Legacy emoji nav | **FAIL** vs SABHA icon standard (legacy only) |
-| Auth alignment | **PASS** (prior fix on main) |
+1. `SABHA_COMPLETE_FEATURE_MAP.md`  
+2. `SABHA_COMPETITIVE_BENCHMARK.md`  
+3. `SABHA_SCREEN_AUDIT.md`  
+4. `SABHA_ROLE_PERMISSION_AUDIT.md`  
+5. `SABHA_SMOKE_TEST_REPORT.md`  
+6. `SABHA_UI_AUDIT.md`  
+7. `SABHA_BACKEND_DEPENDENCY_MATRIX.md`  
+8. `SABHA_SECURITY_AUDIT.md`  
+9. `SABHA_GAP_ANALYSIS.md`  
+10. `SABHA_PRODUCT_ROADMAP.md`  
+11. This file  
 
-## Backend blockers
-
-1. Hosted project missing full foundation write RPC set (`IMPLEMENTATION_STATUS.md`).
-2. Invitation edge + migration completeness for production onboarding.
-3. Email/WhatsApp delivery not implemented (in-app notifications only).
-4. Storage redaction is a flag/second file, not an engine.
-5. Demo must remain the only path that claims filled Palm Court figures without a ledger.
-
-## Security findings
-
-| Finding | Status |
-| --- | --- |
-| Demo never writes community ledger | **PASS** (code + toast evidence) |
-| Resident cannot see other-flat private demo concerns | **PASS** (browser) |
-| Nav hiding ≠ authorization | Documented; hosted RLS walk **NOT TESTED** |
-| Phone/PIN auth-login returns 410 | Intentional retirement |
-| No fake success on demo actions | **PASS** (explicit demo-only copy) |
-| `ai-proxy` has no user check and CORS `*` | **FAIL** if the function is publicly exposed (Gemini key proxy). Confirm hosted `verify_jwt` or disable |
-| Legacy ResidentPortal UPI string still says Sunrise Residency | **FAIL** on that legacy surface (hardcoded VPA/brand) |
-| WhatsApp centre hardcodes one project function URL | **FAIL** for multi-env safety |
-| Default `SOCIETY_ID` fallback when env missing | **FAIL** if a deploy omits `VITE_SOCIETY_ID` |
-
-## Fixed in this audit branch
-
-- Demo Home/Finance/Community/Concerns/More drill-downs and missing demo workflows (pay, raise, expense, observe, invite).
-- Live Home click-through to related sections.
-- Resident A-402 partial invoice so payment smoke keeps November totals.
-- Audit documentation set + browser evidence.
-
-## Outstanding before production readiness
-
-1. Apply remaining foundation RPCs to a dedicated empty project (not Yasvik); run hosted RLS suite.
-2. Walk live resident/treasurer/auditor write paths on that project.
-3. Complete invitation email + `/join` activation test.
-4. Smoke legacy modules or formally defer them behind `/legacy` with product sign-off.
-5. Replace legacy emoji nav if `/legacy` remains user-facing.
-6. Disable or JWT-gate `ai-proxy`; remove hardcoded Sunrise UPI and WhatsApp function URL from legacy clients.
-7. Do **not** treat CI green or demo screenshots as production financial readiness.
-
-## Production readiness assessment
-
-**Not production-ready** for live community financial operations.
-
-**Demo-ready** for Palm Court isolated walkthroughs: navigation, drill-downs, role-differentiated visibility, and explicit non-persistence of mutations.
-
-Use **DEMO ONLY** builds for stakeholder demos. Keep `VITE_ENABLE_DEMO_LOGIN` off in production Pages. Do not merge this audit’s conclusions into a claim of hosted ledger completeness.
+Evidence: `docs/audit-evidence/master-audit/`.

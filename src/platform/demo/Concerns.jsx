@@ -43,16 +43,16 @@ export function Concerns() {
             }}
           >
             <h2>Raise a demo concern</h2>
-            <label htmlFor="title">Title</label>
-            <input id="title" name="title" required />
-            <label htmlFor="description">Description</label>
-            <input id="description" name="description" required />
-            <label htmlFor="category">Category</label>
-            <select id="category" name="category" defaultValue="General">
+            <label htmlFor="concern-title">Title</label>
+            <input id="concern-title" name="title" required autoComplete="off" />
+            <label htmlFor="concern-description">Description</label>
+            <textarea id="concern-description" name="description" rows={4} required />
+            <label htmlFor="concern-category">Category</label>
+            <select id="concern-category" name="category" defaultValue="General">
               {["Maintenance", "Water", "Electricity", "Security", "Finance", "General"].map((item) => <option key={item}>{item}</option>)}
             </select>
-            <label htmlFor="visibility">Visibility</label>
-            <select id="visibility" name="visibility" defaultValue="Public">
+            <label htmlFor="concern-visibility">Visibility</label>
+            <select id="concern-visibility" name="visibility" defaultValue="Public">
               <option>Public</option>
               <option>Private</option>
             </select>

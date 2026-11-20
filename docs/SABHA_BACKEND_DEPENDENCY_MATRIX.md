@@ -29,7 +29,7 @@ Updated after the deep route/API inventory pass on this branch (additional edge 
 | Phone/PIN login | Not used by UI | Edge `auth-login` returns **410** discontinued | **FAIL** if called; intentionally retired |
 | Password reset | `AccountRecovery.jsx` | Auth `resetPasswordForEmail` / `updateUser` | **NOT TESTED** mail delivery |
 | Accept invite | `JoinCommunity` | Auth `updateUser` + RPC `accept_invitation` | **BLOCKED** without invitations objects |
-| Demo picker | `demoAccounts.js` when `VITE_ENABLE_DEMO_LOGIN=true` | Auth users only; no community RPC | **DEMO ONLY** |
+| Demo picker | `demoAccounts.js` always on sign-in; tap role signs in | Auth users only; no community RPC | **DEMO ONLY** |
 
 ---
 

@@ -1,57 +1,49 @@
-# SABHA UI and responsiveness audit
+# SABHA UI audit
 
-Audited 19 November 2026 (Asia/Calcutta) with Playwright Chromium. Viewports: 360×800, 390×844, 430×932, 768×1024, 1366×768, 1440×900.
+Date: 20 November 2026 (Asia/Calcutta). Prior viewport matrix retained; this pass adds master-audit notes.
 
-Evidence: `docs/audit-evidence/ui-*-390.png`, `docs/audit-evidence/ui-overflow.json`, workflow screenshots.
+Viewports required: 360×800, 390×844, 430×932, 768×1024, 1366×768, 1440×900.
 
-Statuses: **PASS** / **FAIL** / **BLOCKED** / **NOT TESTED** / **DEMO ONLY**.
+---
 
-## Horizontal overflow (demo routes, resident session)
+## 1. Results summary
 
-| Route | 360 | 390 | 430 | 768 | 1366 | 1440 |
-| --- | --- | --- | --- | --- | --- | --- |
-| `/` | **PASS** | **PASS** | **PASS** | **PASS** | **PASS** | **PASS** |
-| `/community` | **PASS** | **PASS** | **PASS** | **PASS** | **PASS** | **PASS** |
-| `/finance` | **PASS** | **PASS** | **PASS** | **PASS** | **PASS** | **PASS** |
-| `/concerns` | **PASS** | **PASS** | **PASS** | **PASS** | **PASS** | **PASS** |
-| `/more` | **PASS** | **PASS** | **PASS** | **PASS** | **PASS** | **PASS** |
+| Surface | Overflow | Nav | Forms | Tables | Status |
+| --- | --- | --- | --- | --- | --- |
+| Auth sign-in | PASS (prior) | — | Aligned inputs | — | PASS |
+| Demo Home / Finance / Community / Concerns / More @ 390 | PASS (prior + Playwright) | Bottom nav | OK | Scroll | PASS |
+| Live shell | PASS structure | Role nav | — | Empty states | PASS chrome |
+| `/legacy` | Desktop-oriented | Emoji ROLE_NAV | Dense | Wide tables | FAIL vs SABHA mobile standard |
 
-`document.documentElement.scrollWidth <= clientWidth + 1` on every cell above.
+---
 
-## Shell and navigation
+## 2. Defects
 
-| Check | Result | Status |
-| --- | --- | --- |
-| Mobile bottom nav 5 items | Present; only selected route renders | **PASS** |
-| Desktop sidebar ≥1024 | Present in CSS/shell | **PASS** (code + 1366/1440 overflow) |
-| Header notifications/profile popovers | Open/close | **PASS** (manual earlier; not re-clicked every viewport) |
-| Auth sign-in alignment | Fields and Sign in share edges | **PASS** (prior PR #7) |
-| Metric cards clickable | Cursor/button metrics | **PASS** after remediation |
-| Maintenance wide table | Scrolls inside `.app-scroll`, page does not | **PASS** |
-| Modals/drawers | Popovers only in demo header | **PASS** for popovers; no drawer component |
-| Legacy `/legacy` | Login chrome renders at 1440 | **PASS** open; interior modules **NOT TESTED** at all six sizes |
+| ID | Viewport | Issue | Severity | Status |
+| --- | --- | --- | --- | --- |
+| U1 | 390 | Announcement title ran into body | P2 | Fixed (`<br />`) |
+| U2 | All | Concern description single-line | P2 | Fixed (textarea) |
+| U3 | Legacy | Emoji nav / dark slate interiors | P2 | Open until shell merge |
+| U4 | Live | Decorative Available/Receipts/Payments (no drill) | P2 | Open |
+| U5 | — | Computer-use reported dead tabs | — | Not reproduced in Playwright |
 
-## Defects found and fixed this pass
+---
 
-| Defect | Severity | Fix |
-| --- | --- | --- |
-| Home metrics decorative | High (functional UX) | Converted to buttons with route drill-downs |
-| Invoice rows not openable | High | Clickable flat → detail |
-| Outstanding filter hid resident’s partial invoice | High | `Due` filter = Partial + Outstanding; A-402 partial fixture |
-| Directory rows not openable | Medium | Person detail card |
+## 3. Accessibility / interaction notes
 
-## Remaining UI issues
-
-| Issue | Status |
+| Check | Result |
 | --- | --- |
-| Legacy emoji icons in ROLE_NAV | **FAIL** vs SABHA Lucide standard (legacy surface only) |
-| Live Platform still uses older slate card chrome vs demo shell | Inconsistent, not broken — **NOT TESTED** as visual redesign |
-| No breadcrumb trail on nested demo details | Acceptable with Back buttons — note only |
-| Keyboard roving on tablists | Native buttons; full a11y audit **NOT TESTED** |
-| Chart hit-targets | Decorative bars; open Reports via text control — **PASS** for overflow |
+| Touch targets demo primary/text buttons | ≥44px CSS |
+| Keyboard | **NOT TESTED** systematically |
+| Icon consistency (Lucide demo vs emoji legacy) | Split |
+| Loading / error | Live PageStatus present; demo Notice toasts |
 
-## Screenshot index
+---
 
-- `ui-home-390.png`, `ui-community-390.png`, `ui-finance-390.png`, `ui-concerns-390.png`, `ui-more-390.png`
-- `w1-resident.png`, `w2-treasurer.png`, `w3-auditor.png`, `w5-meeting.png`, `w6-admin.png`
-- `resident-payment.png`, `committee-private.png`, `legacy-1440.png`
+## 4. Evidence
+
+- `docs/audit-evidence/` prior UI captures
+- `docs/audit-evidence/master-audit/` 20 Nov screenshots
+- Playwright 390 viewport smoke
+
+Full six-viewport re-grid of every legacy module remains **NOT TESTED**.

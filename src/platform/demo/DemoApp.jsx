@@ -307,6 +307,7 @@ function HomeScreen() {
           <h2>Announcements</h2>
           <button type="button" className="demo-text-button" onClick={() => openCommunity("Notices", { notice: notices[0].id })}>
             <strong>{notices[0].title}</strong>
+            <br />
             <span className="demo-secondary">{notices[0].body}</span>
           </button>
           <h2>Upcoming meeting</h2>
