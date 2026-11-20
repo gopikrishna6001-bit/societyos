@@ -2,21 +2,21 @@ import { useEffect, useState } from "react";
 import { explain } from "./api.js";
 
 export function PageStatus({ loading, error, onRetry, empty, title, body }) {
-  if (loading) return <p className="text-slate-400">Loading…</p>;
+  if (loading) return <p className="text-[#5C5852]">Loading…</p>;
   if (error) {
     return (
-      <div role="alert" className="border border-red-900 bg-red-950 p-4">
-        <p className="font-semibold text-red-300">Could not load this page</p>
-        <p className="mt-1 text-sm text-slate-400">{error}</p>
-        {onRetry && <button type="button" className="mt-3 min-h-12 border border-slate-800 bg-white px-3 py-2 text-sm" onClick={onRetry}>Retry</button>}
+      <div role="alert" className="border border-red-300 bg-red-50 p-4 text-[#252525]">
+        <p className="font-semibold text-red-800">Could not load this page</p>
+        <p className="mt-1 text-sm text-[#5C5852]">{error}</p>
+        {onRetry && <button type="button" className="mt-3 min-h-12 border border-[#031D27]/30 bg-white px-3 py-2 text-sm" onClick={onRetry}>Retry</button>}
       </div>
     );
   }
   if (empty) {
     return (
-      <div className="border border-slate-800 bg-white p-4">
+      <div className="border border-[#031D27]/20 bg-white p-4 text-[#252525]">
         <p className="font-semibold">{title || "Nothing here yet"}</p>
-        {body && <p className="mt-1 text-sm text-slate-400">{body}</p>}
+        {body && <p className="mt-1 text-sm text-[#5C5852]">{body}</p>}
       </div>
     );
   }
@@ -46,7 +46,7 @@ export function Field({ label, children }) {
   );
 }
 
-export const control = "w-full min-h-12 rounded-sm border border-slate-800 bg-white px-3 py-3 text-base text-slate-100";
+export const control = "w-full min-h-12 rounded-sm border border-[#031D27]/30 bg-white px-3 py-3 text-base text-[#252525]";
 
 export function SaveForm({ onSubmit, submitLabel = "Save", confirmMessage, children }) {
   const [error, setError] = useState("");
@@ -71,8 +71,8 @@ export function SaveForm({ onSubmit, submitLabel = "Save", confirmMessage, child
       }}
     >
       {children}
-      {error && <p role="alert" className="text-sm text-red-300">{error}</p>}
-      <button type="submit" disabled={pending} className="min-h-12 w-full bg-amber-500 px-3 py-3 font-semibold text-white disabled:opacity-60">
+      {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
+      <button type="submit" disabled={pending} className="min-h-12 w-full bg-[#0878E8] px-3 py-3 font-semibold text-white disabled:opacity-60">
         {pending ? "Saving…" : submitLabel}
       </button>
     </form>

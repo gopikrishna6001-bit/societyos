@@ -26,9 +26,9 @@ export default function DemoEntry() {
 
   if (!enabled) {
     return (
-      <main className="mx-auto max-w-lg px-4 py-16 text-slate-100">
-        <h1 className="font-display text-2xl font-semibold">{brand.name} demo is off</h1>
-        <p className="mt-3 text-slate-400">
+      <main className="mx-auto max-w-lg px-4 py-16 text-[#252525]">
+        <h1 className="font-display text-2xl font-semibold text-[#031D27]">{brand.name} demo is off</h1>
+        <p className="mt-3 text-[#5C5852]">
           The Palm Court fixture is only available when <code>VITE_ENABLE_DEMO_LOGIN=true</code>.
           The live product is at the home route and uses authenticated society ledgers.
         </p>

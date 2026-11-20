@@ -895,7 +895,7 @@ function Reconciliation({ communityId, banks, canPost }) {
             setPreviewError(parsed.error);
           }} />
         </Field>
-        {previewError && <p role="alert" className="text-sm text-red-300">{previewError}</p>}
+        {previewError && <p role="alert" className="text-sm text-red-700">{previewError}</p>}
         {!!preview.length && <p className="text-sm text-slate-400">{preview.length} lines ready to import. Nothing is saved until you start the reconciliation.</p>}
       </SaveForm>}
     </div>
@@ -1262,7 +1262,7 @@ export function UnitsScreen({ communityId }) {
         <h3 className="font-semibold">Import units</h3>
         <p className="mb-2 text-sm text-slate-400">CSV columns: block, number. The preview does not write anything.</p>
         <textarea className={control} rows={5} onChange={(event) => setPreview(parseUnits(event.target.value, units.data || []))} />
-        {!!preview.errors.length && <ul className="mt-2 text-sm text-red-300">{preview.errors.map((error) => <li key={error}>{error}</li>)}</ul>}
+        {!!preview.errors.length && <ul className="mt-2 text-sm text-red-700">{preview.errors.map((error) => <li key={error}>{error}</li>)}</ul>}
         {!!preview.rows.length && <p className="mt-2 text-sm text-slate-400">{preview.rows.length} units ready.</p>}
         <button
           type="button"

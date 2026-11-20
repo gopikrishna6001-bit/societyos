@@ -18,14 +18,14 @@ export default function Platform() {
 
 function ConfigRequired() {
   return (
-    <main className="mx-auto max-w-lg px-4 py-16">
+    <main className="mx-auto max-w-lg px-4 py-16 text-[#252525]">
       <div className="flex items-center gap-3 text-[#0878E8]">
         <Mark size={36} />
-        <h1 className="text-4xl font-semibold tracking-[0.14em] text-slate-100">{brand.name}</h1>
+        <h1 className="text-4xl font-semibold tracking-[0.14em] text-[#031D27]">{brand.name}</h1>
       </div>
       <p className="mt-3 text-lg">{brand.tagline}</p>
-      <p className="mt-4 text-slate-400">Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY, apply the migration, then sign in. No sample balances are shown.</p>
-      <Link className="mt-6 inline-block font-semibold text-amber-300" to="/legacy">Open the earlier screens</Link>
+      <p className="mt-4 text-[#5C5852]">Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY, apply the migration, then sign in. No sample balances are shown.</p>
+      <Link className="mt-6 inline-block font-semibold text-[#0878E8]" to="/legacy">Open the earlier screens</Link>
     </main>
   );
 }
@@ -51,7 +51,7 @@ function SignedInApp() {
     const { data } = supabase.auth.onAuthStateChange((_event, next) => finish(next));
     return () => { live = false; data.subscription.unsubscribe(); };
   }, []);
-  if (session === undefined) return <p className="p-6 text-slate-400">Checking your session…</p>;
+  if (session === undefined) return <p className="p-6 text-[#5C5852]">Checking your session…</p>;
   if (!session) return <AuthScreen />;
   return <CommunityApp session={session} />;
 }
@@ -162,7 +162,7 @@ function LiveCommunity({ session }) {
       .catch((cause) => { setMemberships([]); setError(explain(cause)); });
   };
   useEffect(load, [session.user.id]);
-  if (memberships === undefined) return <p className="p-6 text-slate-400">Loading your communities…</p>;
+  if (memberships === undefined) return <p className="p-6 text-[#5C5852]">Loading your communities…</p>;
   if (error) return <main className="p-6"><PageStatus error={error} onRetry={load} /></main>;
   const mine = memberships.filter((row) => row.community_id === communityId);
   if (!mine.length) return <Setup onCreated={(id) => { setCommunityId(id); load(); }} />;
@@ -174,10 +174,10 @@ function Setup({ onCreated }) {
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   return (
-    <main className="mx-auto max-w-lg px-4 py-10">
+    <main className="mx-auto max-w-lg px-4 py-10 text-[#252525]">
       <Wordmark />
-      <h1 className="mt-4 text-2xl font-semibold">Set up your community</h1>
-      <p className="mt-2 text-sm text-slate-400">Approval limits are required. Leave them as the amounts your community has actually agreed. The statement deadline defaults to the 10th of the next month and can be changed.</p>
+      <h1 className="mt-4 text-2xl font-semibold text-[#031D27]">Set up your community</h1>
+      <p className="mt-2 text-sm text-[#5C5852]">Approval limits are required. Leave them as the amounts your community has actually agreed. The statement deadline defaults to the 10th of the next month and can be changed.</p>
       <form className="mt-4 grid gap-3" onSubmit={async (event) => {
         event.preventDefault();
         const data = Object.fromEntries(new FormData(event.currentTarget));
@@ -205,8 +205,8 @@ function Setup({ onCreated }) {
         <Field label="Treasurer can approve up to"><input className={control} name="treasurer" inputMode="decimal" required /></Field>
         <Field label="Committee can approve up to"><input className={control} name="committee" inputMode="decimal" required /></Field>
         <Field label="Statement due day"><input className={control} name="due" type="number" min="1" max="28" defaultValue="10" /></Field>
-        {error && <p role="alert" className="text-sm text-red-300">{error}</p>}
-        <button disabled={pending} className="min-h-12 rounded-lg bg-amber-500 px-3 py-3 font-semibold text-white" type="submit">{pending ? "Saving…" : "Create community"}</button>
+        {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
+        <button disabled={pending} className="min-h-12 rounded-lg bg-[#0878E8] px-3 py-3 font-semibold text-white" type="submit">{pending ? "Saving…" : "Create community"}</button>
       </form>
     </main>
   );
@@ -276,15 +276,15 @@ function Shell({ email, community, communities, communityId, onCommunity, roles,
   const [moreOpen, setMoreOpen] = useState(false);
   const unique = [...new Map(communities.map((row) => [row.community_id, row])).values()];
   const openPage = (id) => { setPage(id); setMoreOpen(false); };
-  const itemClass = (id) => `min-h-12 w-full px-3 py-2 text-left text-sm ${page === id ? "bg-[#EAE6DE] font-semibold" : ""}`;
+  const itemClass = (id) => `min-h-12 w-full px-3 py-2 text-left text-sm text-[#252525] ${page === id ? "bg-[#EAE6DE] font-semibold" : ""}`;
   const current = page === "decisions" ? "decisions" : page;
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 lg:grid lg:grid-cols-[220px_minmax(0,1fr)]">
-      <nav className="hidden border-r border-slate-800 bg-white p-4 lg:block" aria-label="Primary">
+    <div className="min-h-screen bg-[#F7F5F0] text-[#252525] lg:grid lg:grid-cols-[220px_minmax(0,1fr)]">
+      <nav className="hidden border-r border-[#031D27]/15 bg-white p-4 lg:block" aria-label="Primary">
         <Wordmark />
-        <p className="mt-2 text-sm text-slate-400">{brand.tagline}</p>
-        <p className="mt-3 font-display text-lg font-semibold">{community?.name}</p>
-        <p className="text-sm text-slate-400">{roleLabel(roles)}</p>
+        <p className="mt-2 text-sm text-[#5C5852]">{brand.tagline}</p>
+        <p className="mt-3 font-display text-lg font-semibold text-[#031D27]">{community?.name}</p>
+        <p className="text-sm text-[#5C5852]">{roleLabel(roles)}</p>
         <div className="mt-4 grid gap-1">
           {items.map(([id, label]) => (
             <button key={id} type="button" className={itemClass(id)} aria-current={page === id ? "page" : undefined} onClick={() => openPage(id)}>{label}</button>
@@ -292,12 +292,12 @@ function Shell({ email, community, communities, communityId, onCommunity, roles,
         </div>
       </nav>
       <div className="pb-[calc(4.75rem+env(safe-area-inset-bottom))] lg:pb-8">
-        <header className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-slate-800 bg-slate-950 px-4 py-3">
+        <header className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-[#031D27]/15 bg-[#F7F5F0]/95 px-4 py-3 backdrop-blur">
           <div className="min-w-0">
             <p className="print:hidden"><Wordmark /></p>
             <p className="hidden text-sm font-semibold print:block">{brand.name} · {brand.promise}</p>
-            <p className="mt-1 truncate font-display text-lg font-semibold leading-tight">{community?.name}</p>
-            <p className="truncate text-sm text-slate-400">{roleLabel(roles)} · {email}</p>
+            <p className="mt-1 truncate font-display text-lg font-semibold leading-tight text-[#031D27]">{community?.name}</p>
+            <p className="truncate text-sm text-[#5C5852]">{roleLabel(roles)} · {email}</p>
           </div>
           {unique.length > 1 && (
             <select className={`${control} max-w-[46%]`} value={communityId} onChange={(event) => onCommunity(event.target.value)} aria-label="Community">
@@ -309,7 +309,7 @@ function Shell({ email, community, communities, communityId, onCommunity, roles,
           <Screen page={page} communityId={communityId} roles={roles} email={email} onSignOut={onSignOut} onOpen={openPage} />
         </main>
       </div>
-      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-800 bg-white pb-[env(safe-area-inset-bottom)] lg:hidden" aria-label="Mobile">
+      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-[#031D27]/15 bg-white text-[#252525] pb-[env(safe-area-inset-bottom)] lg:hidden" aria-label="Mobile">
         <div className="grid grid-cols-5">
           {primary.map(([id, label]) => (
             <button key={id} type="button" aria-current={current === id ? "page" : undefined} className={`min-h-12 px-1 py-2 text-center text-xs leading-tight ${current === id ? "font-semibold text-[#0878E8]" : ""}`} onClick={() => openPage(id)}>{label}</button>
@@ -317,7 +317,7 @@ function Shell({ email, community, communities, communityId, onCommunity, roles,
           <button type="button" className={`min-h-12 px-1 py-2 text-center text-xs ${moreOpen || overflow.some(([id]) => id === page) ? "font-semibold text-[#0878E8]" : ""}`} aria-expanded={moreOpen} onClick={() => setMoreOpen((open) => !open)}>More</button>
         </div>
         {moreOpen && (
-          <div className="absolute bottom-full right-2 mb-2 grid max-h-80 w-56 gap-1 overflow-auto border border-slate-800 bg-white p-2">
+          <div className="absolute bottom-full right-2 mb-2 grid max-h-80 w-56 gap-1 overflow-auto border border-[#031D27]/20 bg-white p-2 shadow-lg">
             {overflow.map(([id, label]) => <button key={id} type="button" className={itemClass(id)} onClick={() => openPage(id)}>{label}</button>)}
           </div>
         )}

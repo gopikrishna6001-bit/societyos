@@ -15,3 +15,10 @@ test("asks for configuration and does not show sample money", () => {
   expect(screen.getByText(/Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY/)).toBeInTheDocument();
   expect(screen.queryByText(/₹/)).not.toBeInTheDocument();
 });
+
+test("form controls use dark ink on white so preview is readable", async () => {
+  const { control } = await import("./ui.jsx");
+  expect(control).toContain("bg-white");
+  expect(control).toContain("text-[#252525]");
+  expect(control).not.toContain("text-slate-100");
+});
