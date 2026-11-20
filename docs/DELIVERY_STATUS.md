@@ -13,16 +13,16 @@ Next product workflow after shell is usable: **maintenance billing and payment**
 
 | Surface | URL | Status |
 | --- | --- | --- |
-| Branch preview | https://cursor-sabha-product-deliver.societyos.pages.dev | Cloudflare deploy OK; shell contrast fixed on this branch (awaiting redeploy) |
-| Commit preview | https://05793404.societyos.pages.dev | Prior commit until Pages rebuilds |
+| Branch preview | https://cursor-sabha-product-deliver.societyos.pages.dev | **Verified** — commit `07e0b2a` deployed; login UI readable; 0 console errors ([Browser-test SABHA preview](bc-d5454e17-59c9-5943-9227-fa169464b6e3)) |
+| Commit preview | https://20156864.societyos.pages.dev | Same deploy as branch tip |
 | Production | https://societyos.pages.dev | Not promoted from this branch |
 | Hosted Supabase | `wzchqxwwezklxsxmjvyt` | Reachable; delivery migrations **not applied** without authorization |
 
-### Preview failure root cause (diagnosed)
+### Preview failure root cause (resolved)
 
-1. HTML/JS assets returned HTTP 200; Supabase URL + anon key are embedded; Auth settings respond.
-2. Live Platform shell used `bg-slate-950 text-slate-100` with `bg-white` panels and `control` inputs also `text-slate-100` → **near-invisible UI** (looked “not working”).
-3. Palm Court DemoApp had been the default for `@demo.sabha.app` (fixed earlier: live `/`, demo only `/demo`).
+1. Assets/Auth were fine; shell used light text on white panels → looked blank.
+2. Fixed in `07e0b2a` (ivory/ink shell + dark controls). Browser recheck: sign-in form visible, no JS errors.
+3. Palm Court DemoApp remains isolated at `/demo`.
 
 ## Stage 0 recovery inventory (concise)
 
@@ -66,4 +66,4 @@ Next product workflow after shell is usable: **maintenance billing and payment**
 
 ## Exact next implementation task
 
-After contrast fix lands on Pages: sign in on preview with a real (non-demo-fixture) community account, confirm Action centre is readable, then run payment journey against disposable DB / authorized staging society.
+Run maintenance billing/payment end-to-end on disposable DB (and preview with a real community account): invoice → resident proof → treasurer verify → ledger → receipt.
