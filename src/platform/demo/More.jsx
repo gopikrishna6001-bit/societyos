@@ -12,17 +12,29 @@ const ANSWERS = [
 export function More() {
   const { person, onSignOut, state, dispatch } = useDemo();
   const [section, setSection] = useState("Profile");
+  const [selectedDocument, setSelectedDocument] = useState(null);
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const sections = person.role === "platform_admin"
     ? ["Profile", "Documents", "Invitations", "Assistant", "Settings"]
     : ["Profile", "Documents", "Assistant", "Settings"];
+  const document = documents.find((row) => row.id === selectedDocument);
   return (
     <section>
       <h1>More</h1>
       <Notice>{state.notice}</Notice>
       <div className="demo-tabs" role="tablist" aria-label="More">
-        {sections.map((name) => <button key={name} type="button" role="tab" aria-selected={section === name} onClick={() => setSection(name)}>{name}</button>)}
+        {sections.map((name) => (
+          <button
+            key={name}
+            type="button"
+            role="tab"
+            aria-selected={section === name}
+            onClick={() => { setSection(name); setSelectedDocument(null); }}
+          >
+            {name}
+          </button>
+        ))}
       </div>
       <div className="demo-panel">
         {section === "Profile" && (
@@ -33,16 +45,29 @@ export function More() {
             <button type="button" className="demo-primary" onClick={onSignOut}>Sign out</button>
           </>
         )}
-        {section === "Documents" && (
+        {section === "Documents" && (document ? (
+          <article>
+            <button type="button" className="demo-text-button" onClick={() => setSelectedDocument(null)}>Back to documents</button>
+            <h2>{document.title}</h2>
+            <p>{document.status} · {document.date}</p>
+            <p>
+              {document.id === "doc-nov"
+                ? `${statement.status}. Due ${statement.due}. ${state.observation || statement.observation}`
+                : "This is a demo copy. The file is not downloaded and the community ledger is not opened."}
+            </p>
+          </article>
+        ) : (
           <>
             <h2>Documents</h2>
-            <ul>
-              {documents.map((document) => <li key={document.id}>{document.title} · {document.status} · {document.date}</li>)}
-            </ul>
+            {documents.map((row) => (
+              <button key={row.id} type="button" className="demo-row" onClick={() => setSelectedDocument(row.id)}>
+                <span>{row.title}<br /><span className="demo-secondary">{row.status} · {row.date}</span></span>
+              </button>
+            ))}
             <h3>November draft</h3>
             <p>{statement.status}. Due {statement.due}. {state.observation || statement.observation}</p>
           </>
-        )}
+        ))}
         {section === "Invitations" && person.role === "platform_admin" && (
           <>
             <h2>Resident invitations</h2>

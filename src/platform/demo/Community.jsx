@@ -86,18 +86,52 @@ export function Community() {
             <button type="button" className="demo-text-button" onClick={() => openTab("Directory")}>Open the resident directory</button>
           </>
         )}
-        {tab === "Committee" && (
-          <>
-            <h2>Committee</h2>
-            <ul>{committee.map((member) => <li key={member.name}><strong>{member.name}</strong>, {member.title} · {member.flat}. {member.focus}</li>)}</ul>
-          </>
-        )}
-        {tab === "Staff" && (
-          <>
-            <h2>Staff</h2>
-            <ul>{staff.map((member) => <li key={member.id}>{member.name} · {member.role}</li>)}</ul>
-          </>
-        )}
+        {tab === "Committee" && (() => {
+          const member = committee.find((row) => row.name === selectedPerson);
+          if (member) {
+            return (
+              <article>
+                <button type="button" className="demo-text-button" onClick={() => setSelectedPerson(null)}><ArrowLeft size={16} aria-hidden="true" /> All committee</button>
+                <h2>{member.name}</h2>
+                <p>{member.title} · {member.flat}</p>
+                <p>{member.focus}</p>
+              </article>
+            );
+          }
+          return (
+            <>
+              <h2>Committee</h2>
+              {committee.map((row) => (
+                <button key={row.name} type="button" className="demo-row" onClick={() => setSelectedPerson(row.name)}>
+                  <span><strong>{row.name}</strong>, {row.title}<br /><span className="demo-secondary">{row.flat} · {row.focus}</span></span>
+                </button>
+              ))}
+            </>
+          );
+        })()}
+        {tab === "Staff" && (() => {
+          const member = staff.find((row) => row.id === selectedPerson);
+          if (member) {
+            return (
+              <article>
+                <button type="button" className="demo-text-button" onClick={() => setSelectedPerson(null)}><ArrowLeft size={16} aria-hidden="true" /> All staff</button>
+                <h2>{member.name}</h2>
+                <p>{member.role}</p>
+                <p className="demo-secondary">Palm Court staff listing for this demo only. Attendance and payroll stay on the earlier SocietyOS screens.</p>
+              </article>
+            );
+          }
+          return (
+            <>
+              <h2>Staff</h2>
+              {staff.map((row) => (
+                <button key={row.id} type="button" className="demo-row" onClick={() => setSelectedPerson(row.id)}>
+                  <span>{row.name}<br /><span className="demo-secondary">{row.role}</span></span>
+                </button>
+              ))}
+            </>
+          );
+        })()}
         {tab === "Notices" && (notice ? (
           <article>
             <button type="button" className="demo-text-button" onClick={() => { setSelectedNotice(null); setParams({ tab: "Notices" }); }}><ArrowLeft size={16} aria-hidden="true" /> All notices</button>
