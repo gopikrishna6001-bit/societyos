@@ -15,7 +15,7 @@ Architecture shell/demo separation done; preview verified.
 | --- | --- | --- |
 | Branch preview | https://cursor-sabha-product-deliver.societyos.pages.dev | **Verified** — commit `07e0b2a` deployed; login UI readable; 0 console errors ([Browser-test SABHA preview](bc-d5454e17-59c9-5943-9227-fa169464b6e3)) |
 | Commit preview | https://20156864.societyos.pages.dev | Same deploy as branch tip |
-| Production | https://societyos.pages.dev | Not promoted from this branch |
+| Production | https://societyos.pages.dev | **Still on `main` (`782274c`)** — **15 commits behind** this PR. iPhone home-screen apps keep the old cached icon until removed and re-added after production promote. |
 | Hosted Supabase | `wzchqxwwezklxsxmjvyt` | Reachable; delivery migrations **not applied** without authorization |
 
 ### Preview failure root cause (resolved)
@@ -73,6 +73,16 @@ Architecture shell/demo separation done; preview verified.
 Symptom: stuck on “Loading your communities…”.
 Fix on branch: `my_memberships` RPC + 10s timeout + Retry/Sign out + empty membership → setup (demo users get `/demo` link). Nested `communities(name)` embed removed from the critical path.
 
+## Why societyos.pages.dev looks unchanged
+
+Cloudflare production tracks **`main`**. All SABHA delivery work is on PR branch `cursor/sabha-product-delivery-fe89` and only appears on:
+
+- https://cursor-sabha-product-deliver.societyos.pages.dev
+
+Until PR #10 is merged (or production is pointed at this branch) **and** hosted Supabase migrations are applied, production will not show admin/finance/platform changes. That promote needs explicit authorization.
+
+**iPhone shortcut icon:** iOS caches PWA icons aggressively. After production is updated, delete the home-screen icon and Add to Home Screen again. Cache-bust query `?v=20261121` is on icons/manifest for the next deploy.
+
 ## Exact next implementation task
 
-Apply hosted migrations through `20261120220000_my_memberships.sql` (authorization required). Expense workflow E2E next on disposable DB.
+User authorization to merge/promote PR #10 to production + apply hosted migrations. Until then, use the branch preview URL. Expense workflow E2E continues on disposable DB.
