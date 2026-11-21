@@ -40,11 +40,11 @@ const STEP_LABEL_KEY: Record<string, string> = {
 function Stepper({ current }: { current: number }) {
   const { t } = useT()
   return (
-    <ol className="mb-8 flex items-center gap-2">
+    <ol className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2">
       {SETUP_STEPS.map((step, i) => {
         const state = i === current ? 'current' : i < current ? 'done' : 'todo'
         return (
-          <li key={step.key} className="flex flex-1 items-center gap-2">
+          <li key={step.key} className="flex min-w-0 items-center gap-2 sm:flex-1">
             <span
               className={
                 'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold ' +
@@ -59,12 +59,12 @@ function Stepper({ current }: { current: number }) {
             </span>
             <span
               className={
-                'text-sm font-medium ' + (state === 'todo' ? 'text-muted-foreground' : 'text-foreground')
+                'truncate text-sm font-medium ' + (state === 'todo' ? 'text-muted-foreground' : 'text-foreground')
               }
             >
               {t(STEP_LABEL_KEY[step.key])}
             </span>
-            {i < SETUP_STEPS.length - 1 && <span className="bg-border mx-2 h-px flex-1" />}
+            {i < SETUP_STEPS.length - 1 && <span className="bg-border mx-2 hidden h-px flex-1 sm:block" />}
           </li>
         )
       })}
@@ -96,9 +96,9 @@ function SetupWizard() {
   })
 
   return (
-    <div>
+    <div className="mx-auto w-full max-w-3xl overflow-x-hidden">
       <PageHeader title={t('page.setup.title')} description={t('page.setup.desc')} />
-      <Card>
+      <Card className="overflow-hidden">
         <CardContent className="pt-6">
           <Stepper current={step} />
 

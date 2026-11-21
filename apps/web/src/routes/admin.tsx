@@ -55,17 +55,22 @@ const NAV: { to: string; tKey: string; icon: LucideIcon }[] = [
 export function AdminLayout() {
   const dashboardPath = useDashboardPath()
   const demo = dashboardPath('/admin') === '/demo'
-  const health = useQuery({ queryKey: ['health'], queryFn: apiClient.health, retry: false })
+  const health = useQuery({
+    queryKey: ['health'],
+    queryFn: apiClient.health,
+    retry: false,
+    enabled: !demo,
+  })
   const { t } = useT()
+  const apiOffline = !demo && !health.isLoading && !health.isSuccess
 
   return (
-    <div className="bg-background text-foreground min-h-screen">
+    <div className="bg-background text-foreground min-h-screen overflow-x-hidden overscroll-none touch-pan-y">
       <div className="mx-auto flex min-h-screen max-w-7xl">
         <aside className="bg-card hidden w-60 shrink-0 flex-col border-r p-4 md:flex">
           <a href="/" className="mb-6 flex items-center gap-2 px-2">
-            <span className="font-display text-lg font-bold tracking-tight">
-              SABHA
-            </span>
+            <img src="/brand/sabha-mark-navy.png" alt="" width={28} height={28} className="size-7 rounded-md" />
+            <span className="font-display text-lg font-bold tracking-tight">SABHA</span>
           </a>
           <nav className="flex flex-col gap-1">
             {NAV.map(({ to, tKey, icon: Icon }) => (
@@ -86,8 +91,8 @@ export function AdminLayout() {
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="flex items-center justify-between gap-3 border-b px-6 py-3">
-            <nav className="flex gap-1 overflow-x-auto md:hidden">
+          <header className="flex items-center justify-between gap-3 border-b px-4 py-3 sm:px-6">
+            <nav className="scrollbar-none flex max-w-[55vw] gap-1 overflow-x-auto overscroll-x-contain md:hidden">
               {NAV.map(({ to, tKey }) => (
                 <Link
                   key={to}
@@ -100,18 +105,35 @@ export function AdminLayout() {
                 </Link>
               ))}
             </nav>
-            <div className="ml-auto flex items-center gap-3">
-              {demo ? <Badge>{t('demo.badge')}</Badge> : <Badge variant={health.isSuccess ? 'default' : 'destructive'}>
-                {t('header.api')}{' '}
-                {health.isLoading ? '…' : health.isSuccess ? t('header.apiOnline') : t('header.apiOffline')}
-              </Badge>}
+            <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
+              {demo ? (
+                <Badge>{t('demo.badge')}</Badge>
+              ) : (
+                <Badge variant={health.isSuccess ? 'default' : 'destructive'}>
+                  {t('header.api')}{' '}
+                  {health.isLoading ? '…' : health.isSuccess ? t('header.apiOnline') : t('header.apiOffline')}
+                </Badge>
+              )}
               <LanguageSwitcher />
               {CLERK_ENABLED && !demo && <AuthControls />}
               <ThemeToggle />
             </div>
           </header>
 
-          <main className="flex-1 p-6">
+          {apiOffline && (
+            <div className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-amber-950 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-50 sm:px-6">
+              <p className="font-semibold">Live API is offline</p>
+              <p className="mt-1 text-sm">
+                This preview has no Neon database or society API yet, so saving units and other live writes will fail.
+                Use the browser demo for full flows with sample data — no setup required.
+              </p>
+              <a href="/demo/setup" className="mt-2 inline-flex text-sm font-semibold underline">
+                Open demo setup wizard
+              </a>
+            </div>
+          )}
+
+          <main className="flex-1 overflow-x-hidden p-4 sm:p-6">
             <Outlet />
           </main>
         </div>

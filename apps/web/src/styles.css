@@ -87,11 +87,17 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html,
+  body {
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
+  }
   body {
     @apply m-0 bg-background text-foreground;
     font-family: Inter, 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    touch-action: pan-y;
   }
   h1,
   h2,

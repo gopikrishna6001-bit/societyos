@@ -8,7 +8,8 @@ import viteTsConfigPaths from 'vite-tsconfig-paths'
 import { fileURLToPath, URL } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 
-const useCloudflare = Boolean(process.env.CF_PAGES || process.env.CLOUDFLARE)
+const useCloudflare =
+  !process.env.VITEST && Boolean(process.env.CF_PAGES || process.env.CLOUDFLARE)
 
 const config = defineConfig(({ mode }) => {
   validateHostingConfig({ ...loadEnv(mode, process.cwd(), ''), ...process.env })
