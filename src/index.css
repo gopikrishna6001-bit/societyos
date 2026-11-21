@@ -1074,6 +1074,40 @@ button.metric {
   color: var(--warn-ink);
 }
 
+.record-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 4px 0 8px;
+}
+
+.record-shortcuts button,
+.record-shortcuts a {
+  display: flex;
+  align-items: center;
+  min-height: 56px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(180deg, #ffffff 0%, var(--paper) 100%);
+  color: var(--navy);
+  font-family: Manrope, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+}
+
+.record-shortcuts button:hover,
+.record-shortcuts button:focus-visible,
+.record-shortcuts a:hover,
+.record-shortcuts a:focus-visible {
+  border-color: var(--blue);
+  color: var(--blue);
+}
+
 .record-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -31,9 +31,9 @@ export function Finance() {
 
   return (
     <section>
-      <h1>Finance</h1>
-      <p className="demo-secondary">November is the open month. Earlier months use their published totals. Nothing here is posted to a ledger.</p>
-      <div className="demo-tabs" role="tablist" aria-label="Finance">
+      <h1>Bills & accounts</h1>
+      <p className="demo-secondary">November is the open month. Pay dues or review society accounts. Changes stay on this device only.</p>
+      <div className="demo-tabs" role="tablist" aria-label="Bills">
         {["Overview", "Transactions", "Maintenance", "Reports"].map((name) => (
           <button key={name} type="button" role="tab" aria-selected={tab === name} onClick={() => { setTab(name); setSelected(null); }}>{name}</button>
         ))}

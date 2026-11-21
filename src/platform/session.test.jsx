@@ -44,12 +44,15 @@ test("signs out from the profile and shows the adaptive home status", async () =
   render(<Platform />);
   expect((await screen.findAllByText("Palm Court")).length).toBeGreaterThan(0);
   expect(await screen.findByRole("heading", { name: "Home" })).toBeInTheDocument();
-  expect(screen.getByText(/up to date on maintenance/i)).toBeInTheDocument();
-  expect(screen.getAllByRole("button", { name: "Payments" }).length).toBeGreaterThan(0);
-  expect(screen.getAllByRole("button", { name: "Help" }).length).toBeGreaterThan(0);
+  expect(screen.getByText(/No maintenance due right now/i)).toBeInTheDocument();
+  expect(screen.getAllByRole("button", { name: "Bills" }).length).toBeGreaterThan(0);
+  expect(screen.getAllByRole("button", { name: "Complaints" }).length).toBeGreaterThan(0);
+  expect(screen.getAllByRole("button", { name: "Pay maintenance" }).length).toBeGreaterThan(0);
+  expect(screen.getAllByRole("button", { name: "Raise complaint" }).length).toBeGreaterThan(0);
   expect(screen.getByText("More")).toBeInTheDocument();
   expect(screen.queryByText(/₹/)).not.toBeInTheDocument();
   expect(screen.queryByText(/ledger/i)).not.toBeInTheDocument();
+  expect(screen.queryByText(/what needs a decision/i)).not.toBeInTheDocument();
   await user.click(screen.getAllByRole("button", { name: "Profile" })[0]);
   expect(screen.getByText("asha@example.com")).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Sign out" }));

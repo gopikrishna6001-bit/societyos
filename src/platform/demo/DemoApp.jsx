@@ -18,13 +18,13 @@ import { Community } from "./Community.jsx";
 import { Concerns } from "./Concerns.jsx";
 import { Finance } from "./Finance.jsx";
 import { More } from "./More.jsx";
-import { Meter, MonthChart, rupee } from "./ui.jsx";
+import { Meter, rupee } from "./ui.jsx";
 
 const NAV = [
   ["/", "Home", Home],
   ["/community", "Community", Building2],
-  ["/finance", "Finance", Landmark],
-  ["/concerns", "Concerns", LifeBuoy],
+  ["/finance", "Bills", Landmark],
+  ["/concerns", "Complaints", LifeBuoy],
   ["/more", "More", Ellipsis],
 ];
 
@@ -169,43 +169,38 @@ function HomeScreen() {
   const recent = state.expenses.slice(-5).reverse();
   const meeting = meetings.find((item) => item.status === "Upcoming");
   return (
-    <section className="dash">
-      <header className="dash-welcome">
-        <h1>{person.name.split(" ")[0]}, November is {snapshot.efficiency}% collected.</h1>
-        <p>{community.name} · {community.city} · {month.label}</p>
+    <section className="record">
+      <header className="record-hero">
+        <h1>Hi {person.name.split(" ")[0]}</h1>
+        <p>Pay dues, raise a complaint, or check notices.</p>
       </header>
-      <div className="metric-grid">
-        <article className="metric"><span>Collected</span><strong>{rupee(snapshot.collected)}</strong></article>
-        <article className="metric"><span>Outstanding</span><strong>{rupee(snapshot.outstanding)}</strong></article>
-        <article className="metric"><span>Expenses</span><strong>{rupee(month.expenses)}</strong></article>
-        <article className="metric"><span>Bank balance</span><strong>{rupee(funds.bank)}</strong></article>
-        <article className="metric"><span>Corpus</span><strong>{rupee(funds.corpus)}</strong></article>
-        <article className="metric"><span>Reserve</span><strong>{rupee(funds.reserve)}</strong></article>
+      <div className="record-shortcuts" role="navigation" aria-label="Quick actions">
+        <NavLink to="/finance">Pay maintenance</NavLink>
+        <NavLink to="/concerns">Raise complaint</NavLink>
+        <NavLink to="/more">Book hall</NavLink>
+        <NavLink to="/community">Invite guest</NavLink>
+        <NavLink to="/community">Notices</NavLink>
+        <NavLink to="/community">Meetings</NavLink>
       </div>
-      <div className="dash-grid">
-        <article className="card">
-          <h2>Collection progress</h2>
-          <Meter value={snapshot.collected} max={snapshot.billed} label="November maintenance collection" />
-          <p>{rupee(snapshot.collected)} of {rupee(snapshot.billed)} billed. Maintenance is {rupee(community.maintenancePerUnit)} per occupied unit.</p>
-        </article>
-        <article className="card">
-          <h2>Income and expenditure</h2>
-          <MonthChart months={months} activeId={month.id} />
-        </article>
+      <div className="record-band">
+        <h2>Your dues</h2>
+        <p className="record-meta">{rupee(snapshot.outstanding)} still due · {month.label}</p>
+        <Meter value={snapshot.collected} max={snapshot.billed} label="November maintenance collection" />
+        <p className="record-meta">{rupee(snapshot.collected)} of {rupee(snapshot.billed)} paid by the society this month.</p>
       </div>
-      <div className="dash-grid">
-        <article className="card">
-          <h2>Recent transactions</h2>
+      <div className="record-panel">
+        <h2>Notices</h2>
+        <p><strong>{notices[0].title}</strong></p>
+        <p className="record-meta">{notices[0].body}</p>
+        <p className="record-meta" style={{ marginTop: 12 }}><strong>Next meeting</strong> · {meeting.title} · {meeting.when}</p>
+      </div>
+      {person.role !== "resident" && (
+        <div className="record-panel">
+          <h2>Recent expenses</h2>
           <ul>{recent.map((row) => <li key={row.id}>{row.date} · {row.description} · {rupee(row.amount)}</li>)}</ul>
-        </article>
-        <article className="card">
-          <h2>Announcements</h2>
-          <p><strong>{notices[0].title}</strong></p>
-          <p>{notices[0].body}</p>
-          <h2>Upcoming meeting</h2>
-          <p>{meeting.title} · {meeting.when} · {meeting.venue}</p>
-        </article>
-      </div>
+          <p className="record-meta">Bank {rupee(funds.bank)} · Corpus {rupee(funds.corpus)}</p>
+        </div>
+      )}
     </section>
   );
 }

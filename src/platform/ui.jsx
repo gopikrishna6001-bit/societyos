@@ -1,26 +1,12 @@
 import { useEffect, useState } from "react";
 import { explain } from "./api.js";
 
-function isSchemaGap(error) {
-  const text = String(error || "");
-  return /schema cache|could not find the (function|table)|does not exist|not authorized|permission denied|row-level security/i.test(text);
-}
-
 export function PageStatus({ loading, error, onRetry, empty, title, body }) {
   if (loading) return <p className="demo-secondary">Loading…</p>;
   if (error) {
-    if (isSchemaGap(error)) {
-      return (
-        <div className="demo-empty" role="status">
-          <p>{title || "Nothing recorded yet"}</p>
-          <p>{body || "This society record is empty for now. When the committee posts it, it appears here."}</p>
-          {onRetry && <button type="button" className="demo-text-button" onClick={onRetry}>Retry</button>}
-        </div>
-      );
-    }
     return (
       <div role="alert" className="live-panel" style={{ borderColor: "#f1c4c4", background: "#fff7f7" }}>
-        <p className="font-semibold" style={{ color: "#9f1239" }}>Could not load this page</p>
+        <p className="font-semibold" style={{ color: "#9f1239" }}>Could not load this</p>
         <p className="mt-1 text-sm demo-secondary">{error}</p>
         {onRetry && <button type="button" className="demo-text-button" style={{ marginTop: 12 }} onClick={onRetry}>Retry</button>}
       </div>
@@ -64,6 +50,7 @@ export const control = "w-full min-h-12 rounded-[12px] border border-[#d5e2e6] b
 
 export function SaveForm({ onSubmit, submitLabel = "Save", confirmMessage, children }) {
   const [error, setError] = useState("");
+  const [ok, setOk] = useState("");
   const [pending, setPending] = useState(false);
   return (
     <form
@@ -74,9 +61,11 @@ export function SaveForm({ onSubmit, submitLabel = "Save", confirmMessage, child
         const data = Object.fromEntries(new FormData(event.currentTarget));
         setPending(true);
         setError("");
+        setOk("");
         try {
           await onSubmit(data);
           event.currentTarget.reset();
+          setOk("Saved.");
         } catch (cause) {
           setError(explain(cause));
         } finally {
@@ -86,6 +75,7 @@ export function SaveForm({ onSubmit, submitLabel = "Save", confirmMessage, child
     >
       {children}
       {error && <p role="alert" className="text-sm" style={{ color: "#9f1239" }}>{error}</p>}
+      {ok && !error && <p role="status" className="text-sm" style={{ color: "#0f766e" }}>{ok}</p>}
       <button type="submit" disabled={pending} className="demo-primary disabled:opacity-60">
         {pending ? "Saving…" : submitLabel}
       </button>

@@ -96,6 +96,15 @@ export function HomeScreen({ communityId, roles = [], onOpen }) {
         <p>{financial ? t.leadOps : t.leadResident}</p>
       </header>
 
+      <div className="record-shortcuts" role="navigation" aria-label="Quick actions">
+        <button type="button" onClick={() => onOpen?.(financial ? "collections" : "collections")}>{financial ? t.payCtaOps : t.shortcuts.pay}</button>
+        <button type="button" onClick={() => onOpen?.("concerns")}>{t.shortcuts.complaint}</button>
+        <button type="button" onClick={() => onOpen?.("amenities")}>{t.shortcuts.book}</button>
+        <button type="button" onClick={() => onOpen?.("visitors")}>{t.shortcuts.guest}</button>
+        <button type="button" onClick={() => onOpen?.("notices")}>{t.shortcuts.notices}</button>
+        <button type="button" onClick={() => onOpen?.("decisions")}>{t.shortcuts.meetings}</button>
+      </div>
+
       {financial ? (
         <div className="record-band">
           <div className="record-panel-head">
@@ -884,7 +893,7 @@ function Expenses({ communityId, canPost, canReview, expenses, funds, banks, onP
               </SaveForm>
             )}
             {canPost && expense.approval_status === "approved" && expense.payment_status !== "paid" && (
-              <SaveForm confirmMessage="Pay this expense from the selected bank ledger?" submitLabel="Pay expense" onSubmit={(data) => rpc("pay_expense", { p_expense: expense.id, p_bank_account: data.bank, p_mode: data.mode, p_reference: data.reference, p_key: data.key || crypto.randomUUID() }).then(() => { expenses.reload(); onPosted(); })}>
+              <SaveForm confirmMessage="Pay this expense from the selected bank account?" submitLabel="Pay expense" onSubmit={(data) => rpc("pay_expense", { p_expense: expense.id, p_bank_account: data.bank, p_mode: data.mode, p_reference: data.reference, p_key: data.key || crypto.randomUUID() }).then(() => { expenses.reload(); onPosted(); })}>
                 <AccountSelect label="Bank account" name="bank" accounts={banks} />
                 <Field label="Mode"><input className={control} name="mode" required /></Field>
                 <Field label="Reference"><input className={control} name="reference" /></Field>
@@ -1118,16 +1127,16 @@ export function ConcernsScreen({ communityId, roles }) {
     [openId],
   );
   return (
-    <section className="dash">
-      <header className="dash-welcome">
-        <h1>Concerns</h1>
-        <p>A public concern can be read by residents. A private concern stays with you and the committee.</p>
+    <section className="record">
+      <header className="record-hero">
+        <h1>Complaints</h1>
+        <p>Tell the committee what’s wrong. Track progress until it’s fixed.</p>
       </header>
       <div className="demo-actions">
-        <button type="button" className="demo-primary" onClick={() => setRaising((open) => !open)}>{raising ? "Close the form" : "Raise concern"}</button>
+        <button type="button" className="demo-primary" onClick={() => setRaising((open) => !open)}>{raising ? "Cancel" : "Raise complaint"}</button>
       </div>
       {raising && (
-      <SaveForm submitLabel="Submit concern" onSubmit={(data) => rpc("create_ticket", {
+      <SaveForm submitLabel="Submit complaint" onSubmit={(data) => rpc("create_ticket", {
         p_community: communityId,
         p_subject: data.subject,
         p_category: data.category,
@@ -1136,21 +1145,21 @@ export function ConcernsScreen({ communityId, roles }) {
         p_unit_number: data.unit || null,
         p_priority: data.priority,
       }).then(() => { setRaising(false); query.reload(); })}>
-        <Field label="Subject"><input className={control} name="subject" required /></Field>
+        <Field label="What’s the issue"><input className={control} name="subject" required /></Field>
         <Field label="Category"><select className={control} name="category">{TICKET_CATEGORIES.map((category) => <option key={category}>{category}</option>)}</select></Field>
-        <Field label="Who can read it">
-          <select className={control} name="visibility" defaultValue="public">
-            <option value="public">Public — every resident can read this</option>
-            <option value="private">Private — only you and the committee</option>
+        <Field label="Who can see this">
+          <select className={control} name="visibility" defaultValue="private">
+            <option value="private">Only you and the committee</option>
+            <option value="public">All residents</option>
           </select>
         </Field>
-        <Field label="Unit number, if it applies"><input className={control} name="unit" inputMode="text" /></Field>
-        <Field label="Priority"><select className={control} name="priority" defaultValue="medium"><option>low</option><option>medium</option><option>high</option></select></Field>
-        <Field label="Description"><textarea className={control} name="description" rows={4} required /></Field>
+        <Field label="Flat number"><input className={control} name="unit" inputMode="text" /></Field>
+        <Field label="Urgency"><select className={control} name="priority" defaultValue="medium"><option>low</option><option>medium</option><option>high</option></select></Field>
+        <Field label="Details"><textarea className={control} name="description" rows={4} required /></Field>
       </SaveForm>
       )}
-      <article className="card" style={{ marginTop: 12 }}>
-      <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && !(query.data || []).length} title="No concerns yet" body="Raise a public or private concern and it receives a SOC-YYYY-XXXXX number." />
+      <div className="record-panel" style={{ marginTop: 12 }}>
+      <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && !(query.data || []).length} title="No complaints yet" body="Tap Raise complaint when something needs fixing." />
       <ul className="live-list">
         {(query.data || []).map((ticket) => (
           <li key={ticket.id} style={{ paddingTop: 12, paddingBottom: 12 }}>
@@ -1167,12 +1176,12 @@ export function ConcernsScreen({ communityId, roles }) {
             <button type="button" className="demo-text-button" style={{ marginTop: 8 }} onClick={() => setOpenId(openId === ticket.id ? "" : ticket.id)}>{openId === ticket.id ? "Hide updates" : "Show updates"}</button>
             {openId === ticket.id && (
               <div className="mt-2">
-                <PageStatus loading={updates.loading} error={updates.error} onRetry={updates.reload} empty={!updates.loading && !updates.error && !(updates.data || []).length} title="No written updates yet" body="Status changes from the committee appear as notes on the concern." />
+                <PageStatus loading={updates.loading} error={updates.error} onRetry={updates.reload} empty={!updates.loading && !updates.error && !(updates.data || []).length} title="No updates yet" body="When the committee replies, notes appear here." />
                 <ul className="space-y-2">{(updates.data || []).map((update) => <li key={update.id} className="border-t border-slate-800 pt-2">{update.body}<p className="text-slate-400">{new Date(update.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</p></li>)}</ul>
               </div>
             )}
             {committee && (
-              <SaveForm submitLabel="Update status" onSubmit={(data) => rpc("transition_ticket", { p_ticket: ticket.id, p_status: data.status, p_note: data.note }).then(query.reload)}>
+              <SaveForm submitLabel="Update status" onSubmit={(data) => rpc("transition_ticket", { p_ticket: ticket.id, p_status: data.status, p_note: data.note || null, p_assignee: null }).then(query.reload)}>
                 <Field label="Status">
                   <select className={control} name="status">
                     {["assigned", "in_progress", "awaiting_resident", "resolved", "on_hold", "rejected", "closed"].map((status) => <option key={status}>{status}</option>)}
@@ -1183,14 +1192,14 @@ export function ConcernsScreen({ communityId, roles }) {
             )}
             {ticket.status === "resolved" && (
               <div className="demo-actions" style={{ marginTop: 8 }}>
-                <button type="button" onClick={() => rpc("transition_ticket", { p_ticket: ticket.id, p_status: "closed", p_note: "Resident confirmed" }).then(query.reload)}>Confirm</button>
-                <button type="button" onClick={() => rpc("transition_ticket", { p_ticket: ticket.id, p_status: "reopened", p_note: "Resident reopened" }).then(query.reload)}>Reopen</button>
+                <button type="button" onClick={() => rpc("transition_ticket", { p_ticket: ticket.id, p_status: "closed", p_note: "Resident confirmed", p_assignee: null }).then(query.reload)}>Confirm fixed</button>
+                <button type="button" onClick={() => rpc("transition_ticket", { p_ticket: ticket.id, p_status: "reopened", p_note: "Still not fixed", p_assignee: null }).then(query.reload)}>Still not fixed</button>
               </div>
             )}
           </li>
         ))}
       </ul>
-      </article>
+      </div>
     </section>
   );
 }

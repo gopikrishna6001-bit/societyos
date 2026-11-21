@@ -362,7 +362,7 @@ function moreNav(roles) {
   const ops = roles.some((role) => ["treasurer", "resident_auditor", "committee_admin", "platform_admin"].includes(role));
   return MORE_IDS
     .filter((id) => canSee(roles, id))
-    .filter((id) => ops || id !== "collections") // residents use Payments tab, not a second Pay dues entry
+    .filter((id) => ops || id !== "collections") // residents use Bills tab, not a second Pay dues entry
     .map((id) => [id, navLabel(id, roles)]);
 }
 

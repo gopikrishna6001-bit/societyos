@@ -12,7 +12,7 @@ export function Concerns() {
   const concern = visible.find((item) => item.id === selected);
   return (
     <section>
-      <h1>Concerns</h1>
+      <h1>Complaints</h1>
       <p className="demo-secondary">{person.role === "resident" ? "You see public concerns and private concerns raised from your flat." : "This role can see public and private concerns."}</p>
       <div className="demo-filters">
         <select aria-label="Concern status" value={status} onChange={(event) => { setStatus(event.target.value); setSelected(null); }}>
