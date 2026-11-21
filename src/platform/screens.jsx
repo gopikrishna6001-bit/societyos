@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { rpc, rows, supabase } from "./api.js";
 import { downloadText, inr, toCsv } from "./money.js";
 import { Field, FilterSheet, FlatPicker, PageStatus, SaveForm, control, useLoad } from "./ui.jsx";
@@ -349,11 +349,13 @@ function List({ title, items, render, empty }) {
 
 export function FinanceScreen({ communityId, roles, focus }) {
   const canPost = roles.includes("treasurer");
+  const canReviewProofs = roles.some((role) => ["treasurer", "committee_admin", "platform_admin"].includes(role));
   const canReview = roles.includes("resident_auditor");
   const ops = isFinanceOps(roles);
   const canSeeRecon = ops;
   const t = copy.finance;
   const defaultSection = "collections";
+  const proofsRef = useRef(null);
   const funds = useLoad(() => rpc("account_balances", { p_community: communityId }), [communityId]);
   const pendingProofs = useLoad(
     () => (ops
@@ -441,16 +443,39 @@ export function FinanceScreen({ communityId, roles, focus }) {
         <div className="record-band">
           <h2>{t.snapshotOps}</h2>
           <div className="record-health">
-            <button type="button" onClick={() => setSection("collections")}>
+            <button
+              type="button"
+              onClick={() => {
+                setSection("collections");
+                requestAnimationFrame(() => proofsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+              }}
+            >
               <span>Proofs waiting</span>
               <strong>{(pendingProofs.data || []).length}</strong>
             </button>
-            <div className="tile"><span>{t.fundsCount}</span><strong>{(funds.data || []).length}</strong></div>
-            <div className="tile"><span>{t.fundBalances}</span><strong>{inr(fundTotal)}</strong></div>
-            <div className="tile"><span>{t.openPeriods}</span><strong>{(periods.data || []).length}</strong></div>
+            <button type="button" onClick={() => setSection("collections")}>
+              <span>Collect dues</span>
+              <strong>Open</strong>
+            </button>
+            <button type="button" onClick={() => setSection("funds")}>
+              <span>{t.fundsCount}</span>
+              <strong>{(funds.data || []).length}</strong>
+            </button>
+            <button type="button" onClick={() => setSection("expenses")}>
+              <span>Expenses</span>
+              <strong>Open</strong>
+            </button>
           </div>
           {!!(pendingProofs.data || []).length && (
-            <button type="button" className="demo-primary" style={{ marginTop: 12 }} onClick={() => setSection("collections")}>
+            <button
+              type="button"
+              className="demo-primary"
+              style={{ marginTop: 12 }}
+              onClick={() => {
+                setSection("collections");
+                requestAnimationFrame(() => proofsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+              }}
+            >
               Review {(pendingProofs.data || []).length} payment proof{(pendingProofs.data || []).length === 1 ? "" : "s"}
             </button>
           )}
@@ -520,8 +545,16 @@ export function FinanceScreen({ communityId, roles, focus }) {
       )}
 
       {show("collections") && (
-        <div className="record-panel">
-          <Collections communityId={communityId} canPost={canPost} periods={periods} ledger={ledger.data || []} onPosted={funds.reload} residentView={!ops} />
+        <div className="record-panel" ref={proofsRef}>
+          <Collections
+            communityId={communityId}
+            canPost={canPost}
+            canReviewProofs={canReviewProofs}
+            periods={periods}
+            ledger={ledger.data || []}
+            onPosted={funds.reload}
+            residentView={!ops}
+          />
         </div>
       )}
 
@@ -587,7 +620,7 @@ export function FinanceScreen({ communityId, roles, focus }) {
   );
 }
 
-function Collections({ communityId, canPost, periods, ledger, onPosted, residentView = false }) {
+function Collections({ communityId, canPost, canReviewProofs = canPost, periods, ledger, onPosted, residentView = false }) {
   const [periodId, setPeriodId] = useState("");
   const [proofBusy, setProofBusy] = useState(false);
   const [proofMessage, setProofMessage] = useState("");
@@ -670,24 +703,30 @@ function Collections({ communityId, canPost, periods, ledger, onPosted, resident
                   </span>
                   <span className="record-chip warn">Waiting</span>
                 </div>
-                {canPost ? (
+                {canReviewProofs ? (
                   <>
-                    <SaveForm
-                      confirmMessage="Confirm this proof and mark the dues paid?"
-                      submitLabel="Confirm and mark paid"
-                      onSubmit={(data) => rpc("review_payment_proof", {
-                        p_proof: proof.id,
-                        p_decision: "verified",
-                        p_receipt_number: data.receipt,
-                        p_bank_account: data.bank,
-                        p_fund_account: data.fund,
-                        p_key: data.key || `proof:${proof.id}`,
-                      }).then(() => { proofs.reload(); summary.reload(); onPosted(); myDues.reload(); })}
-                    >
-                      <Field label="Receipt number"><input className={control} name="receipt" required /></Field>
-                      <AccountSelect label="Bank account" name="bank" accounts={accountsOf(ledger, "bank")} />
-                      <AccountSelect label="Society fund" name="fund" accounts={accountsOf(ledger, "fund")} />
-                    </SaveForm>
+                    {!accountsOf(ledger, "bank").length || !accountsOf(ledger, "fund").length ? (
+                      <p role="alert" className="record-muted" style={{ color: "#9f1239" }}>
+                        Open a bank account and society fund under Billing → Society funds before you can confirm this proof.
+                      </p>
+                    ) : (
+                      <SaveForm
+                        confirmMessage="Confirm this proof and mark the dues paid?"
+                        submitLabel="Confirm and mark paid"
+                        onSubmit={(data) => rpc("review_payment_proof", {
+                          p_proof: proof.id,
+                          p_decision: "verified",
+                          p_receipt_number: data.receipt,
+                          p_bank_account: data.bank,
+                          p_fund_account: data.fund,
+                          p_key: data.key || `proof:${proof.id}`,
+                        }).then(() => { proofs.reload(); summary.reload(); onPosted(); myDues.reload(); })}
+                      >
+                        <Field label="Receipt number"><input className={control} name="receipt" required /></Field>
+                        <AccountSelect label="Bank account" name="bank" accounts={accountsOf(ledger, "bank")} />
+                        <AccountSelect label="Society fund" name="fund" accounts={accountsOf(ledger, "fund")} />
+                      </SaveForm>
+                    )}
                     <SaveForm
                       confirmMessage="Reject this payment proof?"
                       submitLabel="Reject proof"
@@ -701,7 +740,7 @@ function Collections({ communityId, canPost, periods, ledger, onPosted, resident
                     </SaveForm>
                   </>
                 ) : (
-                  <p className="record-muted">Treasurer confirms payments. You can see this alert; ask the treasurer to mark it paid.</p>
+                  <p className="record-muted">Treasurer or committee confirms payments. You can see this alert.</p>
                 )}
               </li>
             ))}
@@ -869,7 +908,8 @@ function Collections({ communityId, canPost, periods, ledger, onPosted, resident
 function AccountSelect({ label, name, accounts }) {
   return (
     <Field label={label}>
-      <select className={control} name={name} required>
+      <select className={control} name={name} required defaultValue={accounts[0]?.id || ""}>
+        {!accounts.length && <option value="" disabled>No accounts available</option>}
         {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
       </select>
     </Field>

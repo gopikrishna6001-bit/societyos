@@ -1398,12 +1398,66 @@ button.metric {
   font-size: 1.1rem;
 }
 
-.os-scanner-video {
-  width: 100%;
-  max-height: 320px;
+.os-scanner-frame {
+  position: relative;
+  overflow: hidden;
   border-radius: 16px;
   background: #031d27;
+}
+
+.os-scanner-video {
+  display: block;
+  width: 100%;
+  max-height: 360px;
   object-fit: cover;
+  background: #031d27;
+}
+
+.os-scanner-reticle {
+  pointer-events: none;
+  position: absolute;
+  inset: 18%;
+  border: 2px solid rgba(0, 212, 232, 0.9);
+  border-radius: 16px;
+  box-shadow: 0 0 0 999px rgba(3, 29, 39, 0.35);
+}
+
+.app-admin-strip {
+  display: flex;
+  flex: none;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 8px 12px;
+  background: #042633;
+  -webkit-overflow-scrolling: touch;
+}
+
+.app-admin-strip button {
+  flex: none;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #d6f6fa;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.app-admin-strip button[aria-current="page"] {
+  background: #ffffff;
+  color: #031d27;
+}
+
+.app-shell-admin .app-main {
+  padding-bottom: 28px;
+}
+
+.app-shell-admin .app-tabbar {
+  display: none;
 }
 
 .os-scanner-upload {
@@ -1682,7 +1736,7 @@ button.metric {
     display: none;
   }
 
-  .app-shell-admin .app-tabbar {
+  .app-admin-strip {
     display: none;
   }
 }

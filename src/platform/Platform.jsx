@@ -511,40 +511,51 @@ function Shell({ email, community, communities, communityId, onCommunity, roles,
             <button type="button" aria-pressed={view === "admin"} onClick={() => switchMode("admin")}>{copy.home.manage}</button>
           </div>
         )}
+        {view === "admin" && (
+          <nav className="app-admin-strip" aria-label="Society admin">
+            {sidebar.map(([id, label]) => (
+              <button key={id} type="button" aria-current={(id === "finance" ? current === "finance" : page === id) ? "page" : undefined} onClick={() => openPage(id)}>
+                {label}
+              </button>
+            ))}
+          </nav>
+        )}
         <p className="app-note record-context">{roleLabel(roles)} · {email}</p>
         <main className="app-main">
           <Screen page={page} communityId={communityId} roles={roles} email={email} onSignOut={onSignOut} onOpen={openPage} view={view} />
         </main>
       </div>
-      <nav className="app-tabbar" aria-label="Mobile">
-        {primary.map(([id, label]) => {
-          const Icon = TAB_ICONS[id] || Home;
-          return (
-            <button key={id} type="button" aria-current={current === id ? "page" : undefined} onClick={() => openPage(id)}>
-              <Icon size={20} aria-hidden="true" />
-              <span>{label}</span>
-            </button>
-          );
-        })}
-        <button
-          type="button"
-          aria-current={menu === "more" || overflow.some(([id]) => id === page) ? "page" : undefined}
-          aria-expanded={menu === "more"}
-          onClick={() => setMenu((value) => (value === "more" ? "" : "more"))}
-        >
-          <Ellipsis size={20} aria-hidden="true" />
-          <span>More</span>
-        </button>
-        {menu === "more" && (
-          <div className="app-more-sheet" role="dialog" aria-label="More">
-            {overflow.map(([id, label]) => (
-              <button key={id} type="button" aria-current={page === id ? "page" : undefined} onClick={() => openPage(id)}>
-                {label}
+      {view === "resident" && (
+        <nav className="app-tabbar" aria-label="Mobile">
+          {primary.map(([id, label]) => {
+            const Icon = TAB_ICONS[id] || Home;
+            return (
+              <button key={id} type="button" aria-current={current === id ? "page" : undefined} onClick={() => openPage(id)}>
+                <Icon size={20} aria-hidden="true" />
+                <span>{label}</span>
               </button>
-            ))}
-          </div>
-        )}
-      </nav>
+            );
+          })}
+          <button
+            type="button"
+            aria-current={menu === "more" || overflow.some(([id]) => id === page) ? "page" : undefined}
+            aria-expanded={menu === "more"}
+            onClick={() => setMenu((value) => (value === "more" ? "" : "more"))}
+          >
+            <Ellipsis size={20} aria-hidden="true" />
+            <span>More</span>
+          </button>
+          {menu === "more" && (
+            <div className="app-more-sheet" role="dialog" aria-label="More">
+              {overflow.map(([id, label]) => (
+                <button key={id} type="button" aria-current={page === id ? "page" : undefined} onClick={() => openPage(id)}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+        </nav>
+      )}
     </div>
   );
 }
