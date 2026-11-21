@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { Shield, Receipt, Megaphone, Users, Ticket, Scale } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -41,9 +41,6 @@ function App() {
           <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
             <Button asChild size="lg">
               <a href="/demo">Try the demo</a>
-            </Button>
-            <Button asChild size="lg" variant="outline">
-              <Link to="/admin">Open live dashboard</Link>
             </Button>
           </div>
         </div>
