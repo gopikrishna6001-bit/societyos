@@ -1,4 +1,4 @@
-import { createFileRoute, Link, Outlet } from '@tanstack/react-router'
+import { createFileRoute, Link, Outlet, useRouterState } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import {
   BarChart3,
@@ -54,6 +54,12 @@ const NAV: { to: string; tKey: string; icon: LucideIcon }[] = [
 
 export function AdminLayout() {
   const dashboardPath = useDashboardPath()
+  const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const setupOnly =
+    pathname === '/demo/setup' ||
+    pathname.startsWith('/demo/setup/') ||
+    pathname === '/admin/setup' ||
+    pathname.startsWith('/admin/setup/')
   const demo = dashboardPath('/admin') === '/demo'
   const health = useQuery({
     queryKey: ['health'],
@@ -67,44 +73,48 @@ export function AdminLayout() {
   return (
     <div className="bg-background text-foreground min-h-screen overflow-x-hidden overscroll-none touch-pan-y">
       <div className="mx-auto flex min-h-screen max-w-7xl">
-        <aside className="bg-card hidden w-60 shrink-0 flex-col border-r p-4 md:flex">
-          <a href="/" className="mb-6 flex items-center gap-2 px-2">
-            <img src="/brand/sabha-mark-navy.png" alt="" width={28} height={28} className="size-7 rounded-md" />
-            <span className="font-display text-lg font-bold tracking-tight">SABHA</span>
-          </a>
-          <nav className="flex flex-col gap-1">
-            {NAV.map(({ to, tKey, icon: Icon }) => (
-              <Link
-                key={to}
-                to={dashboardPath(to)}
-                activeOptions={{ exact: to === '/admin' }}
-                className={cn(
-                  'text-muted-foreground hover:bg-accent hover:text-accent-foreground flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                )}
-                activeProps={{ className: 'bg-accent text-accent-foreground' }}
-              >
-                <Icon className="size-4" />
-                {t(tKey)}
-              </Link>
-            ))}
-          </nav>
-        </aside>
-
-        <div className="flex min-w-0 flex-1 flex-col">
-          <header className="flex items-center justify-between gap-3 border-b px-4 py-3 sm:px-6">
-            <nav className="scrollbar-none flex max-w-[55vw] gap-1 overflow-x-auto overscroll-x-contain md:hidden">
-              {NAV.map(({ to, tKey }) => (
+        {!setupOnly && (
+          <aside className="bg-card hidden w-60 shrink-0 flex-col border-r p-4 md:flex">
+            <a href="/" className="mb-6 flex items-center gap-2 px-2">
+              <img src="/brand/sabha-mark-navy.png" alt="" width={28} height={28} className="size-7 rounded-md" />
+              <span className="font-display text-lg font-bold tracking-tight">SABHA</span>
+            </a>
+            <nav className="flex flex-col gap-1">
+              {NAV.map(({ to, tKey, icon: Icon }) => (
                 <Link
                   key={to}
                   to={dashboardPath(to)}
                   activeOptions={{ exact: to === '/admin' }}
-                  className="text-muted-foreground rounded-md px-2 py-1 text-xs font-medium whitespace-nowrap"
-                  activeProps={{ className: 'text-foreground' }}
+                  className={cn(
+                    'text-muted-foreground hover:bg-accent hover:text-accent-foreground flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                  )}
+                  activeProps={{ className: 'bg-accent text-accent-foreground' }}
                 >
+                  <Icon className="size-4" />
                   {t(tKey)}
                 </Link>
               ))}
             </nav>
+          </aside>
+        )}
+
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="flex items-center justify-between gap-3 border-b px-4 py-3 sm:px-6">
+            {!setupOnly && (
+              <nav className="scrollbar-none flex max-w-[55vw] gap-1 overflow-x-auto overscroll-x-contain md:hidden">
+                {NAV.map(({ to, tKey }) => (
+                  <Link
+                    key={to}
+                    to={dashboardPath(to)}
+                    activeOptions={{ exact: to === '/admin' }}
+                    className="text-muted-foreground rounded-md px-2 py-1 text-xs font-medium whitespace-nowrap"
+                    activeProps={{ className: 'text-foreground' }}
+                  >
+                    {t(tKey)}
+                  </Link>
+                ))}
+              </nav>
+            )}
             <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
               {demo ? (
                 <Badge>{t('demo.badge')}</Badge>
