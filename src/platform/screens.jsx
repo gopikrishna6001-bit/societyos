@@ -75,208 +75,192 @@ export function HomeScreen({ communityId, roles = [], onOpen }) {
   const periodLabel = selectedPeriod
     ? `${selectedPeriod.financial_year} · ${selectedPeriod.period_month}`
     : "No billing period opened yet";
+  const attentionCount = actionItems.length + outstanding.length;
+  const maintClosing = maintenance.reduce((sum, row) => sum + Number(row.closing || 0), 0);
 
   return (
-    <section className="dash">
-      <header className="dash-welcome">
+    <section className="record">
+      <header className="record-hero">
         <h1>{financial ? "Society home" : "Your home"}</h1>
-        <p>{brand.promise} · {periodLabel}</p>
+        <p>{brand.promise}</p>
       </header>
 
-      <div className="live-actions">
-        <button type="button" className="primary" onClick={() => onOpen?.("collections")}>Pay / verify maintenance</button>
-        <button type="button" onClick={() => onOpen?.("concerns")}>Raise concern</button>
-        <button type="button" onClick={() => onOpen?.("notices")}>Notices</button>
-        <button type="button" onClick={() => onOpen?.("decisions")}>Meetings &amp; votes</button>
-      </div>
+      {financial ? (
+        <div className="record-band">
+          <div className="record-panel-head">
+            <h2>Money health</h2>
+            {(periods.data || []).length > 0 ? (
+              <select
+                className={control}
+                style={{ width: "auto", minHeight: 36, padding: "0 10px", borderRadius: 999, maxWidth: "52%" }}
+                value={periodId}
+                onChange={(event) => setPeriodId(event.target.value)}
+                aria-label="Billing period"
+              >
+                {(periods.data || []).map((period) => (
+                  <option key={period.id} value={period.id}>{period.financial_year} · {period.period_month}</option>
+                ))}
+              </select>
+            ) : (
+              <span className="record-meta">{periodLabel}</span>
+            )}
+          </div>
+          <PageStatus loading={periods.loading || summary.loading} error={periods.error || summary.error} onRetry={() => { periods.reload(); summary.reload(); }} empty={!periods.loading && !(periods.data || []).length} title="No collection period" body="Open a billing month under Collections before period metrics appear." />
+          {selectedPeriod && (
+            <>
+              <div className="record-progress">
+                <div className="demo-meter" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress} aria-label="Collection progress">
+                  <span style={{ "--demo-scale": Math.min(progress, 100) / 100 }} />
+                </div>
+                <p className="record-meta">{progress}% collected · {inr(collected)} of {inr(billed)} · due {selectedPeriod.due_on}</p>
+              </div>
+              <div className="record-health">
+                <button type="button" onClick={() => onOpen?.("collections")}><span>Outstanding</span><strong>{inr(periodOutstanding)}</strong></button>
+                <button type="button" onClick={() => onOpen?.("expenses")}><span>Expenses</span><strong>{inr(expenseTotal)}</strong></button>
+                <button type="button" onClick={() => onOpen?.("reconciliation")}><span>Bank</span><strong>{inr(bankTotal)}</strong></button>
+                <button type="button" onClick={() => onOpen?.("funds")}><span>Maintenance</span><strong>{inr(maintClosing)}</strong></button>
+                <button type="button" onClick={() => onOpen?.("funds")}><span>Corpus</span><strong>{inr(corpusTotal)}</strong></button>
+                <button type="button" onClick={() => onOpen?.("funds")}><span>Reserve</span><strong>{inr(reserveTotal)}</strong></button>
+              </div>
+            </>
+          )}
+        </div>
+      ) : (
+        <div className="record-band">
+          <h2>Your status</h2>
+          <p className="record-meta">
+            {outstanding.length
+              ? `${outstanding.length} outstanding demand${outstanding.length === 1 ? "" : "s"} on your units`
+              : "No outstanding dues on your units"}
+            {attentionCount ? ` · ${attentionCount} item${attentionCount === 1 ? "" : "s"} need attention` : ""}
+          </p>
+          {!!outstanding.length && (
+            <div className="record-health">
+              {outstanding.slice(0, 2).map((row) => (
+                <button key={row.demand_id} type="button" onClick={() => onOpen?.("collections")}>
+                  <span>Unit {row.unit_number}</span>
+                  <strong>{inr(row.outstanding_amount)}</strong>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
-      <article className="card">
-        <h2>Needs your attention</h2>
-        <PageStatus loading={actions.loading} error={actions.error} onRetry={actions.reload} empty={!actions.loading && !actions.error && actionItems.length === 0} title="Nothing waiting for you" body="When dues, proofs, concerns or meetings need attention, they appear here." />
+      <div className="record-panel">
+        <div className="record-panel-head">
+          <h2>Needs you</h2>
+          {attentionCount > 0 && <span className="record-chip warn">{attentionCount}</span>}
+        </div>
+        <PageStatus loading={actions.loading} error={actions.error} onRetry={actions.reload} empty={!actions.loading && !actions.error && actionItems.length === 0 && !outstanding.length} title="Nothing waiting for you" body="Dues, proofs, concerns and meetings that need a response appear here." />
+        {!!outstanding.length && (
+          <div className="record-dues">
+            <strong>Outstanding dues</strong>
+            <ul>
+              {outstanding.map((row) => (
+                <li key={row.demand_id}>
+                  <span>Unit {row.unit_number} · due {row.due_on}</span>
+                  <strong>{inr(row.outstanding_amount)}</strong>
+                </li>
+              ))}
+            </ul>
+            <button type="button" className="demo-primary" onClick={() => onOpen?.("collections")}>Pay / submit proof</button>
+          </div>
+        )}
         {!!actionItems.length && (
-          <ul className="live-list">
+          <ul className="record-attention">
             {actionItems.map((item) => (
               <li key={`${item.module}-${item.id}`}>
-                <button type="button" className="row" onClick={() => onOpen?.(item.page || "home")}>
+                <button type="button" onClick={() => onOpen?.(item.page || "home")}>
                   <span>
                     <strong>{item.title}</strong>
                     <br />
-                    <span className="demo-secondary">{item.module} · {item.status}{item.due_on ? ` · due ${item.due_on}` : ""}</span>
+                    <span className="record-meta">{item.module} · {item.status}{item.due_on ? ` · due ${item.due_on}` : ""}</span>
                   </span>
-                  <span className="demo-status">{item.action || "Open"}</span>
+                  <span className="record-chip">{item.action || "Open"}</span>
                 </button>
               </li>
             ))}
           </ul>
         )}
-      </article>
+      </div>
 
-      {!!outstanding.length && (
-        <article className="card">
-          <h2>Your outstanding dues</h2>
-          <ul className="live-list">
-            {outstanding.map((row) => (
-              <li key={row.demand_id} className="row">
-                <span>Unit {row.unit_number} · {row.financial_year} · due {row.due_on}</span>
-                <strong className="tabular">{inr(row.outstanding_amount)}</strong>
-              </li>
-            ))}
-          </ul>
-          <div className="demo-actions">
-            <button type="button" className="demo-primary" onClick={() => onOpen?.("collections")}>Submit payment proof</button>
+      <div className="record-actions">
+        <button type="button" className="primary" onClick={() => onOpen?.("collections")}>{financial ? "Collections" : "Pay maintenance"}</button>
+        <button type="button" onClick={() => onOpen?.("concerns")}>Raise concern</button>
+        <button type="button" onClick={() => onOpen?.("notices")}>Notices</button>
+        <button type="button" onClick={() => onOpen?.("decisions")}>Meetings</button>
+      </div>
+
+      <div className="record-split">
+        <div className="record-panel">
+          <div className="record-panel-head">
+            <h2>Announcements</h2>
+            <button type="button" className="demo-text-button" onClick={() => onOpen?.("notices")}>All</button>
           </div>
-        </article>
-      )}
-
-      {financial && (
-        <>
-          <div className="live-panel" style={{ marginTop: 12 }}>
-            <Field label="Billing period">
-              <select className={control} value={periodId} onChange={(event) => setPeriodId(event.target.value)} aria-label="Billing period">
-                {(periods.data || []).length === 0 && <option value="">No period opened</option>}
-                {(periods.data || []).map((period) => (
-                  <option key={period.id} value={period.id}>{period.financial_year} · {period.period_month}</option>
-                ))}
-              </select>
-            </Field>
-          </div>
-          <PageStatus loading={periods.loading || summary.loading} error={periods.error || summary.error} onRetry={() => { periods.reload(); summary.reload(); }} empty={!periods.loading && !(periods.data || []).length} title="No collection period" body="Open a billing month under Collections before period metrics appear." />
-          {selectedPeriod && (
-            <div className="metric-grid">
-              <button type="button" className="metric" onClick={() => onOpen?.("collections")}><span>Collected</span><strong>{inr(collected)}</strong></button>
-              <button type="button" className="metric" onClick={() => onOpen?.("collections")}><span>Outstanding</span><strong>{inr(periodOutstanding)}</strong></button>
-              <button type="button" className="metric" onClick={() => onOpen?.("expenses")}><span>Expenses</span><strong>{inr(expenseTotal)}</strong></button>
-              <button type="button" className="metric" onClick={() => onOpen?.("reconciliation")}><span>Bank balance</span><strong>{inr(bankTotal)}</strong></button>
-              <button type="button" className="metric" onClick={() => onOpen?.("funds")}><span>Corpus</span><strong>{inr(corpusTotal)}</strong></button>
-              <button type="button" className="metric" onClick={() => onOpen?.("funds")}><span>Reserve / other</span><strong>{inr(reserveTotal)}</strong></button>
-            </div>
-          )}
-          {selectedPeriod && (
-            <article className="card">
-              <h2>Collection progress</h2>
-              <div className="demo-meter" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress} aria-label="Collection progress">
-                <span style={{ "--demo-scale": Math.min(progress, 100) / 100 }} />
-              </div>
-              <p>{inr(collected)} of {inr(billed)} billed · due {selectedPeriod.due_on}</p>
-              <div className="demo-actions">
-                <button type="button" onClick={() => onOpen?.("collections")}>Open collection register</button>
-              </div>
-            </article>
-          )}
-          {selectedPeriod && (
-            <article className="card">
-              <h2>Income and expenditure</h2>
-              <div className="metric-grid">
-                <div className="metric"><span>Maintenance collected</span><strong>{inr(collected)}</strong></div>
-                <div className="metric"><span>Expenses in period</span><strong>{inr(expenseTotal)}</strong></div>
-              </div>
-              <PageStatus loading={periodExpenses.loading} error={periodExpenses.error} onRetry={periodExpenses.reload} empty={!periodExpenses.loading && !asList(periodExpenses.data).length} title="No expenses in this period" body="Posted expenses appear here after the treasurer records them." />
-              <ul className="live-list">
-                {asList(periodExpenses.data).slice(0, 5).map((row) => (
-                  <li key={row.expense_id}>
-                    <button type="button" className="row" onClick={() => onOpen?.("expenses")}>
-                      <span>{row.occurred_on} · {row.expense_number} · {row.category}</span>
-                      <strong className="tabular">{inr(row.amount)}</strong>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </article>
-          )}
-        </>
-      )}
-
-      {!financial && (
-        <article className="card">
-          <h2>Community books</h2>
-          <p className="demo-secondary">Fund totals and unit registers stay with treasurer, committee and auditor roles. Your dues, notices and concerns stay available here.</p>
-        </article>
-      )}
-
-      <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && funds.length === 0 && !financial} title="No fund balances yet" body="When the treasurer opens funds and posts balances, community totals appear for authorized roles." />
-      {!!maintenance.length && financial && (
-        <button type="button" className="metric" style={{ width: "100%", textAlign: "left" }} onClick={() => onOpen?.("funds")}>
-          <span>Maintenance funds</span>
-          <strong>{inr(maintenance.reduce((sum, row) => sum + Number(row.closing || 0), 0))}</strong>
-        </button>
-      )}
-
-      {financial && (
-        <article className="card">
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
-            <h2 style={{ margin: 0 }}>Recent ledger transactions</h2>
-            <button type="button" className="demo-text-button" onClick={() => onOpen?.("history")}>Full history</button>
-          </div>
-          <PageStatus loading={ledger.loading} error={ledger.error} onRetry={ledger.reload} empty={!ledger.loading && !asList(ledger.data).length} title="No journal entries yet" body="Receipts, payments and adjustments appear here after they are posted." />
-          <ul className="live-list">
-            {asList(ledger.data).map((entry) => (
-              <li key={entry.entry_id}>
-                <button type="button" className="row" onClick={() => onOpen?.(entry.entry_type === "payment" ? "expenses" : "collections")}>
-                  <span>
-                    <strong>{entry.entry_type}</strong>
-                    <br />
-                    <span className="demo-secondary">{entry.occurred_on} · {entry.narration}</span>
-                  </span>
-                  <strong className="tabular">{inr(entry.amount)}</strong>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </article>
-      )}
-
-      <div className="dash-grid">
-        <article className="card">
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
-            <h2 style={{ margin: 0 }}>Announcements</h2>
-            <button type="button" className="demo-text-button" onClick={() => onOpen?.("notices")}>All notices</button>
-          </div>
-          <PageStatus loading={query.loading} error={null} empty={!query.loading && !(dash?.announcements || []).length} title="No announcements" body="Published notices appear here." />
-          <ul className="live-list">
-            {(dash?.announcements || []).map((item, index) => (
+          <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !(dash?.announcements || []).length} title="No announcements" body="Published notices appear here." />
+          <ul className="record-attention">
+            {(dash?.announcements || []).slice(0, 4).map((item, index) => (
               <li key={`${item.title}-${index}`}>
-                <button type="button" className="row" onClick={() => onOpen?.(item.event_type ? "notifications" : "notices")}>
+                <button type="button" onClick={() => onOpen?.(item.event_type ? "notifications" : "notices")}>
                   <span>
                     <strong>{item.title}</strong>
                     <br />
-                    <span className="demo-secondary">{item.body}</span>
+                    <span className="record-meta">{item.body}</span>
                   </span>
                 </button>
               </li>
             ))}
           </ul>
-        </article>
-        <article className="card">
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
-            <h2 style={{ margin: 0 }}>Upcoming meetings</h2>
+        </div>
+        <div className="record-panel">
+          <div className="record-panel-head">
+            <h2>Upcoming</h2>
             <button type="button" className="demo-text-button" onClick={() => onOpen?.("decisions")}>Meetings</button>
           </div>
-          <PageStatus loading={query.loading} error={null} empty={!query.loading && !(dash?.upcoming_meetings || []).length} title="No upcoming meetings" body="Scheduled meetings appear here when the committee posts them." />
-          <ul className="live-list">
-            {(dash?.upcoming_meetings || []).map((meeting, index) => (
+          <PageStatus loading={query.loading} error={null} empty={!query.loading && !(dash?.upcoming_meetings || []).length} title="No upcoming meetings" body="Scheduled meetings appear when the committee posts them." />
+          <ul className="record-attention">
+            {(dash?.upcoming_meetings || []).slice(0, 4).map((meeting, index) => (
               <li key={`${meeting.title}-${index}`}>
-                <button type="button" className="row" onClick={() => onOpen?.("decisions")}>
+                <button type="button" onClick={() => onOpen?.("decisions")}>
                   <span>
                     <strong>{meeting.title}</strong>
                     <br />
-                    <span className="demo-secondary">{new Date(meeting.held_on).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} · {meeting.venue || "Venue TBA"}</span>
+                    <span className="record-meta">{new Date(meeting.held_on).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} · {meeting.venue || "Venue TBA"}</span>
                   </span>
                 </button>
               </li>
             ))}
           </ul>
           {nextMeeting && financial && statement && !["published", "published_with_exceptions"].includes(statement.status) && (
-            <div className="demo-actions">
-              <button type="button" className="demo-primary" onClick={() => onOpen?.("finance")}>Review latest statement</button>
-            </div>
+            <button type="button" className="demo-primary" onClick={() => onOpen?.("finance")}>Review latest statement</button>
           )}
-        </article>
+        </div>
       </div>
 
-      {dash && (
-        <div className="dash-grid">
-          <List title="Recently resolved concerns" items={dash.recently_resolved} render={(item) => `${item.number}: ${item.subject}`} empty="No resolved public concerns yet." />
-          {financial && <List title="Bank book balances" items={dash.banks} render={(item) => `${item.name}: ${inr(item.book_balance)}`} empty="No bank ledger has been opened." />}
+      {financial && (
+        <div className="record-panel">
+          <div className="record-panel-head">
+            <h2>Recent ledger</h2>
+            <button type="button" className="demo-text-button" onClick={() => onOpen?.("transactions")}>Full ledger</button>
+          </div>
+          <PageStatus loading={ledger.loading} error={ledger.error} onRetry={ledger.reload} empty={!ledger.loading && !asList(ledger.data).length} title="No journal entries yet" body="Receipts, payments and adjustments appear after they are posted." />
+          {asList(ledger.data).slice(0, 6).map((entry) => (
+            <button
+              key={entry.entry_id}
+              type="button"
+              className="record-money-row"
+              style={{ width: "100%", border: 0, background: "transparent", cursor: "pointer", textAlign: "left", font: "inherit" }}
+              onClick={() => onOpen?.(entry.entry_type === "payment" ? "expenses" : "collections")}
+            >
+              <span>
+                <strong>{entry.entry_type}</strong>
+                <br />
+                <span className="record-muted">{entry.occurred_on} · {entry.narration}</span>
+              </span>
+              <strong className="amount">{inr(entry.amount)}</strong>
+            </button>
+          ))}
         </div>
       )}
     </section>
@@ -372,39 +356,57 @@ export function FinanceScreen({ communityId, roles, focus }) {
     }))));
   };
 
+  const activeSection = sections.some(([id]) => id === section) ? section : "funds";
+  const fundTotal = (funds.data || []).reduce((sum, row) => sum + Number(row.closing || 0), 0);
+
   return (
-    <section className="dash">
-      <header className="dash-welcome">
+    <section className="record">
+      <header className="record-hero">
         <h1>Finance</h1>
-        <p>Live ledger records for this community.</p>
+        <p>Live ledger for this community — status first, then the working register.</p>
       </header>
-      <Field label="Section">
-        <select className={control} value={sections.some(([id]) => id === section) ? section : "funds"} onChange={(event) => setSection(event.target.value)} aria-label="Finance section">
-          {sections.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
-        </select>
-      </Field>
+
+      <div className="record-band">
+        <h2>Ledger snapshot</h2>
+        <div className="record-health">
+          <div className="tile"><span>Funds on books</span><strong>{(funds.data || []).length}</strong></div>
+          <div className="tile"><span>Fund balances</span><strong>{inr(fundTotal)}</strong></div>
+          <div className="tile"><span>Open periods</span><strong>{(periods.data || []).length}</strong></div>
+        </div>
+      </div>
+
+      <div className="record-segments" role="tablist" aria-label="Finance section">
+        {sections.map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={activeSection === id}
+            onClick={() => setSection(id)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       {show("funds") && (
-        <article className="card">
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
-            <h2 style={{ margin: 0 }}>Funds</h2>
+        <div className="record-panel">
+          <div className="record-panel-head">
+            <h2>Funds</h2>
             <button type="button" className="demo-text-button" onClick={exportBalances}>Export CSV</button>
           </div>
           <PageStatus loading={funds.loading} error={funds.error} onRetry={funds.reload} empty={!funds.loading && !funds.error && !(funds.data || []).length} title="No funds opened" body="Open a maintenance, corpus, special, emergency, or other fund before posting money." />
-          <ul className="live-list">
-            {(funds.data || []).map((row) => (
-              <li key={row.account_id} className="row">
-                <span>
-                  <strong>{row.name}</strong>
-                  <br />
-                  <span className="demo-secondary">Opening {inr(row.opening)} · Receipts {inr(row.receipts)} · Payments {inr(row.payments)}</span>
-                  <br />
-                  <span className="demo-secondary">Transfers in {inr(row.transfers_in)} · out {inr(row.transfers_out)}</span>
-                </span>
-                <strong className="tabular">{inr(row.closing)}</strong>
-              </li>
-            ))}
-          </ul>
-          <p className="demo-secondary" style={{ marginTop: 8, fontSize: 12 }}>Closing = opening + receipts − payments + transfers in − transfers out + adjustments. Individual flat dues are not shown here.</p>
+          {(funds.data || []).map((row) => (
+            <div key={row.account_id} className="record-money-row">
+              <span>
+                <strong>{row.name}</strong>
+                <br />
+                <span className="record-muted">Opening {inr(row.opening)} · In {inr(row.receipts)} · Out {inr(row.payments)}</span>
+              </span>
+              <strong className="amount">{inr(row.closing)}</strong>
+            </div>
+          ))}
+          <p className="record-muted">Closing = opening + receipts − payments + transfers ± adjustments. Flat dues live under Collections.</p>
           {canPost && (
             <SaveForm submitLabel="Open fund" onSubmit={(data) => rpc("open_fund", { p_community: communityId, p_code: data.code, p_name: data.name, p_kind: data.kind, p_description: data.description }).then(funds.reload)}>
               <Field label="Code"><input className={control} name="code" required /></Field>
@@ -430,53 +432,73 @@ export function FinanceScreen({ communityId, roles, focus }) {
               <Field label="Idempotency key"><input className={control} name="key" /></Field>
             </SaveForm>
           )}
-        </article>
+        </div>
       )}
 
       {show("collections") && (
-        <Collections communityId={communityId} canPost={canPost} periods={periods} ledger={ledger.data || []} onPosted={funds.reload} />
+        <div className="record-panel">
+          <Collections communityId={communityId} canPost={canPost} periods={periods} ledger={ledger.data || []} onPosted={funds.reload} />
+        </div>
       )}
 
       {show("expenses") && (
-        <Expenses communityId={communityId} canPost={canPost} canReview={canReview} expenses={expenses} funds={accountsOf(ledger.data, "fund")} banks={accountsOf(ledger.data, "bank")} onPosted={funds.reload} />
+        <div className="record-panel">
+          <Expenses communityId={communityId} canPost={canPost} canReview={canReview} expenses={expenses} funds={accountsOf(ledger.data, "fund")} banks={accountsOf(ledger.data, "bank")} onPosted={funds.reload} />
+        </div>
       )}
 
       {show("transactions") && (
-        <div>
-          <h2 className="mb-3 text-xl font-semibold">Ledger transactions</h2>
-          <p className="mb-3 text-sm text-slate-400">Posted journal entries. Corrections use reversals — originals are never deleted.</p>
+        <div className="record-panel">
+          <div className="record-panel-head">
+            <h2>Ledger transactions</h2>
+          </div>
+          <p className="record-muted">Posted journal entries. Corrections use reversals — originals are never deleted.</p>
           <PageStatus loading={entries.loading} error={entries.error} onRetry={entries.reload} empty={!entries.loading && !(entries.data || []).length} title="No transactions posted" body="Collections, expenses and opening balances create journal entries here." />
-          <ul className="space-y-2 text-sm">
-            {(entries.data || []).map((entry) => (
-              <li key={entry.id} className="border border-slate-800 bg-white p-3">
-                <button type="button" className="w-full text-left" onClick={() => setOpenEntry(openEntry === entry.id ? "" : entry.id)}>
-                  <div className="flex flex-wrap justify-between gap-2">
-                    <strong>{entry.entry_type}</strong>
-                    <span>{entry.occurred_on}</span>
-                  </div>
-                  <p>{entry.narration}</p>
-                  <p className="font-mono text-xs text-slate-500">{entry.id}</p>
-                </button>
-                {openEntry === entry.id && (
-                  <div className="mt-3 border-t border-slate-800 pt-3">
-                    <p className="text-slate-400">Idempotency {entry.idempotency_key}</p>
-                    {entry.reverses_entry_id && <p className="text-slate-400">Reverses {entry.reverses_entry_id}</p>}
-                    <PageStatus loading={entryLines.loading} error={entryLines.error} onRetry={entryLines.reload} empty={!entryLines.loading && !(entryLines.data || []).length} title="No lines" />
-                    <ul className="mt-2 space-y-1">
-                      {(entryLines.data || []).map((line) => (
-                        <li key={line.id}>{line.direction} · {line.accounts?.code} {line.accounts?.name} · {inr(line.amount)}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
+          {(entries.data || []).map((entry) => (
+            <div key={entry.id}>
+              <button
+                type="button"
+                className="record-money-row"
+                style={{ width: "100%", border: 0, background: "transparent", cursor: "pointer", textAlign: "left", font: "inherit" }}
+                onClick={() => setOpenEntry(openEntry === entry.id ? "" : entry.id)}
+              >
+                <span>
+                  <strong>{entry.entry_type}</strong>
+                  <br />
+                  <span className="record-muted">{entry.occurred_on} · {entry.narration}</span>
+                </span>
+                <span className="record-chip">{openEntry === entry.id ? "Hide" : "Lines"}</span>
+              </button>
+              {openEntry === entry.id && (
+                <div className="demo-detail">
+                  <PageStatus loading={entryLines.loading} error={entryLines.error} onRetry={entryLines.reload} empty={!entryLines.loading && !(entryLines.data || []).length} title="No lines" />
+                  {(entryLines.data || []).map((line) => (
+                    <div key={line.id} className="record-money-row">
+                      <span className="record-muted">{line.direction} · {line.accounts?.code} {line.accounts?.name}</span>
+                      <strong className="amount">{inr(line.amount)}</strong>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
-      {show("reconciliation") && canSeeRecon && <Reconciliation communityId={communityId} banks={accountsOf(ledger.data, "bank")} canPost={canPost} />}
-      {show("reviews") && <Reviews communityId={communityId} roles={roles} />}
-      {show("statements") && <Statements communityId={communityId} canPost={canPost} canReview={canReview} />}
+      {show("reconciliation") && canSeeRecon && (
+        <div className="record-panel">
+          <Reconciliation communityId={communityId} banks={accountsOf(ledger.data, "bank")} canPost={canPost} />
+        </div>
+      )}
+      {show("reviews") && (
+        <div className="record-panel">
+          <Reviews communityId={communityId} roles={roles} />
+        </div>
+      )}
+      {show("statements") && (
+        <div className="record-panel">
+          <Statements communityId={communityId} canPost={canPost} canReview={canReview} />
+        </div>
+      )}
     </section>
   );
 }
@@ -539,14 +561,14 @@ function Collections({ communityId, canPost, periods, ledger, onPosted }) {
   };
 
   return (
-    <div className="dash">
-      <header className="dash-welcome">
-        <h1>Collections &amp; payments</h1>
-        <p>Uploading a UPI or bank transfer screenshot does not mark dues paid. The treasurer verifies the proof, then the ledger posts.</p>
-      </header>
+    <div className="record" style={{ gap: 12 }}>
+      <div className="record-panel-head">
+        <h2>Collections &amp; payments</h2>
+      </div>
+      <p className="record-muted">A payment proof does not mark dues paid until the treasurer verifies it and the ledger posts.</p>
 
-      <article className="card">
-      <h2>Your unit dues</h2>
+      <div>
+      <h3 style={{ margin: "0 0 8px", fontSize: "1rem" }}>Your unit dues</h3>
       <PageStatus loading={myDues.loading} error={myDues.error} onRetry={myDues.reload} empty={!myDues.loading && !myDues.error && !asList(myDues.data).length} title="No demands on your units" body="When the treasurer opens a collection period for your flat, it appears here." />
       {!!asList(myDues.data).length && (
         <ul className="live-list">
@@ -562,7 +584,7 @@ function Collections({ communityId, canPost, periods, ledger, onPosted }) {
           ))}
         </ul>
       )}
-      </article>
+      </div>
 
       {!!outstanding.length && (
         <form className="live-panel grid gap-3" onSubmit={submitProof}>

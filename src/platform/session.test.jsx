@@ -39,11 +39,12 @@ vi.mock("../lib/supabase.js", () => ({
   },
 }));
 
-test("signs out from the profile and shows an empty fund state", async () => {
+test("signs out from the profile and shows the adaptive home status", async () => {
   const user = userEvent.setup();
   render(<Platform />);
   expect((await screen.findAllByText("Palm Court")).length).toBeGreaterThan(0);
-  expect(await screen.findByText("No fund balances yet")).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "Your home" })).toBeInTheDocument();
+  expect(screen.getByText(/No outstanding dues on your units/i)).toBeInTheDocument();
   expect(screen.getByText("More")).toBeInTheDocument();
   expect(screen.queryByText(/₹/)).not.toBeInTheDocument();
   await user.click(screen.getAllByRole("button", { name: "Profile" })[0]);

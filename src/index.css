@@ -16,6 +16,17 @@
   --blue: #0878e8;
   --white: #ffffff;
   --muted: #5c5852;
+  --line: #d5e2e6;
+  --paper: #f3f7f8;
+  --secondary: #1f3d48;
+  --warn-bg: #fff6e8;
+  --warn-ink: #8a4b00;
+  --ok-bg: #e7f7fa;
+  --danger-bg: #fff7f7;
+  --danger-ink: #9f1239;
+  --radius: 16px;
+  --radius-sm: 12px;
+  --shadow: 0 8px 20px rgba(3, 29, 39, 0.06);
 }
 
 html {
@@ -39,8 +50,8 @@ h3 {
 }
 
 ::selection {
-  background: var(--stone);
-  color: var(--ink);
+  background: rgba(0, 212, 232, 0.35);
+  color: var(--navy);
 }
 
 :focus-visible {
@@ -879,5 +890,327 @@ button.metric {
   *::after {
     animation: none !important;
     transition: none !important;
+  }
+}
+
+/* —— SABHA record surfaces (Shell / Home / Finance) —— */
+
+.record {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.record-hero {
+  display: grid;
+  gap: 6px;
+}
+
+.record-hero h1 {
+  margin: 0;
+  font-size: 1.65rem;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  color: var(--navy);
+}
+
+.record-hero p {
+  margin: 0;
+  color: var(--secondary);
+  font-size: 0.95rem;
+}
+
+.record-band {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--radius);
+  background: var(--navy);
+  color: #ffffff;
+  box-shadow: var(--shadow);
+}
+
+.record-band h2 {
+  margin: 0;
+  font-size: 1rem;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+}
+
+.record-band .record-meta {
+  color: #b7ecef;
+  font-size: 0.8125rem;
+}
+
+.record-health {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.record-health button,
+.record-health .tile {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 12px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.record-health button:hover,
+.record-health button:focus-visible {
+  background: rgba(0, 212, 232, 0.18);
+}
+
+.record-health span {
+  color: #b7ecef;
+  font-size: 0.75rem;
+}
+
+.record-health strong {
+  font-family: Manrope, sans-serif;
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.record-progress {
+  display: grid;
+  gap: 8px;
+}
+
+.record-progress .demo-meter {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.record-panel {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--white);
+  box-shadow: var(--shadow);
+}
+
+.record-panel > h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+  color: var(--navy);
+}
+
+.record-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.record-panel-head h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+  color: var(--navy);
+}
+
+.record-attention {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.record-attention li + li {
+  border-top: 1px solid var(--line);
+}
+
+.record-attention button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  padding: 14px 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.record-attention button:hover strong,
+.record-attention button:focus-visible strong {
+  color: var(--blue);
+}
+
+.record-attention .record-meta {
+  color: var(--secondary);
+  font-size: 0.8125rem;
+}
+
+.record-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--ok-bg);
+  color: var(--navy);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.record-chip.warn {
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+}
+
+.record-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.record-actions button {
+  min-height: 48px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  color: var(--navy);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.record-actions button.primary {
+  border-color: var(--blue);
+  background: var(--blue);
+  color: #ffffff;
+}
+
+.record-actions button:hover,
+.record-actions button:focus-visible {
+  border-color: var(--navy);
+}
+
+.record-actions button.primary:hover,
+.record-actions button.primary:focus-visible {
+  filter: brightness(1.05);
+}
+
+.record-dues {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: var(--radius-sm);
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+}
+
+.record-dues ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.record-dues li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.9rem;
+}
+
+.record-dues strong {
+  font-variant-numeric: tabular-nums;
+  color: var(--navy);
+}
+
+.record-segments {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 4px;
+  overflow-x: auto;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  -webkit-overflow-scrolling: touch;
+}
+
+.record-segments button {
+  flex: none;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--secondary);
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.record-segments button[aria-selected="true"] {
+  background: var(--navy);
+  color: #ffffff;
+}
+
+.record-money-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: baseline;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.record-money-row:last-child {
+  border-bottom: 0;
+}
+
+.record-money-row strong.amount {
+  font-family: Manrope, sans-serif;
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.record-muted {
+  color: var(--secondary);
+  font-size: 0.8125rem;
+}
+
+.app-note.record-context {
+  background: rgba(3, 29, 39, 0.92);
+  color: #d6f6fa;
+  font-size: 12px;
+  letter-spacing: 0.01em;
+}
+
+@media (min-width: 768px) {
+  .record-health {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .record-actions {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .record-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    gap: 16px;
+    align-items: start;
   }
 }

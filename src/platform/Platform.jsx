@@ -469,7 +469,7 @@ function Shell({ email, community, communities, communityId, onCommunity, roles,
             </div>
           )}
         </header>
-        <p className="app-note">{roleLabel(roles)} · {email}</p>
+        <p className="app-note record-context">{roleLabel(roles)} · {email}</p>
         <main className="app-main">
           <Screen page={page} communityId={communityId} roles={roles} email={email} onSignOut={onSignOut} onOpen={openPage} />
         </main>
