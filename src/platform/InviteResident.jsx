@@ -16,7 +16,8 @@ export default function InviteResident({ communityId, roles }) {
 
   const submit = async (event) => {
     event.preventDefault();
-    const data = Object.fromEntries(new FormData(event.currentTarget));
+    const form = event.currentTarget;
+    const data = Object.fromEntries(new FormData(form));
     setPending(true);
     setMessage("");
     const result = await supabase.functions.invoke("invite-member", {
@@ -26,7 +27,7 @@ export default function InviteResident({ communityId, roles }) {
     setMessage(result.error || !result.data?.ok
       ? "Invitation could not be sent."
       : "Invitation sent. The link expires and works once.");
-    event.currentTarget.reset();
+    if (form.isConnected) form.reset();
   };
 
   return (

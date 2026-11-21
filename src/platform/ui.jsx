@@ -58,13 +58,15 @@ export function SaveForm({ onSubmit, submitLabel = "Save", confirmMessage, child
       onSubmit={async (event) => {
         event.preventDefault();
         if (confirmMessage && !window.confirm(confirmMessage)) return;
-        const data = Object.fromEntries(new FormData(event.currentTarget));
+        const form = event.currentTarget;
+        const data = Object.fromEntries(new FormData(form));
         setPending(true);
         setError("");
         setOk("");
         try {
           await onSubmit(data);
-          event.currentTarget.reset();
+          // Capture form before await; reload() re-renders and nulls event.currentTarget.
+          if (form.isConnected) form.reset();
           setOk("Saved.");
         } catch (cause) {
           setError(explain(cause));
