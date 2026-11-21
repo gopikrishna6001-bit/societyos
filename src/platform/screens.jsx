@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { rpc, rows, supabase } from "./api.js";
 import { downloadText, inr, toCsv } from "./money.js";
-import { Field, FilterSheet, PageStatus, SaveForm, control, useLoad } from "./ui.jsx";
+import { Field, FilterSheet, FlatPicker, PageStatus, SaveForm, control, useLoad } from "./ui.jsx";
 import { brand } from "../brand.js";
 import InviteResident from "./InviteResident.jsx";
 import { copy, isFinanceOps, navLabel } from "./roleCopy.js";
@@ -1180,7 +1180,7 @@ export function ConcernsScreen({ communityId, roles }) {
             <option value="public">All residents</option>
           </select>
         </Field>
-        <Field label="Flat number"><input className={control} name="unit" inputMode="text" /></Field>
+        <FlatPicker communityId={communityId} roles={roles} name="unit" label="Flat" required={!committee} />
         <Field label="Urgency"><select className={control} name="priority" defaultValue="medium"><option>low</option><option>medium</option><option>high</option></select></Field>
         <Field label="Details"><textarea className={control} name="description" rows={4} required /></Field>
       </SaveForm>
@@ -1405,8 +1405,8 @@ export function UnitsScreen({ communityId }) {
         <Field label="Block"><input className={control} name="block" /></Field>
         <Field label="Number"><input className={control} name="number" required /></Field>
       </SaveForm>
-      <SaveForm submitLabel="Link resident" onSubmit={(data) => rpc("add_occupancy", { p_community: communityId, p_unit_number: data.number, p_email: data.email, p_relationship: data.relationship }).then(units.reload)}>
-        <Field label="Unit number"><input className={control} name="number" required /></Field>
+      <SaveForm submitLabel="Link resident" onSubmit={(data) => rpc("add_occupancy", { p_community: communityId, p_unit_number: data.unit, p_email: data.email, p_relationship: data.relationship }).then(units.reload)}>
+        <FlatPicker communityId={communityId} roles={["committee_admin"]} name="unit" label="Flat" required />
         <Field label="Resident email"><input className={control} type="email" name="email" required /></Field>
         <Field label="Relationship"><select className={control} name="relationship"><option>owner</option><option>tenant</option></select></Field>
       </SaveForm>
@@ -1713,7 +1713,7 @@ export function VisitorsScreen({ communityId, roles }) {
         }}>
           <Field label="Guest name"><input className={control} name="name" required /></Field>
           <Field label="Phone"><input className={control} name="phone" inputMode="tel" /></Field>
-          <Field label="Flat number"><input className={control} name="unit" /></Field>
+          <FlatPicker communityId={communityId} roles={roles} name="unit" label="Flat" required />
           <Field label="Purpose"><input className={control} name="purpose" placeholder="Family / delivery / cab" /></Field>
           <Field label="Vehicle number"><input className={control} name="vehicle" /></Field>
           <Field label="Expected at"><input className={control} type="datetime-local" name="expected" /></Field>
@@ -1816,7 +1816,7 @@ export function AmenitiesScreen({ communityId, roles }) {
           </Field>
           <Field label="Starts"><input className={control} type="datetime-local" name="start" required /></Field>
           <Field label="Ends"><input className={control} type="datetime-local" name="end" required /></Field>
-          <Field label="Flat number"><input className={control} name="unit" /></Field>
+          <FlatPicker communityId={communityId} roles={roles} name="unit" label="Flat" required />
           <Field label="Purpose"><input className={control} name="purpose" placeholder="Birthday / meeting" /></Field>
         </SaveForm>
       )}

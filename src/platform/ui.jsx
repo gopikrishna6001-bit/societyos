@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import { explain } from "./api.js";
+import { useEffect, useMemo, useState } from "react";
+import { explain, rows, supabase } from "./api.js";
+import { isFinanceOps, isCommittee } from "./roleCopy.js";
 
 export function PageStatus({ loading, error, onRetry, empty, title, body }) {
   if (loading) return <p className="demo-secondary">Loading…</p>;
@@ -100,5 +101,144 @@ export function FilterSheet({ label, children }) {
         </div>
       )}
     </div>
+  );
+}
+
+function flatLabel(unit) {
+  if (!unit) return "";
+  return unit.block ? `${unit.block}-${unit.number}` : String(unit.number);
+}
+
+/** Flat picker: residents get their flats only; ops get searchable society flats (no free typing). */
+export function FlatPicker({
+  communityId,
+  roles = [],
+  name = "unit",
+  label = "Flat",
+  required = false,
+  allowEmpty = !required,
+}) {
+  const canSearch = isFinanceOps(roles) || isCommittee(roles) || roles.includes("resident_auditor");
+  const [mine, setMine] = useState([]);
+  const [all, setAll] = useState([]);
+  const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let live = true;
+    setLoading(true);
+    setError("");
+    (async () => {
+      try {
+        const { data: auth } = await supabase.auth.getUser();
+        const userId = auth?.user?.id;
+        const own = userId
+          ? await rows(
+            supabase
+              .from("unit_occupancies")
+              .select("unit_id, relationship, units(id, number, block)")
+              .eq("community_id", communityId)
+              .eq("profile_id", userId)
+              .is("ended_on", null),
+          )
+          : [];
+        const ownUnits = own.map((row) => row.units).filter(Boolean);
+        if (!live) return;
+        setMine(ownUnits);
+        if (!canSearch && ownUnits.length === 1) setSelected(ownUnits[0].number);
+        if (canSearch) {
+          const units = await rows(
+            supabase.from("units").select("id, number, block").eq("community_id", communityId).order("number"),
+          );
+          if (!live) return;
+          setAll(units);
+        }
+      } catch (cause) {
+        if (live) setError(explain(cause));
+      } finally {
+        if (live) setLoading(false);
+      }
+    })();
+    return () => { live = false; };
+  }, [communityId, canSearch]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return all.slice(0, 40);
+    return all.filter((unit) => flatLabel(unit).toLowerCase().includes(q) || String(unit.number).toLowerCase().includes(q)).slice(0, 40);
+  }, [all, query]);
+
+  if (loading) {
+    return (
+      <Field label={label}>
+        <p className="demo-secondary">Loading flats…</p>
+        <input type="hidden" name={name} value="" />
+      </Field>
+    );
+  }
+
+  if (error) {
+    return (
+      <Field label={label}>
+        <p role="alert" className="text-sm" style={{ color: "#9f1239" }}>{error}</p>
+        <input type="hidden" name={name} value="" />
+      </Field>
+    );
+  }
+
+  if (!canSearch) {
+    if (!mine.length) {
+      return (
+        <Field label={label}>
+          <p className="demo-secondary">No flat linked to your login. Ask the committee to link your flat.</p>
+          <input type="hidden" name={name} value="" />
+        </Field>
+      );
+    }
+    return (
+      <Field label={label}>
+        <select className={control} name={name} required={required} value={selected} onChange={(event) => setSelected(event.target.value)}>
+          {allowEmpty && !required && <option value="">Select flat</option>}
+          {mine.map((unit) => (
+            <option key={unit.id} value={unit.number}>{flatLabel(unit)}</option>
+          ))}
+        </select>
+      </Field>
+    );
+  }
+
+  const selectedUnit = all.find((unit) => unit.number === selected);
+  const options = selectedUnit && !filtered.some((unit) => unit.id === selectedUnit.id)
+    ? [selectedUnit, ...filtered]
+    : filtered;
+
+  return (
+    <Field label={label}>
+      <input
+        className={control}
+        type="search"
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder="Search flat (e.g. A-101)"
+        autoComplete="off"
+        aria-label={`Search ${label}`}
+      />
+      <select
+        className={control}
+        style={{ marginTop: 8 }}
+        name={name}
+        required={required}
+        value={selected}
+        onChange={(event) => setSelected(event.target.value)}
+      >
+        {(allowEmpty || !required) && <option value="">Select flat</option>}
+        {options.map((unit) => (
+          <option key={unit.id} value={unit.number}>{flatLabel(unit)}</option>
+        ))}
+      </select>
+      {!options.length && <p className="mt-2 demo-secondary text-sm">No flat matches “{query}”.</p>}
+    </Field>
   );
 }
