@@ -136,4 +136,4 @@ if (![...expected].every((email) => people.some((person) => person.email === ema
 console.log("DEMO community: DEMO · Palm Court");
 console.log(`Shared password: ${demoPassword}`);
 for (const person of people) console.log(`${person.role}  ${person.email}`);
-console.log("No ledger entries were posted.");
+console.log("Login accounts only. Apply supabase/migrations/20261121123000_seed_demo_palm_court.sql for sample ledger, concerns, meetings, notices, and amenities.");

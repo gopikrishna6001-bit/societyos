@@ -3,7 +3,7 @@ import { explain } from "./api.js";
 
 function isSchemaGap(error) {
   const text = String(error || "");
-  return /schema cache|could not find the (function|table)|does not exist/i.test(text);
+  return /schema cache|could not find the (function|table)|does not exist|not authorized|permission denied|row-level security/i.test(text);
 }
 
 export function PageStatus({ loading, error, onRetry, empty, title, body }) {

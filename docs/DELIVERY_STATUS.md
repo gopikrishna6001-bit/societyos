@@ -83,6 +83,11 @@ Hosted migrations are applied. Until PR #10 is merged (or production is pointed 
 
 **iPhone shortcut icon:** iOS caches PWA icons aggressively. After production is updated, delete the home-screen icon and Add to Home Screen again. Cache-bust query `?v=20261121` is on icons/manifest for the next deploy.
 
+## Hosted schema + DEMO seed (21 Nov 2026, Asia/Calcutta)
+
+- Applied missing foundation write RPCs (`open_fund`, `create_ticket`, `create_meeting`, `collection_summary`, `record_collection`, …).
+- Seeded DEMO · Palm Court (`20261121123000_seed_demo_palm_court.sql`): funds, bank, Nov dues (101 outstanding / 102 paid), expenses, concerns, meetings, resolution, notice, amenity booking, visitor pass, staff, asset.
+
 ## Exact next implementation task
 
-Merge PR #10 so production Pages picks up the polished `app-shell` UI (navy chrome, designed cards/empty states). Hosted migrations are already applied — refresh production Home to clear the old `action_centre` schema error.
+Merge PR #10 so production Pages picks up the polished `app-shell` UI. Refresh the live site and sign in with demo roles to exercise seeded records.
