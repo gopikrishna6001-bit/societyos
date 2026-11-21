@@ -1,0 +1,9 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "sabha",
+  "compatibility_date": "2026-11-21",
+  "main": "@tanstack/react-start/server-entry",
+  "observability": {
+    "enabled": true
+  }
+}

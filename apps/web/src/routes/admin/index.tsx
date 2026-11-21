@@ -1,0 +1,170 @@
+import { createFileRoute, Link } from '@tanstack/react-router'
+import { useQuery } from '@tanstack/react-query'
+import { Building2, IndianRupee, Landmark, Megaphone, TrendingUp, UserCheck, Users } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import { formatPaise, collectionRatePct } from '@opensociety/shared'
+
+import { apiClient } from '../../lib/api'
+import { PageHeader } from '@/components/admin/ui'
+import { useT } from '@/lib/i18n'
+import { useDashboardPath } from '@/lib/dashboard-path'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+
+export const Route = createFileRoute('/admin/')({ component: Overview })
+
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  to,
+  hint,
+}: {
+  icon: LucideIcon
+  label: string
+  value: number | string
+  to: string
+  hint?: string
+}) {
+  const dashboardPath = useDashboardPath()
+  return (
+    <Link to={dashboardPath(to)} className="block">
+      <Card className="hover:border-ring transition-colors">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-muted-foreground text-sm font-medium">{label}</CardTitle>
+          <Icon className="text-muted-foreground size-4" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-3xl font-bold">{value}</div>
+          {hint && <p className="text-muted-foreground mt-1 text-xs">{hint}</p>}
+        </CardContent>
+      </Card>
+    </Link>
+  )
+}
+
+function Overview() {
+  const dashboardPath = useDashboardPath()
+  const { t } = useT()
+  const society = useQuery({ queryKey: ['society'], queryFn: apiClient.getSociety })
+  const apartments = useQuery({ queryKey: ['apartments'], queryFn: () => apiClient.listApartments() })
+  const visitors = useQuery({ queryKey: ['visitors'], queryFn: () => apiClient.listVisitors() })
+  const notices = useQuery({ queryKey: ['notices'], queryFn: () => apiClient.listNotices() })
+  const pending = useQuery({ queryKey: ['users', 'PENDING'], queryFn: () => apiClient.listUsers('PENDING') })
+  const finance = useQuery({ queryKey: ['finance-report'], queryFn: apiClient.getFinanceReport })
+  const dues = useQuery({ queryKey: ['dues'], queryFn: apiClient.listDues })
+
+  const pendingVisitors = visitors.data?.filter((v) => v.status === 'PENDING').length ?? 0
+  const outstanding = dues.data ? dues.data.reduce((s, r) => s + r.outstanding, 0) : null
+  const collectionRate = finance.data ? collectionRatePct(finance.data.totalBilled, finance.data.totalCollected) : null
+
+  return (
+    <div>
+      <PageHeader
+        title={t('nav.overview')}
+        description={society.data ? society.data.name : t('overview.notConfigured')}
+      />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          icon={Building2}
+          label={t('nav.apartments')}
+          value={apartments.data?.length ?? '—'}
+          to="/admin/apartments"
+        />
+        <StatCard
+          icon={Users}
+          label={t('overview.pendingResidents')}
+          value={pending.data?.length ?? '—'}
+          to="/admin/residents"
+          hint={t('overview.awaitingApproval')}
+        />
+        <StatCard
+          icon={UserCheck}
+          label={t('nav.visitors')}
+          value={visitors.data?.length ?? '—'}
+          to="/admin/visitors"
+          hint={`${pendingVisitors} ${t('overview.pending')}`}
+        />
+        <StatCard icon={Megaphone} label={t('nav.notices')} value={notices.data?.length ?? '—'} to="/admin/notices" />
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <StatCard
+          icon={IndianRupee}
+          label={t('overview.outstanding')}
+          value={outstanding === null ? '—' : formatPaise(outstanding)}
+          to="/admin/reports"
+        />
+        <StatCard
+          icon={TrendingUp}
+          label={t('overview.collectionRate')}
+          value={collectionRate === null ? '—' : `${collectionRate}%`}
+          to="/admin/reports"
+        />
+        <StatCard
+          icon={Landmark}
+          label={t('overview.cashBank')}
+          value={finance.data ? formatPaise(finance.data.cashBankBalance) : '—'}
+          to="/admin/reports"
+        />
+      </div>
+
+      {dashboardPath('/admin') === '/demo' ? (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>{t('demo.exploreTitle')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4 text-sm">{t('demo.exploreDescription')}</p>
+            <div className="flex flex-wrap gap-3">
+              {[
+                ['/admin/visitors', 'demo.tryVisitor'],
+                ['/admin/tickets', 'demo.tryTicket'],
+                ['/admin/billing', 'demo.tryPayment'],
+                ['/admin/notices', 'demo.tryNotice'],
+              ].map(([path, label]) => (
+                <Button asChild variant="outline" key={path}>
+                  <Link to={dashboardPath(path)}>{t(label)}</Link>
+                </Button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      ) : <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>{t('overview.gettingStarted')}</CardTitle>
+        </CardHeader>
+        <CardContent className="text-muted-foreground space-y-2 text-sm">
+          <p className="text-foreground">
+            {t('overview.newHerePrefix')}
+            <Button asChild size="sm" className="mx-1 align-middle">
+              <Link to={dashboardPath('/admin/setup')}>{t('overview.wizardLink')}</Link>
+            </Button>
+            {t('overview.newHereSuffix')}
+          </p>
+          <p>
+            {t('overview.step1Prefix')}
+            <Link to={dashboardPath('/admin/society')} className="text-foreground underline">{t('nav.society')}</Link>
+            {t('overview.step1Suffix')}
+          </p>
+          <p>
+            {t('overview.step2Prefix')}
+            <Link to={dashboardPath('/admin/apartments')} className="text-foreground underline">{t('nav.apartments')}</Link>
+            {t('overview.step2Suffix')}
+          </p>
+          <p>
+            {t('overview.step3Prefix')}
+            <Link to={dashboardPath('/admin/residents')} className="text-foreground underline">{t('nav.residents')}</Link>
+            {t('overview.step3Suffix')}
+          </p>
+          <p>
+            {t('overview.step4Prefix')}
+            <Link to={dashboardPath('/admin/guards')} className="text-foreground underline">{t('nav.guards')}</Link>
+            {t('overview.step4Suffix')}
+          </p>
+        </CardContent>
+      </Card>}
+    </div>
+  )
+}

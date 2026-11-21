@@ -1,0 +1,121 @@
+import { useState } from 'react';
+import { useRouter } from 'expo-router';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { View } from 'react-native';
+import {
+  visitorTypeSchema,
+  type CreateVisitorEntry,
+  type VisitorEntry,
+  type VisitorType
+} from '@opensociety/shared';
+
+import { useApiClient } from '../api/context';
+import { CREATE_VISITOR_KEY } from '../lib/offline/mutation-defaults';
+import { newClientId } from '../lib/offline/optimistic';
+import { useSyncStatus } from '../lib/offline/use-sync-status';
+import { useT } from '../lib/i18n';
+import { OfflineBanner } from '../components/offline-banner';
+import { SyncErrorTray } from '../components/sync-error-tray';
+import { Button } from '../components/ui/button';
+import { Chip } from '../components/ui/chip';
+import { Input } from '../components/ui/input';
+import { Text } from '../components/ui/text';
+import { Screen, PageIntro } from '../components/ui/screen';
+import { Feedback, Field, Section } from '../components/ui/feedback';
+import { ApartmentPicker } from '../components/apartment-picker';
+
+const TYPES = visitorTypeSchema.options;
+
+export default function Register() {
+  const apiClient = useApiClient();
+  const router = useRouter();
+  const { t } = useT();
+  const { isOnline } = useSyncStatus();
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [type, setType] = useState<VisitorType>('GUEST');
+  const [apartmentId, setApartmentId] = useState<string | null>(null);
+
+  const apartments = useQuery({
+    queryKey: ['apartments'],
+    queryFn: () => apiClient.listApartments()
+  });
+
+  // Uses the offline-capable mutation registered on the client (see
+  // mutation-defaults): the fn, optimistic update, and cache reconcile live
+  // there so a queued write can replay after an app restart.
+  const create = useMutation<VisitorEntry, Error, CreateVisitorEntry>({
+    mutationKey: CREATE_VISITOR_KEY,
+    onSuccess: () => router.replace('/gate')
+  });
+
+  function submit() {
+    create.mutate({
+      apartmentId: apartmentId!,
+      visitorName: name.trim(),
+      visitorPhone: phone.trim() || undefined,
+      type,
+      // Idempotency key so a queued entry replayed after a lost ack dedupes to
+      // one row instead of creating a duplicate.
+      clientId: newClientId()
+    });
+    // Offline the mutation pauses (no onSuccess), but the optimistic entry is
+    // already in the gate list — take the guard straight there.
+    if (!isOnline) router.replace('/gate');
+  }
+
+  const canSubmit = name.trim().length > 0 && !!apartmentId && !create.isPending;
+
+  return (
+    <Screen connectionNotice={false}>
+      <PageIntro title={t('nav.registerVisitor')} description={t('design.registerHint')} />
+      <OfflineBanner className="rounded-md" />
+      <SyncErrorTray />
+      <Section>
+        <Field label={t('register.visitorName')}>
+          <Input
+            accessibilityLabel={t('register.visitorName')}
+            placeholder={t('register.visitorName')}
+            value={name}
+            onChangeText={setName}
+          />
+        </Field>
+
+        <Field label={t('register.phoneOptional')}>
+          <Input
+            accessibilityLabel={t('register.phoneOptional')}
+            placeholder={t('register.phonePlaceholder')}
+            value={phone}
+            onChangeText={setPhone}
+            keyboardType="phone-pad"
+          />
+        </Field>
+
+        <Field label={t('common.type')}>
+          <View className="flex-row flex-wrap gap-2">
+            {TYPES.map((opt) => (
+              <Chip
+                key={opt}
+                label={t('value.' + opt)}
+                selected={type === opt}
+                onPress={() => setType(opt)}
+              />
+            ))}
+          </View>
+        </Field>
+
+        <ApartmentPicker query={apartments} selected={apartmentId} onSelect={setApartmentId} />
+
+        <View className="mt-1 gap-2">
+          <Button size="lg" onPress={submit} disabled={!canSubmit}>
+            <Text>{create.isPending ? t('register.registering') : t('nav.registerVisitor')}</Text>
+          </Button>
+          {!isOnline && (
+            <Text className="text-sm text-muted-foreground">{t('register.offlineNote')}</Text>
+          )}
+          {create.isError && <Feedback />}
+        </View>
+      </Section>
+    </Screen>
+  );
+}

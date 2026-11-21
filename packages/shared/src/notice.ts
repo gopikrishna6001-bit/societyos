@@ -1,0 +1,57 @@
+import { z } from 'zod'
+import { noticePrioritySchema, noticeCategorySchema } from './enums'
+
+export const noticeSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string(),
+  body: z.string(),
+  priority: noticePrioritySchema,
+  category: noticeCategorySchema,
+  attachmentUrl: z.string().nullable(),
+  attachmentName: z.string().nullable(),
+  publishedBy: z.string().uuid(),
+  publishedAt: z.string(),
+  expiresAt: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  // Engagement fields present on GET /notices: total reads and whether the
+  // acting user has read it.
+  readCount: z.number().optional(),
+  read: z.boolean().optional(),
+})
+
+// One entry from GET /notices/:id/reads — who read a notice and when.
+export const noticeReadReceiptSchema = z.object({
+  userId: z.string().uuid(),
+  name: z.string().nullable(),
+  readAt: z.string(),
+})
+
+export const createNoticeSchema = z.object({
+  notifyTower: z.string().trim().min(1).max(64).optional(),
+  title: z.string().min(1),
+  body: z.string().min(1),
+  priority: noticePrioritySchema.default('NORMAL'),
+  category: noticeCategorySchema.default('GENERAL'),
+  attachmentUrl: z.string().optional(),
+  attachmentName: z.string().optional(),
+  expiresAt: z.string().datetime().optional(),
+})
+
+// Case-insensitive keyword match over a notice's title and body — used for the
+// archive search (client-side filtering; the API applies the same via SQL).
+export function noticeMatchesQuery(notice: { title: string; body: string }, query: string): boolean {
+  const q = query.trim().toLowerCase()
+  if (!q) return true
+  return notice.title.toLowerCase().includes(q) || notice.body.toLowerCase().includes(q)
+}
+
+// How many of these notices the acting user has not read yet (for an unread
+// badge). Notices with an undefined `read` flag are treated as read.
+export function unreadNoticeCount(notices: { read?: boolean }[]): number {
+  return notices.filter((n) => n.read === false).length
+}
+
+export type Notice = z.infer<typeof noticeSchema>
+export type CreateNotice = z.infer<typeof createNoticeSchema>
+export type NoticeReadReceipt = z.infer<typeof noticeReadReceiptSchema>
