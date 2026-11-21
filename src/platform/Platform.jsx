@@ -13,6 +13,7 @@ import { Field, PageStatus, control } from "./ui.jsx";
 import { brand } from "../brand.js";
 import { passwordRule, signInMessage } from "../lib/authPolicy.js";
 import { Mark, Wordmark } from "../brand/Mark.jsx";
+import { navLabel } from "./roleCopy.js";
 export default function Platform() {
   if (!isSupabaseConfigured) return <ConfigRequired />;
   return <SignedInApp />;
@@ -340,36 +341,29 @@ function canSee(roles, id) {
   return ["home", "finance", "concerns", "decisions", "documents", "notifications", "profile", "notices", "visitors", "amenities", "assets", "assistant"].includes(id);
 }
 
-const PRIMARY = [
-  ["home", "Home"],
-  ["finance", "Finance"],
-  ["concerns", "Concerns"],
-  ["decisions", "Meetings"],
-];
-
-const MORE = [
-  ["notices", "Notices"],
-  ["visitors", "Visitors"],
-  ["amenities", "Amenities"],
-  ["assets", "Assets"],
-  ["staff", "Staff"],
-  ["assistant", "Assistant"],
-  ["documents", "Documents"],
-  ["notifications", "Notifications"],
-  ["profile", "Profile"],
-  ["collections", "Collections"],
-  ["expenses", "Expenses"],
-  ["transactions", "Transactions"],
-  ["funds", "Funds"],
-  ["reconciliation", "Reconciliation"],
-  ["reviews", "Reviews"],
-  ["units", "Residents and Units"],
-  ["settings", "Settings"],
-  ["history", "Audit History"],
+const PRIMARY_IDS = ["home", "finance", "concerns", "decisions"];
+const MORE_IDS = [
+  "notices", "visitors", "amenities", "assets", "staff", "assistant", "documents",
+  "notifications", "profile", "collections", "expenses", "transactions", "funds",
+  "reconciliation", "reviews", "units", "settings", "history",
 ];
 
 function navigation(roles) {
-  return [...PRIMARY, ...MORE].filter(([id]) => canSee(roles, id));
+  return [...PRIMARY_IDS, ...MORE_IDS]
+    .filter((id) => canSee(roles, id))
+    .map((id) => [id, navLabel(id, roles)]);
+}
+
+function primaryNav(roles) {
+  return PRIMARY_IDS.filter((id) => canSee(roles, id)).map((id) => [id, navLabel(id, roles)]);
+}
+
+function moreNav(roles) {
+  const ops = roles.some((role) => ["treasurer", "resident_auditor", "committee_admin", "platform_admin"].includes(role));
+  return MORE_IDS
+    .filter((id) => canSee(roles, id))
+    .filter((id) => ops || id !== "collections") // residents use Payments tab, not a second Pay dues entry
+    .map((id) => [id, navLabel(id, roles)]);
 }
 
 function roleLabel(roles) {
@@ -392,8 +386,8 @@ const TAB_ICONS = {
 
 function Shell({ email, community, communities, communityId, onCommunity, roles, onSignOut }) {
   const items = navigation(roles);
-  const primary = PRIMARY.filter(([id]) => canSee(roles, id));
-  const overflow = MORE.filter(([id]) => canSee(roles, id));
+  const primary = primaryNav(roles);
+  const overflow = moreNav(roles);
   const [page, setPage] = useState(items[0]?.[0] || "home");
   const [menu, setMenu] = useState("");
   const unique = [...new Map(communities.map((row) => [row.community_id, row])).values()];

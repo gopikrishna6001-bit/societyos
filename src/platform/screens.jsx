@@ -4,6 +4,7 @@ import { downloadText, inr, toCsv } from "./money.js";
 import { Field, FilterSheet, PageStatus, SaveForm, control, useLoad } from "./ui.jsx";
 import { brand } from "../brand.js";
 import InviteResident from "./InviteResident.jsx";
+import { copy, isFinanceOps, navLabel } from "./roleCopy.js";
 
 const TICKET_CATEGORIES = ["Maintenance", "Water", "Electricity", "Security", "Housekeeping", "Lift and facilities", "Finance", "Governance", "General", "Other"];
 const EXPENSE_CATEGORIES = ["Security", "Housekeeping", "Electricity", "Water", "Lift maintenance", "Plumbing", "Civil repairs", "Gardening", "Administration", "Insurance", "Emergency repairs", "Other"];
@@ -29,7 +30,8 @@ export function HomeScreen({ communityId, roles = [], onOpen }) {
   useEffect(() => {
     if (!periodId && periods.data?.[0]?.id) setPeriodId(periods.data[0].id);
   }, [periods.data, periodId]);
-  const financial = roles.some((role) => ["treasurer", "resident_auditor", "committee_admin", "platform_admin"].includes(role));
+  const financial = isFinanceOps(roles);
+  const t = copy.home;
   const summary = useLoad(
     () => (financial && periodId
       ? rpc("collection_summary", { p_community: communityId, p_period: periodId }).then((result) => (Array.isArray(result) ? result[0] || null : result))
@@ -78,24 +80,33 @@ export function HomeScreen({ communityId, roles = [], onOpen }) {
   const attentionCount = actionItems.length + outstanding.length;
   const maintClosing = maintenance.reduce((sum, row) => sum + Number(row.closing || 0), 0);
 
+  const entryLabel = (type) => ({
+    receipt: "Money received",
+    payment: "Money spent",
+    opening: "Opening balance",
+    transfer: "Moved between funds",
+    adjustment: "Adjustment",
+    reversal: "Correction",
+  }[type] || type);
+
   return (
     <section className="record">
       <header className="record-hero">
-        <h1>{financial ? "Society home" : "Your home"}</h1>
-        <p>{brand.promise}</p>
+        <h1>{financial ? t.titleOps : t.titleResident}</h1>
+        <p>{financial ? t.leadOps : t.leadResident}</p>
       </header>
 
       {financial ? (
         <div className="record-band">
           <div className="record-panel-head">
-            <h2>Money health</h2>
+            <h2>{t.statusOps}</h2>
             {(periods.data || []).length > 0 ? (
               <select
                 className={control}
                 style={{ width: "auto", minHeight: 36, padding: "0 10px", borderRadius: 999, maxWidth: "52%" }}
                 value={periodId}
                 onChange={(event) => setPeriodId(event.target.value)}
-                aria-label="Billing period"
+                aria-label="Billing month"
               >
                 {(periods.data || []).map((period) => (
                   <option key={period.id} value={period.id}>{period.financial_year} · {period.period_month}</option>
@@ -105,40 +116,38 @@ export function HomeScreen({ communityId, roles = [], onOpen }) {
               <span className="record-meta">{periodLabel}</span>
             )}
           </div>
-          <PageStatus loading={periods.loading || summary.loading} error={periods.error || summary.error} onRetry={() => { periods.reload(); summary.reload(); }} empty={!periods.loading && !(periods.data || []).length} title="No collection period" body="Open a billing month under Collections before period metrics appear." />
+          <PageStatus loading={periods.loading || summary.loading} error={periods.error || summary.error} onRetry={() => { periods.reload(); summary.reload(); }} empty={!periods.loading && !(periods.data || []).length} title="No billing month yet" body="Open a month under Money → Collections so collection progress can appear." />
           {selectedPeriod && (
             <>
               <div className="record-progress">
-                <div className="demo-meter" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress} aria-label="Collection progress">
+                <div className="demo-meter" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress} aria-label="How much maintenance is in">
                   <span style={{ "--demo-scale": Math.min(progress, 100) / 100 }} />
                 </div>
-                <p className="record-meta">{progress}% collected · {inr(collected)} of {inr(billed)} · due {selectedPeriod.due_on}</p>
+                <p className="record-meta">{progress}% of dues in · {inr(collected)} of {inr(billed)} · due {selectedPeriod.due_on}</p>
               </div>
               <div className="record-health">
-                <button type="button" onClick={() => onOpen?.("collections")}><span>Outstanding</span><strong>{inr(periodOutstanding)}</strong></button>
-                <button type="button" onClick={() => onOpen?.("expenses")}><span>Expenses</span><strong>{inr(expenseTotal)}</strong></button>
-                <button type="button" onClick={() => onOpen?.("reconciliation")}><span>Bank</span><strong>{inr(bankTotal)}</strong></button>
-                <button type="button" onClick={() => onOpen?.("funds")}><span>Maintenance</span><strong>{inr(maintClosing)}</strong></button>
-                <button type="button" onClick={() => onOpen?.("funds")}><span>Corpus</span><strong>{inr(corpusTotal)}</strong></button>
-                <button type="button" onClick={() => onOpen?.("funds")}><span>Reserve</span><strong>{inr(reserveTotal)}</strong></button>
+                <button type="button" onClick={() => onOpen?.("collections")}><span>Still due</span><strong>{inr(periodOutstanding)}</strong></button>
+                <button type="button" onClick={() => onOpen?.("expenses")}><span>Spent</span><strong>{inr(expenseTotal)}</strong></button>
+                <button type="button" onClick={() => onOpen?.("reconciliation")}><span>In bank</span><strong>{inr(bankTotal)}</strong></button>
+                <button type="button" onClick={() => onOpen?.("funds")}><span>Maintenance pot</span><strong>{inr(maintClosing)}</strong></button>
+                <button type="button" onClick={() => onOpen?.("funds")}><span>Corpus pot</span><strong>{inr(corpusTotal)}</strong></button>
+                <button type="button" onClick={() => onOpen?.("funds")}><span>Reserve pot</span><strong>{inr(reserveTotal)}</strong></button>
               </div>
             </>
           )}
         </div>
       ) : (
         <div className="record-band">
-          <h2>Your status</h2>
+          <h2>{t.statusResident}</h2>
           <p className="record-meta">
-            {outstanding.length
-              ? `${outstanding.length} outstanding demand${outstanding.length === 1 ? "" : "s"} on your units`
-              : "No outstanding dues on your units"}
-            {attentionCount ? ` · ${attentionCount} item${attentionCount === 1 ? "" : "s"} need attention` : ""}
+            {outstanding.length ? t.hasDues(outstanding.length) : t.noDues}
+            {attentionCount ? ` · ${attentionCount} to look at` : ""}
           </p>
           {!!outstanding.length && (
             <div className="record-health">
               {outstanding.slice(0, 2).map((row) => (
                 <button key={row.demand_id} type="button" onClick={() => onOpen?.("collections")}>
-                  <span>Unit {row.unit_number}</span>
+                  <span>Flat {row.unit_number}</span>
                   <strong>{inr(row.outstanding_amount)}</strong>
                 </button>
               ))}
@@ -149,22 +158,22 @@ export function HomeScreen({ communityId, roles = [], onOpen }) {
 
       <div className="record-panel">
         <div className="record-panel-head">
-          <h2>Needs you</h2>
+          <h2>{t.needsYou}</h2>
           {attentionCount > 0 && <span className="record-chip warn">{attentionCount}</span>}
         </div>
-        <PageStatus loading={actions.loading} error={actions.error} onRetry={actions.reload} empty={!actions.loading && !actions.error && actionItems.length === 0 && !outstanding.length} title="Nothing waiting for you" body="Dues, proofs, concerns and meetings that need a response appear here." />
+        <PageStatus loading={actions.loading} error={actions.error} onRetry={actions.reload} empty={!actions.loading && !actions.error && actionItems.length === 0 && !outstanding.length} title={t.needsYouEmpty} body={t.needsYouEmptyBody} />
         {!!outstanding.length && (
           <div className="record-dues">
-            <strong>Outstanding dues</strong>
+            <strong>Maintenance still due</strong>
             <ul>
               {outstanding.map((row) => (
                 <li key={row.demand_id}>
-                  <span>Unit {row.unit_number} · due {row.due_on}</span>
+                  <span>Flat {row.unit_number} · pay by {row.due_on}</span>
                   <strong>{inr(row.outstanding_amount)}</strong>
                 </li>
               ))}
             </ul>
-            <button type="button" className="demo-primary" onClick={() => onOpen?.("collections")}>Pay / submit proof</button>
+            <button type="button" className="demo-primary" onClick={() => onOpen?.("collections")}>{t.payCta}</button>
           </div>
         )}
         {!!actionItems.length && (
@@ -175,7 +184,7 @@ export function HomeScreen({ communityId, roles = [], onOpen }) {
                   <span>
                     <strong>{item.title}</strong>
                     <br />
-                    <span className="record-meta">{item.module} · {item.status}{item.due_on ? ` · due ${item.due_on}` : ""}</span>
+                    <span className="record-meta">{item.status}{item.due_on ? ` · due ${item.due_on}` : ""}</span>
                   </span>
                   <span className="record-chip">{item.action || "Open"}</span>
                 </button>
@@ -186,19 +195,19 @@ export function HomeScreen({ communityId, roles = [], onOpen }) {
       </div>
 
       <div className="record-actions">
-        <button type="button" className="primary" onClick={() => onOpen?.("collections")}>{financial ? "Collections" : "Pay maintenance"}</button>
-        <button type="button" onClick={() => onOpen?.("concerns")}>Raise concern</button>
-        <button type="button" onClick={() => onOpen?.("notices")}>Notices</button>
-        <button type="button" onClick={() => onOpen?.("decisions")}>Meetings</button>
+        <button type="button" className="primary" onClick={() => onOpen?.("collections")}>{financial ? t.payCtaOps : t.payCta}</button>
+        <button type="button" onClick={() => onOpen?.("concerns")}>{t.raiseConcern}</button>
+        <button type="button" onClick={() => onOpen?.("notices")}>{t.notices}</button>
+        <button type="button" onClick={() => onOpen?.("decisions")}>{t.meetings}</button>
       </div>
 
       <div className="record-split">
         <div className="record-panel">
           <div className="record-panel-head">
-            <h2>Announcements</h2>
+            <h2>{t.announcements}</h2>
             <button type="button" className="demo-text-button" onClick={() => onOpen?.("notices")}>All</button>
           </div>
-          <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !(dash?.announcements || []).length} title="No announcements" body="Published notices appear here." />
+          <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !(dash?.announcements || []).length} title="No notices yet" body="When the committee publishes a notice, it appears here." />
           <ul className="record-attention">
             {(dash?.announcements || []).slice(0, 4).map((item, index) => (
               <li key={`${item.title}-${index}`}>
@@ -215,10 +224,10 @@ export function HomeScreen({ communityId, roles = [], onOpen }) {
         </div>
         <div className="record-panel">
           <div className="record-panel-head">
-            <h2>Upcoming</h2>
-            <button type="button" className="demo-text-button" onClick={() => onOpen?.("decisions")}>Meetings</button>
+            <h2>{t.upcoming}</h2>
+            <button type="button" className="demo-text-button" onClick={() => onOpen?.("decisions")}>{t.meetings}</button>
           </div>
-          <PageStatus loading={query.loading} error={null} empty={!query.loading && !(dash?.upcoming_meetings || []).length} title="No upcoming meetings" body="Scheduled meetings appear when the committee posts them." />
+          <PageStatus loading={query.loading} error={null} empty={!query.loading && !(dash?.upcoming_meetings || []).length} title="Nothing scheduled" body="Meetings show up here when the committee sets a date." />
           <ul className="record-attention">
             {(dash?.upcoming_meetings || []).slice(0, 4).map((meeting, index) => (
               <li key={`${meeting.title}-${index}`}>
@@ -233,7 +242,7 @@ export function HomeScreen({ communityId, roles = [], onOpen }) {
             ))}
           </ul>
           {nextMeeting && financial && statement && !["published", "published_with_exceptions"].includes(statement.status) && (
-            <button type="button" className="demo-primary" onClick={() => onOpen?.("finance")}>Review latest statement</button>
+            <button type="button" className="demo-primary" onClick={() => onOpen?.("finance")}>Review monthly statement</button>
           )}
         </div>
       </div>
@@ -241,10 +250,10 @@ export function HomeScreen({ communityId, roles = [], onOpen }) {
       {financial && (
         <div className="record-panel">
           <div className="record-panel-head">
-            <h2>Recent ledger</h2>
-            <button type="button" className="demo-text-button" onClick={() => onOpen?.("transactions")}>Full ledger</button>
+            <h2>{t.recentMoney}</h2>
+            <button type="button" className="demo-text-button" onClick={() => onOpen?.("transactions")}>See all</button>
           </div>
-          <PageStatus loading={ledger.loading} error={ledger.error} onRetry={ledger.reload} empty={!ledger.loading && !asList(ledger.data).length} title="No journal entries yet" body="Receipts, payments and adjustments appear after they are posted." />
+          <PageStatus loading={ledger.loading} error={ledger.error} onRetry={ledger.reload} empty={!ledger.loading && !asList(ledger.data).length} title={t.recentMoneyEmpty} body="When dues are received or spending is paid, those moves appear here." />
           {asList(ledger.data).slice(0, 6).map((entry) => (
             <button
               key={entry.entry_id}
@@ -254,7 +263,7 @@ export function HomeScreen({ communityId, roles = [], onOpen }) {
               onClick={() => onOpen?.(entry.entry_type === "payment" ? "expenses" : "collections")}
             >
               <span>
-                <strong>{entry.entry_type}</strong>
+                <strong>{entryLabel(entry.entry_type)}</strong>
                 <br />
                 <span className="record-muted">{entry.occurred_on} · {entry.narration}</span>
               </span>
@@ -262,6 +271,10 @@ export function HomeScreen({ communityId, roles = [], onOpen }) {
             </button>
           ))}
         </div>
+      )}
+
+      {!financial && (
+        <p className="record-muted">{t.communityBooksHint}</p>
       )}
     </section>
   );
@@ -303,26 +316,33 @@ function List({ title, items, render, empty }) {
 export function FinanceScreen({ communityId, roles, focus }) {
   const canPost = roles.includes("treasurer");
   const canReview = roles.includes("resident_auditor");
-  const canSeeRecon = roles.some((role) => ["treasurer", "committee_admin", "resident_auditor", "platform_admin"].includes(role));
+  const ops = isFinanceOps(roles);
+  const canSeeRecon = ops;
+  const t = copy.finance;
+  const defaultSection = ops ? "funds" : "collections";
   const funds = useLoad(() => rpc("account_balances", { p_community: communityId }), [communityId]);
   const ledger = useLoad(
     () => rows(supabase.from("accounts").select("id,name,code,account_type,fund_kind").eq("community_id", communityId)),
     [communityId],
   );
   const expenses = useLoad(
-    () => rows(supabase.from("expenses").select("id,expense_number,occurred_on,description,payee,amount,approval_status,auditor_status,payment_status,expense_categories(name)").eq("community_id", communityId).order("occurred_on", { ascending: false })),
-    [communityId],
+    () => (ops
+      ? rows(supabase.from("expenses").select("id,expense_number,occurred_on,description,payee,amount,approval_status,auditor_status,payment_status,expense_categories(name)").eq("community_id", communityId).order("occurred_on", { ascending: false }))
+      : Promise.resolve([])),
+    [communityId, ops],
   );
   const periods = useLoad(
     () => rows(supabase.from("collection_periods").select("id,financial_year,period_month,due_on").eq("community_id", communityId).order("period_month", { ascending: false })),
     [communityId],
   );
-  const [section, setSection] = useState(focus === "finance" ? "funds" : focus);
-  useEffect(() => { setSection(focus === "finance" ? "funds" : focus); }, [focus]);
+  const [section, setSection] = useState(focus === "finance" ? defaultSection : focus);
+  useEffect(() => { setSection(focus === "finance" ? defaultSection : focus); }, [focus, defaultSection]);
   const show = (name) => section === name;
   const entries = useLoad(
-    () => rows(supabase.from("journal_entries").select("id,occurred_on,entry_type,narration,idempotency_key,reverses_entry_id,created_at").eq("community_id", communityId).order("occurred_on", { ascending: false }).limit(40)),
-    [communityId],
+    () => (ops
+      ? rows(supabase.from("journal_entries").select("id,occurred_on,entry_type,narration,idempotency_key,reverses_entry_id,created_at").eq("community_id", communityId).order("occurred_on", { ascending: false }).limit(40))
+      : Promise.resolve([])),
+    [communityId, ops],
   );
   const [openEntry, setOpenEntry] = useState("");
   const entryLines = useLoad(
@@ -331,15 +351,26 @@ export function FinanceScreen({ communityId, roles, focus }) {
       : Promise.resolve([])),
     [openEntry],
   );
-  const sections = [
-    ["funds", "Funds"],
-    ["collections", "Collections"],
-    ["expenses", "Expenses"],
-    ["transactions", "Transactions"],
-    ...(canSeeRecon ? [["reconciliation", "Reconciliation"]] : []),
-    ["reviews", "Reviews"],
-    ["statements", "Statements"],
-  ];
+  const sections = ops
+    ? [
+      ["funds", navLabel("funds", roles)],
+      ["collections", navLabel("collections", roles)],
+      ["expenses", navLabel("expenses", roles)],
+      ["transactions", navLabel("transactions", roles)],
+      ...(canSeeRecon ? [["reconciliation", navLabel("reconciliation", roles)]] : []),
+      ["reviews", navLabel("reviews", roles)],
+      ["statements", navLabel("statements", roles)],
+    ]
+    : [["collections", "Your dues"]];
+
+  const entryLabel = (type) => ({
+    receipt: "Money received",
+    payment: "Money spent",
+    opening: "Opening balance",
+    transfer: "Moved between funds",
+    adjustment: "Adjustment",
+    reversal: "Correction",
+  }[type] || type);
 
   const exportBalances = () => {
     const data = funds.data || [];
@@ -356,57 +387,61 @@ export function FinanceScreen({ communityId, roles, focus }) {
     }))));
   };
 
-  const activeSection = sections.some(([id]) => id === section) ? section : "funds";
+  const activeSection = sections.some(([id]) => id === section) ? section : defaultSection;
   const fundTotal = (funds.data || []).reduce((sum, row) => sum + Number(row.closing || 0), 0);
 
   return (
     <section className="record">
       <header className="record-hero">
-        <h1>Finance</h1>
-        <p>Live ledger for this community — status first, then the working register.</p>
+        <h1>{ops ? t.titleOps : t.titleResident}</h1>
+        <p>{ops ? t.leadOps : t.leadResident}</p>
       </header>
 
-      <div className="record-band">
-        <h2>Ledger snapshot</h2>
-        <div className="record-health">
-          <div className="tile"><span>Funds on books</span><strong>{(funds.data || []).length}</strong></div>
-          <div className="tile"><span>Fund balances</span><strong>{inr(fundTotal)}</strong></div>
-          <div className="tile"><span>Open periods</span><strong>{(periods.data || []).length}</strong></div>
+      {ops ? (
+        <div className="record-band">
+          <h2>{t.snapshotOps}</h2>
+          <div className="record-health">
+            <div className="tile"><span>{t.fundsCount}</span><strong>{(funds.data || []).length}</strong></div>
+            <div className="tile"><span>{t.fundBalances}</span><strong>{inr(fundTotal)}</strong></div>
+            <div className="tile"><span>{t.openPeriods}</span><strong>{(periods.data || []).length}</strong></div>
+          </div>
         </div>
-      </div>
+      ) : null}
 
-      <div className="record-segments" role="tablist" aria-label="Finance section">
-        {sections.map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            role="tab"
-            aria-selected={activeSection === id}
-            onClick={() => setSection(id)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      {ops && (
+        <div className="record-segments" role="tablist" aria-label="Money sections">
+          {sections.map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={activeSection === id}
+              onClick={() => setSection(id)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {show("funds") && (
+      {ops && show("funds") && (
         <div className="record-panel">
           <div className="record-panel-head">
-            <h2>Funds</h2>
+            <h2>{navLabel("funds", roles)}</h2>
             <button type="button" className="demo-text-button" onClick={exportBalances}>Export CSV</button>
           </div>
-          <PageStatus loading={funds.loading} error={funds.error} onRetry={funds.reload} empty={!funds.loading && !funds.error && !(funds.data || []).length} title="No funds opened" body="Open a maintenance, corpus, special, emergency, or other fund before posting money." />
+          <PageStatus loading={funds.loading} error={funds.error} onRetry={funds.reload} empty={!funds.loading && !funds.error && !(funds.data || []).length} title="No society funds yet" body="Open a maintenance, corpus, or reserve pot before money can be recorded against it." />
           {(funds.data || []).map((row) => (
             <div key={row.account_id} className="record-money-row">
               <span>
                 <strong>{row.name}</strong>
                 <br />
-                <span className="record-muted">Opening {inr(row.opening)} · In {inr(row.receipts)} · Out {inr(row.payments)}</span>
+                <span className="record-muted">Start {inr(row.opening)} · In {inr(row.receipts)} · Out {inr(row.payments)}</span>
               </span>
               <strong className="amount">{inr(row.closing)}</strong>
             </div>
           ))}
-          <p className="record-muted">Closing = opening + receipts − payments + transfers ± adjustments. Flat dues live under Collections.</p>
+          <p className="record-muted">Balance = start + money in − money out ± moves. Flat dues are under Collections.</p>
           {canPost && (
             <SaveForm submitLabel="Open fund" onSubmit={(data) => rpc("open_fund", { p_community: communityId, p_code: data.code, p_name: data.name, p_kind: data.kind, p_description: data.description }).then(funds.reload)}>
               <Field label="Code"><input className={control} name="code" required /></Field>
@@ -420,15 +455,15 @@ export function FinanceScreen({ communityId, roles, focus }) {
             </SaveForm>
           )}
           {canPost && (
-            <SaveForm confirmMessage="Reverse this posted entry? A reversal is permanent and does not delete the original." submitLabel="Reverse a posted entry" onSubmit={(data) => rpc("reverse_entry", {
+            <SaveForm confirmMessage="Undo this posted money move? The original stays on record; a correction is added." submitLabel="Undo a posted move" onSubmit={(data) => rpc("reverse_entry", {
               p_entry: data.entry,
               p_date: data.date,
               p_narration: data.narration,
               p_key: data.key || crypto.randomUUID(),
             }).then(funds.reload)}>
-              <Field label="Original journal entry"><input className={control} name="entry" required /></Field>
-              <Field label="Reversal date"><input className={control} type="date" name="date" required /></Field>
-              <Field label="Narration"><input className={control} name="narration" required /></Field>
+              <Field label="Original entry id"><input className={control} name="entry" required /></Field>
+              <Field label="Correction date"><input className={control} type="date" name="date" required /></Field>
+              <Field label="Why"><input className={control} name="narration" required /></Field>
               <Field label="Idempotency key"><input className={control} name="key" /></Field>
             </SaveForm>
           )}
@@ -437,23 +472,23 @@ export function FinanceScreen({ communityId, roles, focus }) {
 
       {show("collections") && (
         <div className="record-panel">
-          <Collections communityId={communityId} canPost={canPost} periods={periods} ledger={ledger.data || []} onPosted={funds.reload} />
+          <Collections communityId={communityId} canPost={canPost} periods={periods} ledger={ledger.data || []} onPosted={funds.reload} residentView={!ops} />
         </div>
       )}
 
-      {show("expenses") && (
+      {ops && show("expenses") && (
         <div className="record-panel">
           <Expenses communityId={communityId} canPost={canPost} canReview={canReview} expenses={expenses} funds={accountsOf(ledger.data, "fund")} banks={accountsOf(ledger.data, "bank")} onPosted={funds.reload} />
         </div>
       )}
 
-      {show("transactions") && (
+      {ops && show("transactions") && (
         <div className="record-panel">
           <div className="record-panel-head">
-            <h2>Ledger transactions</h2>
+            <h2>{navLabel("transactions", roles)}</h2>
           </div>
-          <p className="record-muted">Posted journal entries. Corrections use reversals — originals are never deleted.</p>
-          <PageStatus loading={entries.loading} error={entries.error} onRetry={entries.reload} empty={!entries.loading && !(entries.data || []).length} title="No transactions posted" body="Collections, expenses and opening balances create journal entries here." />
+          <p className="record-muted">Every posted money move. Mistakes are corrected with a reverse entry — originals stay.</p>
+          <PageStatus loading={entries.loading} error={entries.error} onRetry={entries.reload} empty={!entries.loading && !(entries.data || []).length} title="No money moves yet" body="When dues are received or spending is paid, those moves appear here." />
           {(entries.data || []).map((entry) => (
             <div key={entry.id}>
               <button
@@ -463,18 +498,18 @@ export function FinanceScreen({ communityId, roles, focus }) {
                 onClick={() => setOpenEntry(openEntry === entry.id ? "" : entry.id)}
               >
                 <span>
-                  <strong>{entry.entry_type}</strong>
+                  <strong>{entryLabel(entry.entry_type)}</strong>
                   <br />
                   <span className="record-muted">{entry.occurred_on} · {entry.narration}</span>
                 </span>
-                <span className="record-chip">{openEntry === entry.id ? "Hide" : "Lines"}</span>
+                <span className="record-chip">{openEntry === entry.id ? "Hide" : "Details"}</span>
               </button>
               {openEntry === entry.id && (
                 <div className="demo-detail">
                   <PageStatus loading={entryLines.loading} error={entryLines.error} onRetry={entryLines.reload} empty={!entryLines.loading && !(entryLines.data || []).length} title="No lines" />
                   {(entryLines.data || []).map((line) => (
                     <div key={line.id} className="record-money-row">
-                      <span className="record-muted">{line.direction} · {line.accounts?.code} {line.accounts?.name}</span>
+                      <span className="record-muted">{line.direction === "debit" ? "From" : "To"} · {line.accounts?.name}</span>
                       <strong className="amount">{inr(line.amount)}</strong>
                     </div>
                   ))}
@@ -484,17 +519,17 @@ export function FinanceScreen({ communityId, roles, focus }) {
           ))}
         </div>
       )}
-      {show("reconciliation") && canSeeRecon && (
+      {ops && show("reconciliation") && canSeeRecon && (
         <div className="record-panel">
           <Reconciliation communityId={communityId} banks={accountsOf(ledger.data, "bank")} canPost={canPost} />
         </div>
       )}
-      {show("reviews") && (
+      {ops && show("reviews") && (
         <div className="record-panel">
           <Reviews communityId={communityId} roles={roles} />
         </div>
       )}
-      {show("statements") && (
+      {ops && show("statements") && (
         <div className="record-panel">
           <Statements communityId={communityId} canPost={canPost} canReview={canReview} />
         </div>
@@ -503,13 +538,14 @@ export function FinanceScreen({ communityId, roles, focus }) {
   );
 }
 
-function Collections({ communityId, canPost, periods, ledger, onPosted }) {
+function Collections({ communityId, canPost, periods, ledger, onPosted, residentView = false }) {
   const [periodId, setPeriodId] = useState("");
   const [proofBusy, setProofBusy] = useState(false);
   const [proofMessage, setProofMessage] = useState("");
+  const t = copy.finance;
   const summary = useLoad(
-    () => periodId ? rpc("collection_summary", { p_community: communityId, p_period: periodId }).then((result) => Array.isArray(result) ? (result[0] || null) : result) : Promise.resolve(null),
-    [communityId, periodId],
+    () => (!residentView && periodId ? rpc("collection_summary", { p_community: communityId, p_period: periodId }).then((result) => Array.isArray(result) ? (result[0] || null) : result) : Promise.resolve(null)),
+    [communityId, periodId, residentView],
   );
   const demands = useLoad(
     () => periodId && canPost
@@ -531,7 +567,7 @@ function Collections({ communityId, canPost, periods, ledger, onPosted }) {
     const data = Object.fromEntries(new FormData(form));
     const file = form.querySelector('input[type="file"]')?.files?.[0];
     if (!file) {
-      setProofMessage("Choose a payment proof image or PDF.");
+      setProofMessage("Choose a payment screenshot or PDF.");
       return;
     }
     setProofBusy(true);
@@ -550,11 +586,11 @@ function Collections({ communityId, canPost, periods, ledger, onPosted }) {
         p_notes: data.notes || null,
       });
       form.reset();
-      setProofMessage("Proof submitted. The treasurer must verify before the ledger updates.");
+      setProofMessage("Proof sent. You’ll show as paid after the treasurer confirms.");
       myDues.reload();
       proofs.reload();
     } catch (cause) {
-      setProofMessage(cause?.message || "Could not submit proof.");
+      setProofMessage(cause?.message || "Could not send proof.");
     } finally {
       setProofBusy(false);
     }
@@ -563,23 +599,23 @@ function Collections({ communityId, canPost, periods, ledger, onPosted }) {
   return (
     <div className="record" style={{ gap: 12 }}>
       <div className="record-panel-head">
-        <h2>Collections &amp; payments</h2>
+        <h2>{residentView ? t.yourDues : "Collections"}</h2>
       </div>
-      <p className="record-muted">A payment proof does not mark dues paid until the treasurer verifies it and the ledger posts.</p>
+      <p className="record-muted">{residentView ? t.submitProofHint : "Proof from a resident counts as paid only after you confirm it."}</p>
 
       <div>
-      <h3 style={{ margin: "0 0 8px", fontSize: "1rem" }}>Your unit dues</h3>
-      <PageStatus loading={myDues.loading} error={myDues.error} onRetry={myDues.reload} empty={!myDues.loading && !myDues.error && !asList(myDues.data).length} title="No demands on your units" body="When the treasurer opens a collection period for your flat, it appears here." />
+      <h3 style={{ margin: "0 0 8px", fontSize: "1rem" }}>{residentView ? "Your flat" : "Your flats (as resident)"}</h3>
+      <PageStatus loading={myDues.loading} error={myDues.error} onRetry={myDues.reload} empty={!myDues.loading && !myDues.error && !asList(myDues.data).length} title={t.yourDuesEmpty} body={t.yourDuesEmptyBody} />
       {!!asList(myDues.data).length && (
         <ul className="live-list">
           {asList(myDues.data).map((row) => (
             <li key={row.demand_id} className="row">
               <span>
-                Unit {row.unit_number} · {row.financial_year} · due {row.due_on}
+                Flat {row.unit_number} · {row.financial_year} · pay by {row.due_on}
                 <br />
-                <span className="demo-secondary">Expected {inr(row.expected_amount)} · Collected {inr(row.collected_amount)}</span>
+                <span className="demo-secondary">Billed {inr(row.expected_amount)} · Paid {inr(row.collected_amount)}</span>
               </span>
-              <strong className="tabular">{inr(row.outstanding_amount)} due</strong>
+              <strong className="tabular">{inr(row.outstanding_amount)} still due</strong>
             </li>
           ))}
         </ul>
@@ -588,19 +624,19 @@ function Collections({ communityId, canPost, periods, ledger, onPosted }) {
 
       {!!outstanding.length && (
         <form className="live-panel grid gap-3" onSubmit={submitProof}>
-          <h3 className="font-semibold">Submit payment proof</h3>
-          <Field label="Demand">
+          <h3 className="font-semibold">{t.submitProof}</h3>
+          <Field label="Which bill">
             <select className={control} name="demand" required>
               {outstanding.map((row) => (
                 <option key={row.demand_id} value={row.demand_id}>
-                  Unit {row.unit_number} · outstanding {inr(row.outstanding_amount)}
+                  Flat {row.unit_number} · {inr(row.outstanding_amount)} still due
                 </option>
               ))}
             </select>
           </Field>
-          <Field label="Amount paid"><input className={control} name="amount" inputMode="decimal" required /></Field>
-          <Field label="Payment date"><input className={control} type="date" name="paid" required /></Field>
-          <Field label="Mode">
+          <Field label="Amount you paid"><input className={control} name="amount" inputMode="decimal" required /></Field>
+          <Field label="When you paid"><input className={control} type="date" name="paid" required /></Field>
+          <Field label="How you paid">
             <select className={control} name="mode" defaultValue="upi">
               <option value="upi">UPI</option>
               <option value="bank_transfer">Bank transfer</option>
@@ -609,25 +645,25 @@ function Collections({ communityId, canPost, periods, ledger, onPosted }) {
             </select>
           </Field>
           <Field label="UPI / bank reference"><input className={control} name="reference" /></Field>
-          <Field label="Proof file (image or PDF)"><input className={control} type="file" accept="image/*,application/pdf" required /></Field>
-          <Field label="Notes"><input className={control} name="notes" /></Field>
+          <Field label="Screenshot or PDF"><input className={control} type="file" accept="image/*,application/pdf" required /></Field>
+          <Field label="Note for treasurer"><input className={control} name="notes" /></Field>
           {proofMessage && <p role="status" className="text-sm text-slate-600">{proofMessage}</p>}
-          <button disabled={proofBusy} type="submit" className="min-h-12 bg-[#0878E8] px-3 font-semibold text-white">{proofBusy ? "Uploading…" : "Submit proof for verification"}</button>
+          <button disabled={proofBusy} type="submit" className="min-h-12 bg-[#0878E8] px-3 font-semibold text-white">{proofBusy ? "Sending…" : "Send proof"}</button>
         </form>
       )}
 
       {canPost && (
         <div className="mb-6">
-          <h3 className="mb-2 font-semibold">Pending proofs to verify</h3>
-          <PageStatus loading={proofs.loading} error={proofs.error} onRetry={proofs.reload} empty={!proofs.loading && !pendingProofs.length} title="No pending proofs" body="Resident submissions awaiting verification appear here." />
+          <h3 className="mb-2 font-semibold">{t.pendingProofs}</h3>
+          <PageStatus loading={proofs.loading} error={proofs.error} onRetry={proofs.reload} empty={!proofs.loading && !pendingProofs.length} title="Nothing waiting" body="When a resident sends payment proof, it appears here for you to confirm." />
           <ul className="space-y-3">
             {pendingProofs.map((proof) => (
               <li key={proof.id} className="border border-slate-800 bg-white p-3 text-sm">
                 <p className="font-semibold">{inr(proof.amount)} · {proof.payment_mode} · {proof.paid_on}</p>
                 <p className="text-slate-400">{proof.bank_reference || "No reference"} · {proof.storage_path}</p>
                 <SaveForm
-                  confirmMessage="Verify this proof and post the collection to the ledger?"
-                  submitLabel="Verify and post ledger"
+                  confirmMessage="Confirm this proof and mark the dues paid?"
+                  submitLabel="Confirm and mark paid"
                   onSubmit={(data) => rpc("review_payment_proof", {
                     p_proof: proof.id,
                     p_decision: "verified",
@@ -638,8 +674,8 @@ function Collections({ communityId, canPost, periods, ledger, onPosted }) {
                   }).then(() => { proofs.reload(); summary.reload(); onPosted(); myDues.reload(); })}
                 >
                   <Field label="Receipt number"><input className={control} name="receipt" required /></Field>
-                  <AccountSelect label="Bank ledger" name="bank" accounts={accountsOf(ledger, "bank")} />
-                  <AccountSelect label="Fund" name="fund" accounts={accountsOf(ledger, "fund")} />
+                  <AccountSelect label="Bank account" name="bank" accounts={accountsOf(ledger, "bank")} />
+                  <AccountSelect label="Society fund" name="fund" accounts={accountsOf(ledger, "fund")} />
                   <Field label="Idempotency key"><input className={control} name="key" placeholder="Leave blank" /></Field>
                 </SaveForm>
                 <SaveForm
@@ -651,7 +687,7 @@ function Collections({ communityId, canPost, periods, ledger, onPosted }) {
                     p_rejection_reason: data.reason,
                   }).then(() => { proofs.reload(); myDues.reload(); })}
                 >
-                  <Field label="Rejection reason"><input className={control} name="reason" required /></Field>
+                  <Field label="Why rejected"><input className={control} name="reason" required /></Field>
                 </SaveForm>
               </li>
             ))}
@@ -659,68 +695,72 @@ function Collections({ communityId, canPost, periods, ledger, onPosted }) {
         </div>
       )}
 
-      <PageStatus loading={periods.loading} error={periods.error} onRetry={periods.reload} empty={!periods.loading && !periods.error && !(periods.data || []).length} title="No collection period" body="A treasurer opens a month before payments can be recorded." />
-      {(periods.data || []).length > 0 && (
-        <Field label="Period summary">
-          <select className={control} value={periodId} onChange={(event) => setPeriodId(event.target.value)}>
-            <option value="">Select a month</option>
-            {periods.data.map((period) => <option key={period.id} value={period.id}>{period.financial_year} · {period.period_month}</option>)}
-          </select>
-        </Field>
-      )}
-      {summary.data && (
-        <div className="mt-3 grid gap-3 sm:grid-cols-3">
-          <Card label="Expected" value={inr(summary.data.expected)} />
-          <Card label="Collected" value={inr(summary.data.collected)} />
-          <Card label="Outstanding" value={inr(summary.data.outstanding)} />
-          <Card label="Paid units" value={String(summary.data.paid_units ?? 0)} />
-          <Card label="Partial units" value={String(summary.data.partial_units ?? 0)} />
-          <Card label="Unpaid units" value={String(summary.data.unpaid_units ?? 0)} />
-        </div>
-      )}
-      {canPost && periodId && <CollectionRegister communityId={communityId} periodId={periodId} />}
-      {canPost && (
-        <div className="mt-4 space-y-4">
-          <SaveForm submitLabel="Open collection period" onSubmit={(data) => rpc("open_collection_period", {
-            p_community: communityId,
-            p_financial_year: data.year,
-            p_month: data.month,
-            p_due_on: data.due,
-            p_amount: data.amount,
-          }).then(() => periods.reload())}>
-            <Field label="Financial year"><input className={control} name="year" placeholder="2026-27" required /></Field>
-            <Field label="Month"><input className={control} type="date" name="month" required /></Field>
-            <Field label="Due date"><input className={control} type="date" name="due" required /></Field>
-            <Field label="Amount per unit"><input className={control} name="amount" inputMode="decimal" required /></Field>
-          </SaveForm>
-          {!!(demands.data || []).length && (
-            <SaveForm submitLabel="Record offline payment" onSubmit={(data) => rpc("record_collection", {
-              p_demand: data.demand,
-              p_amount: data.amount,
-              p_paid_on: data.paid,
-              p_mode: data.mode,
-              p_bank_reference: data.reference,
-              p_receipt_number: data.receipt,
-              p_key: data.key || crypto.randomUUID(),
-              p_bank_account: data.bank,
-              p_fund_account: data.fund,
-            }).then(() => { summary.reload(); onPosted(); myDues.reload(); })}>
-              <Field label="Unit demand">
-                <select className={control} name="demand" required>
-                  {(demands.data || []).map((demand) => <option key={demand.id} value={demand.id}>{demand.units?.number} · {inr(Number(demand.expected_amount) + Number(demand.additional_amount))}</option>)}
-                </select>
-              </Field>
-              <Field label="Amount received"><input className={control} name="amount" inputMode="decimal" required /></Field>
-              <Field label="Payment date"><input className={control} type="date" name="paid" required /></Field>
-              <Field label="Mode"><input className={control} name="mode" required /></Field>
-              <Field label="Bank reference"><input className={control} name="reference" /></Field>
-              <Field label="Receipt number"><input className={control} name="receipt" required /></Field>
-              <Field label="Idempotency key"><input className={control} name="key" placeholder="Leave blank to generate one" /></Field>
-              <AccountSelect label="Bank ledger" name="bank" accounts={accountsOf(ledger, "bank")} />
-              <AccountSelect label="Fund" name="fund" accounts={accountsOf(ledger, "fund")} />
-            </SaveForm>
+      {!residentView && (
+        <>
+          <PageStatus loading={periods.loading} error={periods.error} onRetry={periods.reload} empty={!periods.loading && !periods.error && !(periods.data || []).length} title="No billing month" body="Open a month before you can record society-wide collections." />
+          {(periods.data || []).length > 0 && (
+            <Field label={t.periodSummary}>
+              <select className={control} value={periodId} onChange={(event) => setPeriodId(event.target.value)}>
+                <option value="">Pick a month</option>
+                {periods.data.map((period) => <option key={period.id} value={period.id}>{period.financial_year} · {period.period_month}</option>)}
+              </select>
+            </Field>
           )}
-        </div>
+          {summary.data && (
+            <div className="mt-3 grid gap-3 sm:grid-cols-3">
+              <Card label="Expected" value={inr(summary.data.expected)} />
+              <Card label="Collected" value={inr(summary.data.collected)} />
+              <Card label="Still due" value={inr(summary.data.outstanding)} />
+              <Card label="Paid flats" value={String(summary.data.paid_units ?? 0)} />
+              <Card label="Partial" value={String(summary.data.partial_units ?? 0)} />
+              <Card label="Unpaid flats" value={String(summary.data.unpaid_units ?? 0)} />
+            </div>
+          )}
+          {canPost && periodId && <CollectionRegister communityId={communityId} periodId={periodId} />}
+          {canPost && (
+            <div className="mt-4 space-y-4">
+              <SaveForm submitLabel="Open billing month" onSubmit={(data) => rpc("open_collection_period", {
+                p_community: communityId,
+                p_financial_year: data.year,
+                p_month: data.month,
+                p_due_on: data.due,
+                p_amount: data.amount,
+              }).then(() => periods.reload())}>
+                <Field label="Financial year"><input className={control} name="year" placeholder="2026-27" required /></Field>
+                <Field label="Month"><input className={control} type="date" name="month" required /></Field>
+                <Field label="Due date"><input className={control} type="date" name="due" required /></Field>
+                <Field label="Amount per flat"><input className={control} name="amount" inputMode="decimal" required /></Field>
+              </SaveForm>
+              {!!(demands.data || []).length && (
+                <SaveForm submitLabel="Record offline payment" onSubmit={(data) => rpc("record_collection", {
+                  p_demand: data.demand,
+                  p_amount: data.amount,
+                  p_paid_on: data.paid,
+                  p_mode: data.mode,
+                  p_bank_reference: data.reference,
+                  p_receipt_number: data.receipt,
+                  p_key: data.key || crypto.randomUUID(),
+                  p_bank_account: data.bank,
+                  p_fund_account: data.fund,
+                }).then(() => { summary.reload(); onPosted(); myDues.reload(); })}>
+                  <Field label="Flat bill">
+                    <select className={control} name="demand" required>
+                      {(demands.data || []).map((demand) => <option key={demand.id} value={demand.id}>{demand.units?.number} · {inr(Number(demand.expected_amount) + Number(demand.additional_amount))}</option>)}
+                    </select>
+                  </Field>
+                  <Field label="Amount received"><input className={control} name="amount" inputMode="decimal" required /></Field>
+                  <Field label="Payment date"><input className={control} type="date" name="paid" required /></Field>
+                  <Field label="Mode"><input className={control} name="mode" required /></Field>
+                  <Field label="Bank reference"><input className={control} name="reference" /></Field>
+                  <Field label="Receipt number"><input className={control} name="receipt" required /></Field>
+                  <Field label="Idempotency key"><input className={control} name="key" placeholder="Leave blank to generate one" /></Field>
+                  <AccountSelect label="Bank account" name="bank" accounts={accountsOf(ledger, "bank")} />
+                  <AccountSelect label="Society fund" name="fund" accounts={accountsOf(ledger, "fund")} />
+                </SaveForm>
+              )}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -845,7 +885,7 @@ function Expenses({ communityId, canPost, canReview, expenses, funds, banks, onP
             )}
             {canPost && expense.approval_status === "approved" && expense.payment_status !== "paid" && (
               <SaveForm confirmMessage="Pay this expense from the selected bank ledger?" submitLabel="Pay expense" onSubmit={(data) => rpc("pay_expense", { p_expense: expense.id, p_bank_account: data.bank, p_mode: data.mode, p_reference: data.reference, p_key: data.key || crypto.randomUUID() }).then(() => { expenses.reload(); onPosted(); })}>
-                <AccountSelect label="Bank ledger" name="bank" accounts={banks} />
+                <AccountSelect label="Bank account" name="bank" accounts={banks} />
                 <Field label="Mode"><input className={control} name="mode" required /></Field>
                 <Field label="Reference"><input className={control} name="reference" /></Field>
                 <Field label="Idempotency key"><input className={control} name="key" /></Field>
@@ -934,7 +974,7 @@ function Reconciliation({ communityId, banks, canPost }) {
         setPreview([]);
         existing.reload();
       }}>
-        <AccountSelect label="Bank ledger" name="bank" accounts={banks} />
+        <AccountSelect label="Bank account" name="bank" accounts={banks} />
         <Field label="Period start"><input className={control} type="date" name="start" required /></Field>
         <Field label="Period end"><input className={control} type="date" name="end" required /></Field>
         <Field label="Statement opening"><input className={control} name="opening" inputMode="decimal" required /></Field>
@@ -982,7 +1022,7 @@ function Reviews({ communityId, roles = [] }) {
     <div className="space-y-8">
       <div>
         <h2 className="mb-3 text-xl font-semibold">Audit observations</h2>
-        <p className="mb-3 text-sm text-slate-400">Independent findings. Auditors raise them; treasurers respond; auditors close them. Ledger rows are never edited from here.</p>
+        <p className="mb-3 text-sm text-slate-400">Independent findings. Auditors raise them; treasurers respond; auditors close them. Posted money moves are not edited from here.</p>
         <PageStatus loading={observations.loading} error={observations.error} onRetry={observations.reload} empty={!observations.loading && !observations.error && !(observations.data || []).length} title="No observations yet" body="Raise a finding when a statement, expense, or bank line needs clarification." />
         <ul className="space-y-2 text-sm">
           {(observations.data || []).map((row) => (
