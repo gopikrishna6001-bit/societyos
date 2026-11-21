@@ -18,6 +18,7 @@ import { Field, PageStatus, control, useLoad } from "./ui.jsx";
 import { brand } from "../brand.js";
 import { passwordRule, signInMessage } from "../lib/authPolicy.js";
 import { Mark, Wordmark } from "../brand/Mark.jsx";
+import { formatNoticeTime, notificationKind, notificationTarget } from "./notifications.js";
 import { copy, navLabel } from "./roleCopy.js";
 export default function Platform() {
   if (!isSupabaseConfigured) return <ConfigRequired />;
@@ -354,16 +355,6 @@ const TAB_ICONS = {
   amenities: ClipboardList,
 };
 
-function notificationTarget(note) {
-  if (note?.event_type === "payment_proof_submitted") return "collections";
-  if (note?.event_type?.startsWith("payment_proof")) return "finance";
-  if (note?.event_type?.includes("visitor")) return "visitors";
-  if (note?.event_type?.includes("ticket") || note?.event_type?.includes("concern")) return "concerns";
-  if (note?.event_type?.includes("meeting") || note?.event_type?.includes("resolution")) return "decisions";
-  if (note?.event_type?.includes("notice")) return "notices";
-  return "notifications";
-}
-
 function readViewMode(roles) {
   try {
     const saved = localStorage.getItem("sabha-view-mode");
@@ -475,13 +466,18 @@ function Shell({ email, community, communities, communityId, onCommunity, roles,
           </div>
           {menu === "notes" && (
             <div className="app-popover app-popover-wide" role="dialog" aria-label="Alerts">
-              <strong>Alerts</strong>
-              <PageStatus loading={notes.loading} error={notes.error} onRetry={notes.reload} empty={!notes.loading && !(notes.data || []).length} title="No alerts yet" body="Payment proofs, maintenance tickets, and meeting updates show here." />
+              <div className="app-popover-head">
+                <strong>Alerts</strong>
+                {unread > 0 && <span className="record-chip warn">{unread} new</span>}
+              </div>
+              <PageStatus loading={notes.loading} error={notes.error} onRetry={notes.reload} empty={!notes.loading && !(notes.data || []).length} title="No alerts yet" body="Guest check-ins, payment proofs, and tickets show here." />
               <ul className="app-note-list">
                 {(notes.data || []).slice(0, 8).map((note) => (
-                  <li key={note.id}>
+                  <li key={note.id} className={!note.read_at ? "unread" : undefined}>
                     <button type="button" onClick={() => openNote(note)}>
                       <span>
+                        <span className="demo-secondary">{notificationKind(note.event_type)} · {formatNoticeTime(note.created_at)}</span>
+                        <br />
                         <strong>{note.title}</strong>
                         <br />
                         <span className="demo-secondary">{note.body}</span>
@@ -491,7 +487,7 @@ function Shell({ email, community, communities, communityId, onCommunity, roles,
                   </li>
                 ))}
               </ul>
-              <button type="button" onClick={() => openPage("notifications")}>See all alerts</button>
+              <button type="button" onClick={() => openPage("notifications")}>Open inbox</button>
             </div>
           )}
           {menu === "profile" && (
@@ -568,7 +564,7 @@ function Screen({ page, communityId, roles, email, onSignOut, onOpen, view }) {
   if (page === "assistant") return <AssistantScreen communityId={communityId} />;
   if (page === "documents") return <DocumentsScreen communityId={communityId} roles={roles} />;
   if (page === "units") return <UnitsScreen communityId={communityId} />;
-  if (page === "notifications") return <NotificationsScreen communityId={communityId} />;
+  if (page === "notifications") return <NotificationsScreen communityId={communityId} onOpen={onOpen} />;
   if (page === "settings") return <SettingsScreen communityId={communityId} roles={roles} />;
   if (page === "history") return <HistoryScreen communityId={communityId} />;
   return <ProfileScreen email={email} roles={roles} onSignOut={onSignOut} />;

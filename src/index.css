@@ -1358,6 +1358,134 @@ button.metric {
   text-align: center;
 }
 
+.os-pass-qr {
+  width: 220px;
+  height: 220px;
+  border-radius: 16px;
+  background: #ffffff;
+  padding: 12px;
+}
+
+.os-scanner {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(3, 29, 39, 0.72);
+}
+
+.os-scanner-panel {
+  width: min(440px, 100%);
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 20px;
+  background: #ffffff;
+  color: var(--demo-ink, #031d27);
+}
+
+.os-scanner-panel header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.os-scanner-panel h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.os-scanner-video {
+  width: 100%;
+  max-height: 320px;
+  border-radius: 16px;
+  background: #031d27;
+  object-fit: cover;
+}
+
+.os-scanner-upload {
+  display: grid;
+  place-items: center;
+  min-height: 140px;
+  border: 1px dashed var(--line, #d5e2e6);
+  border-radius: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.os-scanner-upload input {
+  display: none;
+}
+
+.os-inbox-toolbar {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.os-inbox-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.os-inbox-item {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--line, #d5e2e6);
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.os-inbox-item.unread {
+  border-color: #0878e8;
+  background: linear-gradient(180deg, #f3f9ff 0%, #ffffff 70%);
+}
+
+.os-inbox-main {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.os-inbox-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--demo-secondary, #1f3d48);
+}
+
+.os-inbox-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.app-popover-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.app-note-list li.unread button {
+  background: #f3f9ff;
+}
+
 .os-pass-label {
   margin: 0;
   font-size: 0.75rem;

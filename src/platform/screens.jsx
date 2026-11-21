@@ -6,6 +6,10 @@ import { brand } from "../brand.js";
 import InviteResident from "./InviteResident.jsx";
 import { adminHomeShortcuts, residentHomeShortcuts, residentHouseholdLinks } from "./appNav.js";
 import { TICKET_CATEGORIES } from "./flowConstants.js";
+import GateScanner from "./GateScanner.jsx";
+import GuestPassCard from "./GuestPassCard.jsx";
+import { parsePassQrValue, passShareMessage, sharePassText } from "./guestPass.js";
+import { formatNoticeTime, notificationKind, notificationTarget } from "./notifications.js";
 import { copy, isFinanceOps, navLabel } from "./roleCopy.js";
 
 const EXPENSE_CATEGORIES = ["Security", "Housekeeping", "Electricity", "Water", "Lift maintenance", "Plumbing", "Civil repairs", "Gardening", "Administration", "Insurance", "Emergency repairs", "Other"];
@@ -1526,41 +1530,96 @@ function parseUnits(text, existing) {
   return { rows, errors };
 }
 
-function noteKind(eventType) {
-  if (String(eventType || "").startsWith("payment_proof")) return "Payment";
-  if (String(eventType || "").includes("ticket") || String(eventType || "").includes("concern")) return "Complaint";
-  if (String(eventType || "").includes("meeting") || String(eventType || "").includes("resolution") || String(eventType || "").includes("statement")) return "Meeting";
-  return "Alert";
-}
+export function NotificationsScreen({ communityId, onOpen }) {
+  const [filter, setFilter] = useState("all");
+  const query = useLoad(
+    () => rows(supabase.from("notifications").select("id,title,body,event_type,read_at,created_at").eq("community_id", communityId).order("created_at", { ascending: false }).limit(80)),
+    [communityId],
+  );
+  const list = query.data || [];
+  const unread = list.filter((note) => !note.read_at);
+  const filtered = list.filter((note) => {
+    if (filter === "unread") return !note.read_at;
+    if (filter === "guests") return String(note.event_type || "").includes("visitor");
+    if (filter === "bills") return String(note.event_type || "").includes("payment") || String(note.event_type || "").includes("proof");
+    if (filter === "maintenance") return String(note.event_type || "").includes("ticket") || String(note.event_type || "").includes("concern");
+    return true;
+  });
 
-export function NotificationsScreen({ communityId }) {
-  const query = useLoad(() => rows(supabase.from("notifications").select("id,title,body,event_type,read_at,created_at").eq("community_id", communityId).order("created_at", { ascending: false })), [communityId]);
+  const markRead = async (id) => {
+    await supabase.from("notifications").update({ read_at: new Date().toISOString() }).eq("id", id);
+    query.reload();
+  };
+
+  const markAllRead = async () => {
+    const ids = unread.map((note) => note.id);
+    if (!ids.length) return;
+    await supabase.from("notifications").update({ read_at: new Date().toISOString() }).in("id", ids);
+    query.reload();
+  };
+
+  const openNote = async (note) => {
+    if (!note.read_at) await markRead(note.id);
+    const target = notificationTarget(note);
+    if (target && target !== "notifications") onOpen?.(target);
+  };
+
   return (
     <section className="record">
       <header className="record-hero">
         <h1>Alerts</h1>
-        <p>Payment proofs, maintenance tickets, and meeting updates for you.</p>
+        <p>Guest check-ins, payment proofs, notices, and maintenance updates — open one to jump to the right place.</p>
       </header>
-      <div className="record-panel">
-        <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && !(query.data || []).length} title="No alerts yet" body="When a resident pays or raises a ticket, it shows up here." />
-        <ul className="record-attention">
-          {(query.data || []).map((note) => (
-            <li key={note.id}>
-              <div className="record-money-row">
-                <span>
-                  <span className="record-meta">{noteKind(note.event_type)} · {new Date(note.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</span>
-                  <br />
-                  <strong>{note.title}</strong>
-                  <br />
-                  <span className="record-muted">{note.body}</span>
-                </span>
-                {!note.read_at ? <span className="record-chip warn">New</span> : <span className="record-chip">Read</span>}
-              </div>
-              {!note.read_at && (
-                <button type="button" className="demo-text-button" onClick={() => supabase.from("notifications").update({ read_at: new Date().toISOString() }).eq("id", note.id).then(query.reload)}>Mark read</button>
-              )}
-            </li>
+
+      <div className="os-inbox-toolbar">
+        <div className="record-segments" role="tablist" aria-label="Alert filters">
+          {[
+            ["all", `All (${list.length})`],
+            ["unread", `Unread (${unread.length})`],
+            ["guests", "Guests"],
+            ["bills", "Bills"],
+            ["maintenance", "Maintenance"],
+          ].map(([id, label]) => (
+            <button key={id} type="button" role="tab" aria-selected={filter === id} onClick={() => setFilter(id)}>{label}</button>
           ))}
+        </div>
+        {!!unread.length && (
+          <button type="button" className="demo-primary" onClick={markAllRead}>Mark all read</button>
+        )}
+      </div>
+
+      <div className="record-panel os-inbox">
+        <PageStatus
+          loading={query.loading}
+          error={query.error}
+          onRetry={query.reload}
+          empty={!query.loading && !query.error && !filtered.length}
+          title={filter === "unread" ? "You’re caught up" : "No alerts yet"}
+          body={filter === "unread" ? "New guest, bill, and ticket updates will land here." : "When something needs you, it shows up here."}
+        />
+        <ul className="os-inbox-list">
+          {filtered.map((note) => {
+            const unreadNote = !note.read_at;
+            return (
+              <li key={note.id} className={unreadNote ? "os-inbox-item unread" : "os-inbox-item"}>
+                <button type="button" className="os-inbox-main" onClick={() => openNote(note)}>
+                  <span className="os-inbox-meta">
+                    <span className="record-chip">{notificationKind(note.event_type)}</span>
+                    <time dateTime={note.created_at}>{formatNoticeTime(note.created_at)}</time>
+                    {unreadNote && <span className="record-chip warn">New</span>}
+                  </span>
+                  <strong>{note.title}</strong>
+                  <span className="record-muted">{note.body}</span>
+                </button>
+                <div className="os-inbox-actions">
+                  {unreadNote && (
+                    <button type="button" onClick={() => markRead(note.id)}>Mark read</button>
+                  )}
+                  <button type="button" className="demo-primary" onClick={() => openNote(note)}>Open</button>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       </div>
     </section>
@@ -1789,64 +1848,45 @@ export function NoticesScreen({ communityId, roles }) {
   );
 }
 
-async function sharePassText(message) {
-  if (navigator.share) {
-    await navigator.share({ title: "Guest pass", text: message });
-    return "shared";
-  }
-  if (navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(message);
-    return "copied";
-  }
-  throw new Error("Share is not available on this device");
-}
-
 export function VisitorsScreen({ communityId, roles }) {
   const gate = roles.some((role) => ["committee_admin", "platform_admin", "treasurer"].includes(role));
   const [compose, setCompose] = useState(true);
   const [created, setCreated] = useState(null);
+  const [viewPass, setViewPass] = useState(null);
   const [gateMsg, setGateMsg] = useState("");
-  const [shareMsg, setShareMsg] = useState("");
+  const [gateError, setGateError] = useState("");
+  const [scanning, setScanning] = useState(false);
+  const [codeInput, setCodeInput] = useState("");
   const query = useLoad(
     () => rows(supabase.from("visitor_passes").select("id,visitor_name,visitor_phone,purpose,pass_code,status,expected_at,checked_in_at,checked_out_at,created_at").eq("community_id", communityId).order("created_at", { ascending: false }).limit(40)),
     [communityId],
   );
 
-  if (created) {
-    const code = created.pass_code;
-    const message = `${created.visitor_name}\nPass code: ${code}\nShow this code at the gate.`;
+  const redeemCode = async (raw, notes = null) => {
+    setGateError("");
+    setGateMsg("");
+    const code = parsePassQrValue(raw) || String(raw || "").trim().toUpperCase();
+    if (!code) throw new Error("Enter a pass code or scan a guest-pass QR.");
+    const result = await rpc("check_in_visitor_by_code", {
+      p_community: communityId,
+      p_code: code,
+      p_notes: notes,
+    });
+    setGateMsg(`${result?.visitor_name || "Guest"} checked in (${result?.pass_code || code}).`);
+    setCodeInput("");
+    query.reload();
+    return result;
+  };
+
+  if (created || viewPass) {
+    const pass = created || viewPass;
     return (
-      <section className="record">
-        <header className="record-hero">
-          <h1>Pass ready</h1>
-          <p>Show this to {created.visitor_name} at the gate, or share the code.</p>
-        </header>
-        <div className="os-pass-card">
-          <p className="os-pass-label">Pass code</p>
-          <p className="os-pass-code" aria-label={`Pass code ${code.split("").join(" ")}`}>{code}</p>
-          <p className="record-muted">Valid until checked in · {created.visitor_name}</p>
-        </div>
-        <div className="demo-actions">
-          <button
-            type="button"
-            className="demo-primary"
-            onClick={async () => {
-              setShareMsg("");
-              try {
-                const result = await sharePassText(message);
-                setShareMsg(result === "shared" ? "Shared." : "Copied to clipboard.");
-              } catch (cause) {
-                setShareMsg(cause?.message || "Could not share.");
-              }
-            }}
-          >
-            Share pass
-          </button>
-          <button type="button" onClick={() => { setCreated(null); setCompose(true); setShareMsg(""); }}>Create another</button>
-          <button type="button" onClick={() => { setCreated(null); setCompose(false); query.reload(); }}>Back to guests</button>
-        </div>
-        {shareMsg && <p role="status" className="record-meta">{shareMsg}</p>}
-      </section>
+      <GuestPassCard
+        code={pass.pass_code}
+        visitorName={pass.visitor_name}
+        onAnother={() => { setCreated(null); setViewPass(null); setCompose(true); }}
+        onDone={() => { setCreated(null); setViewPass(null); setCompose(false); query.reload(); }}
+      />
     );
   }
 
@@ -1854,30 +1894,57 @@ export function VisitorsScreen({ communityId, roles }) {
     <section className="record">
       <header className="record-hero">
         <h1>Guests</h1>
-        <p>Create a pass, share the code, and check guests in at the gate.</p>
+        <p>Create a QR pass, share it, and check guests in at the gate — same flow as OpenSociety.</p>
       </header>
 
       {gate && (
         <div className="record-panel">
           <h2>Gate desk</h2>
-          <p className="record-muted">Enter the pass code the guest shows you.</p>
-          <SaveForm
-            submitLabel="Check in by code"
-            onSubmit={async (data) => {
-              setGateMsg("");
-              const result = await rpc("check_in_visitor_by_code", {
-                p_community: communityId,
-                p_code: data.code,
-                p_notes: data.notes || null,
-              });
-              setGateMsg(`${result?.visitor_name || "Guest"} checked in (${result?.pass_code || data.code}).`);
-              query.reload();
+          <p className="record-muted">Scan the resident’s QR, paste `OS-PA:CODE`, or type the 6-character code.</p>
+          <div className="demo-actions">
+            <button type="button" className="demo-primary" onClick={() => setScanning(true)}>Scan QR</button>
+          </div>
+          <form
+            className="grid gap-3"
+            onSubmit={async (event) => {
+              event.preventDefault();
+              const data = Object.fromEntries(new FormData(event.currentTarget));
+              try {
+                await redeemCode(data.code, data.notes || null);
+                event.currentTarget.reset();
+              } catch (cause) {
+                setGateError(cause?.message || "Check-in failed.");
+              }
             }}
           >
-            <Field label="Pass code"><input className={control} name="code" required autoCapitalize="characters" placeholder="ABC123" /></Field>
+            <Field label="Pass code or QR payload">
+              <input
+                className={control}
+                name="code"
+                required
+                autoCapitalize="characters"
+                placeholder="ABC123 or OS-PA:ABC123"
+                value={codeInput}
+                onChange={(event) => setCodeInput(event.target.value)}
+              />
+            </Field>
             <Field label="Gate note"><input className={control} name="notes" placeholder="Optional" /></Field>
-          </SaveForm>
+            <button type="submit" className="demo-primary">Check in</button>
+          </form>
           {gateMsg && <p role="status" className="record-meta" style={{ color: "#0f766e" }}>{gateMsg}</p>}
+          {gateError && <p role="alert" className="auth-error">{gateError}</p>}
+          <GateScanner
+            open={scanning}
+            onClose={() => setScanning(false)}
+            onCode={async (code) => {
+              setScanning(false);
+              try {
+                await redeemCode(code);
+              } catch (cause) {
+                setGateError(cause?.message || "Check-in failed.");
+              }
+            }}
+          />
         </div>
       )}
 
@@ -1914,7 +1981,7 @@ export function VisitorsScreen({ communityId, roles }) {
 
       <div className="record-panel">
         <h2>Your passes</h2>
-        <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && !(query.data || []).length} title="No guest passes" body="Create a pass, then share the code with your guest." />
+        <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && !(query.data || []).length} title="No guest passes" body="Create a pass to get a QR code and gate entry code." />
         <ul className="record-attention">
           {(query.data || []).map((pass) => (
             <li key={pass.id}>
@@ -1929,11 +1996,14 @@ export function VisitorsScreen({ communityId, roles }) {
               <p className="record-meta">{pass.status}{pass.checked_in_at ? ` · in ${new Date(pass.checked_in_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}` : ""}</p>
               <div className="demo-actions" style={{ marginTop: 8 }}>
                 {pass.status === "expected" && (
+                  <button type="button" className="demo-primary" onClick={() => setViewPass(pass)}>Show QR</button>
+                )}
+                {pass.status === "expected" && (
                   <button
                     type="button"
                     onClick={async () => {
                       try {
-                        await sharePassText(`${pass.visitor_name}\nPass code: ${pass.pass_code}\nShow this code at the gate.`);
+                        await sharePassText(passShareMessage({ visitorName: pass.visitor_name, code: pass.pass_code }));
                       } catch { /* ignore */ }
                     }}
                   >
@@ -1944,7 +2014,7 @@ export function VisitorsScreen({ communityId, roles }) {
                   <button type="button" onClick={() => rpc("cancel_visitor_pass", { p_pass: pass.id }).then(query.reload)}>Cancel</button>
                 )}
                 {gate && pass.status === "expected" && (
-                  <button type="button" className="demo-primary" onClick={() => rpc("check_in_visitor", { p_pass: pass.id }).then(query.reload)}>Check in</button>
+                  <button type="button" onClick={() => rpc("check_in_visitor", { p_pass: pass.id }).then(query.reload)}>Check in</button>
                 )}
                 {gate && pass.status === "checked_in" && (
                   <button type="button" className="demo-primary" onClick={() => rpc("check_out_visitor", { p_pass: pass.id }).then(query.reload)}>Check out</button>
