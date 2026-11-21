@@ -15,8 +15,8 @@ Architecture shell/demo separation done; preview verified.
 | --- | --- | --- |
 | Branch preview | https://cursor-sabha-product-deliver.societyos.pages.dev | **Verified** — commit `07e0b2a` deployed; login UI readable; 0 console errors ([Browser-test SABHA preview](bc-d5454e17-59c9-5943-9227-fa169464b6e3)) |
 | Commit preview | https://20156864.societyos.pages.dev | Same deploy as branch tip |
-| Production | https://societyos.pages.dev | **Still on `main` (`782274c`)** — **15 commits behind** this PR. iPhone home-screen apps keep the old cached icon until removed and re-added after production promote. |
-| Hosted Supabase | `wzchqxwwezklxsxmjvyt` | Reachable; delivery migrations **not applied** without authorization |
+| Production | https://societyos.pages.dev | Frontend still on `main` until PR #10 merges. Hosted DB now has delivery RPCs (`action_centre`, etc.). iPhone home-screen apps keep the old cached icon until removed and re-added after UI promote. |
+| Hosted Supabase | `wzchqxwwezklxsxmjvyt` | Delivery migrations applied 21 Nov 2026 (Asia/Calcutta): payment proofs, action centre, notices/visitors/amenities, governance ops, period registers, my_memberships |
 
 ### Preview failure root cause (resolved)
 
@@ -85,4 +85,4 @@ Until PR #10 is merged (or production is pointed at this branch) **and** hosted 
 
 ## Exact next implementation task
 
-User authorization to merge/promote PR #10 to production + apply hosted migrations. Until then, use the branch preview URL. Expense workflow E2E continues on disposable DB.
+Merge PR #10 so production Pages picks up the polished `app-shell` UI (navy chrome, designed cards/empty states). Hosted migrations are already applied — refresh production Home to clear the old `action_centre` schema error.

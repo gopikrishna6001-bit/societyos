@@ -357,23 +357,32 @@ textarea {
 }
 
 .app-tabbar a,
-.app-sidebar a {
+.app-tabbar button,
+.app-sidebar a,
+.app-sidebar button {
   display: flex;
   align-items: center;
   justify-content: center;
   min-width: 0;
+  border: 0;
+  background: transparent;
   color: #ffffff;
   text-decoration: none;
+  cursor: pointer;
+  font: inherit;
 }
 
-.app-tabbar a {
+.app-tabbar a,
+.app-tabbar button {
   flex-direction: column;
   gap: 4px;
   font-size: 11px;
 }
 
 .app-tabbar a[aria-current="page"],
-.app-sidebar a[aria-current="page"] {
+.app-tabbar button[aria-current="page"],
+.app-sidebar a[aria-current="page"],
+.app-sidebar button[aria-current="page"] {
   color: var(--demo-cyan);
 }
 
@@ -382,16 +391,110 @@ textarea {
   gap: 4px;
 }
 
-.app-sidebar a {
+.app-sidebar a,
+.app-sidebar button {
   justify-content: flex-start;
   gap: 10px;
   min-height: 44px;
   padding: 0 12px;
   border-radius: 12px;
+  text-align: left;
 }
 
-.app-sidebar a[aria-current="page"] {
+.app-sidebar a[aria-current="page"],
+.app-sidebar button[aria-current="page"] {
   background: rgba(0, 212, 232, 0.16);
+}
+
+.app-more-sheet {
+  position: absolute;
+  right: 8px;
+  bottom: calc(100% + 8px);
+  z-index: 40;
+  display: grid;
+  gap: 4px;
+  width: min(280px, calc(100vw - 24px));
+  max-height: min(60vh, 420px);
+  overflow: auto;
+  padding: 10px;
+  border-radius: 16px;
+  background: #ffffff;
+  color: var(--demo-ink);
+  box-shadow: 0 12px 28px rgba(3, 29, 39, 0.16);
+}
+
+.app-more-sheet button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 12px;
+  background: #f3f7f8;
+  color: var(--demo-ink);
+  padding: 0 12px;
+  text-align: left;
+  font: inherit;
+}
+
+.app-more-sheet button[aria-current="page"] {
+  background: rgba(8, 120, 232, 0.12);
+  color: var(--demo-blue);
+  font-weight: 600;
+}
+
+.live-panel {
+  margin-top: 12px;
+  background: #ffffff;
+  border: 1px solid var(--demo-line);
+  border-radius: 16px;
+  padding: 14px;
+  box-shadow: 0 8px 20px rgba(3, 29, 39, 0.05);
+}
+
+.live-actions {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 12px 0 4px;
+}
+
+.live-actions button {
+  min-height: 48px;
+  border-radius: 14px;
+  border: 1px solid var(--demo-line);
+  background: #ffffff;
+  color: var(--demo-navy);
+  padding: 0 12px;
+  font-weight: 600;
+}
+
+.live-actions button.primary {
+  background: var(--demo-blue);
+  border-color: var(--demo-blue);
+  color: #ffffff;
+}
+
+.live-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.live-list li + li {
+  border-top: 1px solid var(--demo-line);
+}
+
+.live-list button.row,
+.live-list .row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font: inherit;
 }
 
 .card ul,
@@ -655,6 +758,15 @@ textarea {
   border-radius: 16px;
   padding: 14px;
   box-shadow: 0 8px 20px rgba(3, 29, 39, 0.05);
+}
+
+button.metric {
+  display: block;
+  width: 100%;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
 }
 
 .metric span,

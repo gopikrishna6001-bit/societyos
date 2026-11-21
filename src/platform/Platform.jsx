@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { Bell, Building2, Ellipsis, Home, Landmark, LifeBuoy } from "lucide-react";
 import { isSupabaseConfigured, rpc, rows, supabase, withTimeout } from "./api.js";
 import { explain } from "./api.js";
 import { isDemoEmail } from "./demo/data.js";
@@ -119,9 +120,9 @@ function DemoAccounts({ onPick }) {
   }, []);
   if (!accounts) return null;
   return (
-    <section className="mt-4 border border-slate-800 bg-white p-4">
+    <section className="live-panel" style={{ marginTop: 16 }}>
       <h2 className="font-display text-lg font-semibold">Isolated demo accounts</h2>
-      <p className="mt-1 text-sm text-slate-400">
+      <p className="mt-1 text-sm demo-secondary">
         These credentials are for the Palm Court fixture only. After sign-in, open{" "}
         <Link className="font-semibold text-[#0878E8]" to="/demo">/demo</Link>{" "}
         to see device-local sample figures. Live SABHA at <code>/</code> never posts demo money to a ledger.
@@ -132,10 +133,11 @@ function DemoAccounts({ onPick }) {
           <button
             key={account.email}
             type="button"
-            className="min-h-12 border border-slate-800 px-3 text-left text-sm"
+            className="demo-text-button"
+            style={{ width: "100%", textAlign: "left", minHeight: 48 }}
             onClick={() => onPick(account)}
           >
-            {account.role}<span className="mt-0.5 block text-slate-400">{account.email}</span>
+            {account.role}<span className="mt-0.5 block demo-secondary">{account.email}</span>
           </button>
         ))}
       </div>
@@ -381,57 +383,123 @@ function roleLabel(roles) {
   return roles.map((role) => names[role] || role).join(" · ");
 }
 
+const TAB_ICONS = {
+  home: Home,
+  finance: Landmark,
+  concerns: LifeBuoy,
+  decisions: Building2,
+};
+
 function Shell({ email, community, communities, communityId, onCommunity, roles, onSignOut }) {
   const items = navigation(roles);
   const primary = PRIMARY.filter(([id]) => canSee(roles, id));
   const overflow = MORE.filter(([id]) => canSee(roles, id));
-  const [page, setPage] = useState(items[0][0]);
-  const [moreOpen, setMoreOpen] = useState(false);
+  const [page, setPage] = useState(items[0]?.[0] || "home");
+  const [menu, setMenu] = useState("");
   const unique = [...new Map(communities.map((row) => [row.community_id, row])).values()];
-  const openPage = (id) => { setPage(id); setMoreOpen(false); };
-  const itemClass = (id) => `min-h-12 w-full px-3 py-2 text-left text-sm text-[#252525] ${page === id ? "bg-[#EAE6DE] font-semibold" : ""}`;
-  const current = page === "decisions" ? "decisions" : page;
+  const openPage = (id) => { setPage(id); setMenu(""); };
+  const current = ["collections", "expenses", "funds", "reconciliation", "reviews", "transactions"].includes(page) ? "finance" : page;
+  const initials = String(email || "?")
+    .split("@")[0]
+    .split(/[._-]/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("") || "?";
+
   return (
-    <div className="min-h-screen bg-[#F7F5F0] text-[#252525] lg:grid lg:grid-cols-[220px_minmax(0,1fr)]">
-      <nav className="hidden border-r border-[#031D27]/15 bg-white p-4 lg:block" aria-label="Primary">
-        <Wordmark />
-        <p className="mt-2 text-sm text-[#5C5852]">{brand.tagline}</p>
-        <p className="mt-3 font-display text-lg font-semibold text-[#031D27]">{community?.name}</p>
-        <p className="text-sm text-[#5C5852]">{roleLabel(roles)}</p>
-        <div className="mt-4 grid gap-1">
-          {items.map(([id, label]) => (
-            <button key={id} type="button" className={itemClass(id)} aria-current={page === id ? "page" : undefined} onClick={() => openPage(id)}>{label}</button>
-          ))}
+    <div className="app-shell">
+      <aside className="app-sidebar">
+        <div className="app-brand">
+          <Mark size={40} />
+          <strong>{brand.name}</strong>
         </div>
-      </nav>
-      <div className="pb-[calc(4.75rem+env(safe-area-inset-bottom))] lg:pb-8">
-        <header className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-[#031D27]/15 bg-[#F7F5F0]/95 px-4 py-3 backdrop-blur">
-          <div className="min-w-0">
-            <p className="print:hidden"><Wordmark /></p>
-            <p className="hidden text-sm font-semibold print:block">{brand.name} · {brand.promise}</p>
-            <p className="mt-1 truncate font-display text-lg font-semibold leading-tight text-[#031D27]">{community?.name}</p>
-            <p className="truncate text-sm text-[#5C5852]">{roleLabel(roles)} · {email}</p>
+        <p>{brand.tagline}</p>
+        <p className="demo-secondary" style={{ color: "#d6f6fa", marginTop: 8 }}>{community?.name}</p>
+        <p className="demo-secondary" style={{ color: "#b7ecef", fontSize: 12 }}>{roleLabel(roles)}</p>
+        <nav aria-label="Primary" style={{ marginTop: 16 }}>
+          {items.map(([id, label]) => (
+            <button key={id} type="button" aria-current={page === id ? "page" : undefined} onClick={() => openPage(id)}>
+              <span>{label}</span>
+            </button>
+          ))}
+        </nav>
+      </aside>
+      <div className="app-column">
+        <header className="app-header">
+          <div className="app-header-title">
+            <span className="app-header-mark"><Mark size={36} /></span>
+            <span>
+              <strong>{brand.name}</strong>
+              <small>{community?.name || "Community"}</small>
+            </span>
           </div>
-          {unique.length > 1 && (
-            <select className={`${control} max-w-[46%]`} value={communityId} onChange={(event) => onCommunity(event.target.value)} aria-label="Community">
-              {unique.map((row) => <option key={row.community_id} value={row.community_id}>{row.communities?.name}</option>)}
-            </select>
+          <div className="app-header-actions">
+            {unique.length > 1 && (
+              <select
+                className={control}
+                style={{ width: "auto", minHeight: 40, padding: "0 10px", borderRadius: 999, maxWidth: "40vw" }}
+                value={communityId}
+                onChange={(event) => onCommunity(event.target.value)}
+                aria-label="Community"
+              >
+                {unique.map((row) => (
+                  <option key={row.community_id} value={row.community_id}>{row.communities?.name}</option>
+                ))}
+              </select>
+            )}
+            <button type="button" aria-label="Notifications" aria-expanded={menu === "notes"} onClick={() => setMenu((value) => (value === "notes" ? "" : "notes"))}>
+              <Bell size={18} aria-hidden="true" />
+            </button>
+            <button type="button" className="app-avatar" aria-label="Profile" aria-expanded={menu === "profile"} onClick={() => setMenu((value) => (value === "profile" ? "" : "profile"))}>
+              {initials}
+            </button>
+          </div>
+          {menu === "notes" && (
+            <div className="app-popover" role="dialog" aria-label="Notifications">
+              <p className="demo-secondary">Open Notifications from More for the full list.</p>
+              <button type="button" onClick={() => openPage("notifications")}>Open notifications</button>
+            </div>
+          )}
+          {menu === "profile" && (
+            <div className="app-popover" role="dialog" aria-label="Profile">
+              <p><strong>{roleLabel(roles)}</strong><br />{email}</p>
+              <button type="button" onClick={() => openPage("profile")}>Profile</button>
+              <button type="button" onClick={onSignOut}>Sign out</button>
+            </div>
           )}
         </header>
-        <main className="mx-auto w-full max-w-3xl px-4 py-5 lg:max-w-5xl">
+        <p className="app-note">{roleLabel(roles)} · {email}</p>
+        <main className="app-main">
           <Screen page={page} communityId={communityId} roles={roles} email={email} onSignOut={onSignOut} onOpen={openPage} />
         </main>
       </div>
-      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-[#031D27]/15 bg-white text-[#252525] pb-[env(safe-area-inset-bottom)] lg:hidden" aria-label="Mobile">
-        <div className="grid grid-cols-5">
-          {primary.map(([id, label]) => (
-            <button key={id} type="button" aria-current={current === id ? "page" : undefined} className={`min-h-12 px-1 py-2 text-center text-xs leading-tight ${current === id ? "font-semibold text-[#0878E8]" : ""}`} onClick={() => openPage(id)}>{label}</button>
-          ))}
-          <button type="button" className={`min-h-12 px-1 py-2 text-center text-xs ${moreOpen || overflow.some(([id]) => id === page) ? "font-semibold text-[#0878E8]" : ""}`} aria-expanded={moreOpen} onClick={() => setMoreOpen((open) => !open)}>More</button>
-        </div>
-        {moreOpen && (
-          <div className="absolute bottom-full right-2 mb-2 grid max-h-80 w-56 gap-1 overflow-auto border border-[#031D27]/20 bg-white p-2 shadow-lg">
-            {overflow.map(([id, label]) => <button key={id} type="button" className={itemClass(id)} onClick={() => openPage(id)}>{label}</button>)}
+      <nav className="app-tabbar" aria-label="Mobile">
+        {primary.map(([id, label]) => {
+          const Icon = TAB_ICONS[id] || Home;
+          return (
+            <button key={id} type="button" aria-current={current === id ? "page" : undefined} onClick={() => openPage(id)}>
+              <Icon size={20} aria-hidden="true" />
+              <span>{label}</span>
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          aria-current={menu === "more" || overflow.some(([id]) => id === page) ? "page" : undefined}
+          aria-expanded={menu === "more"}
+          onClick={() => setMenu((value) => (value === "more" ? "" : "more"))}
+        >
+          <Ellipsis size={20} aria-hidden="true" />
+          <span>More</span>
+        </button>
+        {menu === "more" && (
+          <div className="app-more-sheet" role="dialog" aria-label="More">
+            {overflow.map(([id, label]) => (
+              <button key={id} type="button" aria-current={page === id ? "page" : undefined} onClick={() => openPage(id)}>
+                {label}
+              </button>
+            ))}
           </div>
         )}
       </nav>

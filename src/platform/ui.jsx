@@ -1,22 +1,36 @@
 import { useEffect, useState } from "react";
 import { explain } from "./api.js";
 
+function isSchemaGap(error) {
+  const text = String(error || "");
+  return /schema cache|could not find the (function|table)|does not exist/i.test(text);
+}
+
 export function PageStatus({ loading, error, onRetry, empty, title, body }) {
-  if (loading) return <p className="text-[#5C5852]">Loading…</p>;
+  if (loading) return <p className="demo-secondary">Loading…</p>;
   if (error) {
+    if (isSchemaGap(error)) {
+      return (
+        <div className="demo-empty" role="status">
+          <p>{title || "Nothing recorded yet"}</p>
+          <p>{body || "This society record is empty for now. When the committee posts it, it appears here."}</p>
+          {onRetry && <button type="button" className="demo-text-button" onClick={onRetry}>Retry</button>}
+        </div>
+      );
+    }
     return (
-      <div role="alert" className="border border-red-300 bg-red-50 p-4 text-[#252525]">
-        <p className="font-semibold text-red-800">Could not load this page</p>
-        <p className="mt-1 text-sm text-[#5C5852]">{error}</p>
-        {onRetry && <button type="button" className="mt-3 min-h-12 border border-[#031D27]/30 bg-white px-3 py-2 text-sm" onClick={onRetry}>Retry</button>}
+      <div role="alert" className="live-panel" style={{ borderColor: "#f1c4c4", background: "#fff7f7" }}>
+        <p className="font-semibold" style={{ color: "#9f1239" }}>Could not load this page</p>
+        <p className="mt-1 text-sm demo-secondary">{error}</p>
+        {onRetry && <button type="button" className="demo-text-button" style={{ marginTop: 12 }} onClick={onRetry}>Retry</button>}
       </div>
     );
   }
   if (empty) {
     return (
-      <div className="border border-[#031D27]/20 bg-white p-4 text-[#252525]">
-        <p className="font-semibold">{title || "Nothing here yet"}</p>
-        {body && <p className="mt-1 text-sm text-[#5C5852]">{body}</p>}
+      <div className="demo-empty" role="status">
+        <p>{title || "Nothing here yet"}</p>
+        {body && <p>{body}</p>}
       </div>
     );
   }
@@ -40,20 +54,20 @@ export function useLoad(loader, deps) {
 export function Field({ label, children }) {
   return (
     <label className="block text-sm">
-      <span className="mb-1 block text-slate-400">{label}</span>
+      <span className="mb-1 block demo-secondary">{label}</span>
       {children}
     </label>
   );
 }
 
-export const control = "w-full min-h-12 rounded-sm border border-[#031D27]/30 bg-white px-3 py-3 text-base text-[#252525]";
+export const control = "w-full min-h-12 rounded-[12px] border border-[#d5e2e6] bg-white px-3 py-3 text-base text-[#031D27]";
 
 export function SaveForm({ onSubmit, submitLabel = "Save", confirmMessage, children }) {
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   return (
     <form
-      className="mt-4 grid gap-3 border border-slate-800 bg-white p-4"
+      className="mt-4 grid gap-3 live-panel"
       onSubmit={async (event) => {
         event.preventDefault();
         if (confirmMessage && !window.confirm(confirmMessage)) return;
@@ -71,8 +85,8 @@ export function SaveForm({ onSubmit, submitLabel = "Save", confirmMessage, child
       }}
     >
       {children}
-      {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
-      <button type="submit" disabled={pending} className="min-h-12 w-full bg-[#0878E8] px-3 py-3 font-semibold text-white disabled:opacity-60">
+      {error && <p role="alert" className="text-sm" style={{ color: "#9f1239" }}>{error}</p>}
+      <button type="submit" disabled={pending} className="demo-primary disabled:opacity-60">
         {pending ? "Saving…" : submitLabel}
       </button>
     </form>

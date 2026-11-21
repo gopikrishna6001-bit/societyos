@@ -72,53 +72,65 @@ export function HomeScreen({ communityId, roles = [], onOpen }) {
   const periodOutstanding = Number(summary.data?.outstanding || 0);
   const progress = billed > 0 ? Math.round((collected / billed) * 1000) / 10 : 0;
 
-  return (
-    <section>
-      <h2 className="mb-1 font-display text-2xl font-semibold">Action centre</h2>
-      <p className="mb-4 text-sm text-slate-400">Live society records only. Every figure opens the working register — nothing here is decorative.</p>
+  const periodLabel = selectedPeriod
+    ? `${selectedPeriod.financial_year} · ${selectedPeriod.period_month}`
+    : "No billing period opened yet";
 
-      <div className="mb-6 grid gap-2 sm:grid-cols-2">
-        <button type="button" className="min-h-12 bg-[#0878E8] px-3 font-semibold text-white" onClick={() => onOpen?.("collections")}>Pay / verify maintenance</button>
-        <button type="button" className="min-h-12 border border-slate-600 px-3 font-semibold" onClick={() => onOpen?.("concerns")}>Raise concern</button>
-        <button type="button" className="min-h-12 border border-slate-600 px-3 font-semibold" onClick={() => onOpen?.("notices")}>Notices</button>
-        <button type="button" className="min-h-12 border border-slate-600 px-3 font-semibold" onClick={() => onOpen?.("decisions")}>Meetings &amp; votes</button>
+  return (
+    <section className="dash">
+      <header className="dash-welcome">
+        <h1>{financial ? "Society home" : "Your home"}</h1>
+        <p>{brand.promise} · {periodLabel}</p>
+      </header>
+
+      <div className="live-actions">
+        <button type="button" className="primary" onClick={() => onOpen?.("collections")}>Pay / verify maintenance</button>
+        <button type="button" onClick={() => onOpen?.("concerns")}>Raise concern</button>
+        <button type="button" onClick={() => onOpen?.("notices")}>Notices</button>
+        <button type="button" onClick={() => onOpen?.("decisions")}>Meetings &amp; votes</button>
       </div>
 
-      <h3 className="mb-2 font-semibold">Needs your attention</h3>
-      <PageStatus loading={actions.loading} error={actions.error} onRetry={actions.reload} empty={!actions.loading && !actions.error && actionItems.length === 0} title="Nothing waiting for you" body="When dues, proofs, concerns or meetings need attention, they appear here." />
-      {!!actionItems.length && (
-        <ul className="mb-6 border border-slate-800 bg-white">
-          {actionItems.map((item) => (
-            <li key={`${item.module}-${item.id}`} className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 px-3 py-3 last:border-b-0">
-              <div>
-                <p className="font-semibold">{item.title}</p>
-                <p className="text-sm text-slate-400">{item.module} · {item.status}{item.due_on ? ` · due ${item.due_on}` : ""}</p>
-              </div>
-              <button type="button" className="min-h-10 border border-slate-600 px-3 text-sm font-semibold" onClick={() => onOpen?.(item.page || "home")}>{item.action || "Open"}</button>
-            </li>
-          ))}
-        </ul>
-      )}
+      <article className="card">
+        <h2>Needs your attention</h2>
+        <PageStatus loading={actions.loading} error={actions.error} onRetry={actions.reload} empty={!actions.loading && !actions.error && actionItems.length === 0} title="Nothing waiting for you" body="When dues, proofs, concerns or meetings need attention, they appear here." />
+        {!!actionItems.length && (
+          <ul className="live-list">
+            {actionItems.map((item) => (
+              <li key={`${item.module}-${item.id}`}>
+                <button type="button" className="row" onClick={() => onOpen?.(item.page || "home")}>
+                  <span>
+                    <strong>{item.title}</strong>
+                    <br />
+                    <span className="demo-secondary">{item.module} · {item.status}{item.due_on ? ` · due ${item.due_on}` : ""}</span>
+                  </span>
+                  <span className="demo-status">{item.action || "Open"}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </article>
 
       {!!outstanding.length && (
-        <div className="mb-6 border border-amber-700/40 bg-white p-3">
-          <h3 className="font-semibold">Your outstanding dues</h3>
-          <ul className="mt-2 space-y-2 text-sm">
+        <article className="card">
+          <h2>Your outstanding dues</h2>
+          <ul className="live-list">
             {outstanding.map((row) => (
-              <li key={row.demand_id} className="flex justify-between gap-3">
+              <li key={row.demand_id} className="row">
                 <span>Unit {row.unit_number} · {row.financial_year} · due {row.due_on}</span>
                 <strong className="tabular">{inr(row.outstanding_amount)}</strong>
               </li>
             ))}
           </ul>
-          <button type="button" className="mt-3 min-h-12 w-full bg-[#0878E8] px-3 font-semibold text-white" onClick={() => onOpen?.("collections")}>Submit payment proof</button>
-        </div>
+          <div className="demo-actions">
+            <button type="button" className="demo-primary" onClick={() => onOpen?.("collections")}>Submit payment proof</button>
+          </div>
+        </article>
       )}
 
       {financial && (
-        <div className="mb-6">
-          <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
-            <h3 className="font-semibold">Period control</h3>
+        <>
+          <div className="live-panel" style={{ marginTop: 12 }}>
             <Field label="Billing period">
               <select className={control} value={periodId} onChange={(event) => setPeriodId(event.target.value)} aria-label="Billing period">
                 {(periods.data || []).length === 0 && <option value="">No period opened</option>}
@@ -130,144 +142,144 @@ export function HomeScreen({ communityId, roles = [], onOpen }) {
           </div>
           <PageStatus loading={periods.loading || summary.loading} error={periods.error || summary.error} onRetry={() => { periods.reload(); summary.reload(); }} empty={!periods.loading && !(periods.data || []).length} title="No collection period" body="Open a billing month under Collections before period metrics appear." />
           {selectedPeriod && (
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              <MetricButton label="Collected" value={inr(collected)} hint={`${progress}% of billed`} onClick={() => onOpen?.("collections")} />
-              <MetricButton label="Outstanding" value={inr(periodOutstanding)} hint="Unit register (authorized)" onClick={() => onOpen?.("collections")} />
-              <MetricButton label="Expenses" value={inr(expenseTotal)} hint={selectedPeriod.period_month} onClick={() => onOpen?.("expenses")} />
-              <MetricButton label="Bank balance" value={inr(bankTotal)} hint="Reconciliation" onClick={() => onOpen?.("reconciliation")} />
-              <MetricButton label="Corpus" value={inr(corpusTotal)} hint="Fund statement" onClick={() => onOpen?.("funds")} />
-              <MetricButton label="Reserve / other" value={inr(reserveTotal)} hint="Fund statement" onClick={() => onOpen?.("funds")} />
+            <div className="metric-grid">
+              <button type="button" className="metric" onClick={() => onOpen?.("collections")}><span>Collected</span><strong>{inr(collected)}</strong></button>
+              <button type="button" className="metric" onClick={() => onOpen?.("collections")}><span>Outstanding</span><strong>{inr(periodOutstanding)}</strong></button>
+              <button type="button" className="metric" onClick={() => onOpen?.("expenses")}><span>Expenses</span><strong>{inr(expenseTotal)}</strong></button>
+              <button type="button" className="metric" onClick={() => onOpen?.("reconciliation")}><span>Bank balance</span><strong>{inr(bankTotal)}</strong></button>
+              <button type="button" className="metric" onClick={() => onOpen?.("funds")}><span>Corpus</span><strong>{inr(corpusTotal)}</strong></button>
+              <button type="button" className="metric" onClick={() => onOpen?.("funds")}><span>Reserve / other</span><strong>{inr(reserveTotal)}</strong></button>
             </div>
           )}
           {selectedPeriod && (
-            <button type="button" className="mt-3 min-h-12 w-full border border-slate-600 px-3 text-left" onClick={() => onOpen?.("collections")}>
-              <span className="block text-sm text-slate-400">Collection progress · click for register</span>
-              <span className="mt-1 block h-2 w-full bg-slate-800">
-                <span className="block h-2 bg-[#00D4E8]" style={{ width: `${Math.min(progress, 100)}%` }} />
-              </span>
-              <span className="mt-2 text-sm">{inr(collected)} of {inr(billed)} billed · due {selectedPeriod.due_on}</span>
-            </button>
+            <article className="card">
+              <h2>Collection progress</h2>
+              <div className="demo-meter" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress} aria-label="Collection progress">
+                <span style={{ "--demo-scale": Math.min(progress, 100) / 100 }} />
+              </div>
+              <p>{inr(collected)} of {inr(billed)} billed · due {selectedPeriod.due_on}</p>
+              <div className="demo-actions">
+                <button type="button" onClick={() => onOpen?.("collections")}>Open collection register</button>
+              </div>
+            </article>
           )}
           {selectedPeriod && (
-            <div className="mt-4 border border-slate-800 bg-white p-3">
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="font-semibold">Income and expenditure · {selectedPeriod.period_month}</h3>
-                <button type="button" className="text-sm font-semibold text-[#0878E8]" onClick={() => onOpen?.("expenses")}>Open expenses</button>
+            <article className="card">
+              <h2>Income and expenditure</h2>
+              <div className="metric-grid">
+                <div className="metric"><span>Maintenance collected</span><strong>{inr(collected)}</strong></div>
+                <div className="metric"><span>Expenses in period</span><strong>{inr(expenseTotal)}</strong></div>
               </div>
-              <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-                <div className="border border-slate-800 p-3"><dt className="text-slate-400">Maintenance collected</dt><dd className="tabular text-lg font-semibold">{inr(collected)}</dd></div>
-                <div className="border border-slate-800 p-3"><dt className="text-slate-400">Expenses in period</dt><dd className="tabular text-lg font-semibold">{inr(expenseTotal)}</dd></div>
-              </dl>
-              <PageStatus loading={periodExpenses.loading} error={periodExpenses.error} onRetry={periodExpenses.reload} empty={!periodExpenses.loading && !asList(periodExpenses.data).length} title="No expenses in this period" body="Create an expense under Expenses — the chart updates from posted records." />
-              <ul className="mt-2 space-y-2 text-sm">
+              <PageStatus loading={periodExpenses.loading} error={periodExpenses.error} onRetry={periodExpenses.reload} empty={!periodExpenses.loading && !asList(periodExpenses.data).length} title="No expenses in this period" body="Posted expenses appear here after the treasurer records them." />
+              <ul className="live-list">
                 {asList(periodExpenses.data).slice(0, 5).map((row) => (
                   <li key={row.expense_id}>
-                    <button type="button" className="w-full border border-slate-800 bg-white px-3 py-2 text-left" onClick={() => onOpen?.("expenses")}>
-                      {row.occurred_on} · {row.expense_number} · {row.category} · {inr(row.amount)}
+                    <button type="button" className="row" onClick={() => onOpen?.("expenses")}>
+                      <span>{row.occurred_on} · {row.expense_number} · {row.category}</span>
+                      <strong className="tabular">{inr(row.amount)}</strong>
                     </button>
                   </li>
                 ))}
               </ul>
-            </div>
+            </article>
           )}
-        </div>
+        </>
       )}
 
       {!financial && (
-        <div className="mb-6 border border-slate-800 bg-white p-3 text-sm text-slate-400">
-          Community fund totals and unit collection registers are available to treasurer, committee and auditor roles. Your own dues and public notices remain available below.
-        </div>
+        <article className="card">
+          <h2>Community books</h2>
+          <p className="demo-secondary">Fund totals and unit registers stay with treasurer, committee and auditor roles. Your dues, notices and concerns stay available here.</p>
+        </article>
       )}
 
       <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && funds.length === 0 && !financial} title="No fund balances yet" body="When the treasurer opens funds and posts balances, community totals appear for authorized roles." />
       {!!maintenance.length && financial && (
-        <button type="button" className="mb-4 w-full border border-slate-800 bg-white px-3 py-3 text-left" onClick={() => onOpen?.("funds")}>
-          <span className="text-sm text-slate-400">Maintenance funds · open statement</span>
-          <span className="mt-1 block tabular text-xl font-semibold">{inr(maintenance.reduce((sum, row) => sum + Number(row.closing || 0), 0))}</span>
+        <button type="button" className="metric" style={{ width: "100%", textAlign: "left" }} onClick={() => onOpen?.("funds")}>
+          <span>Maintenance funds</span>
+          <strong>{inr(maintenance.reduce((sum, row) => sum + Number(row.closing || 0), 0))}</strong>
         </button>
       )}
 
       {financial && (
-        <div className="mb-6">
-          <div className="mb-2 flex items-center justify-between gap-3">
-            <h3 className="font-semibold">Recent ledger transactions</h3>
-            <button type="button" className="text-sm font-semibold text-[#0878E8]" onClick={() => onOpen?.("history")}>Full audit history</button>
+        <article className="card">
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
+            <h2 style={{ margin: 0 }}>Recent ledger transactions</h2>
+            <button type="button" className="demo-text-button" onClick={() => onOpen?.("history")}>Full history</button>
           </div>
           <PageStatus loading={ledger.loading} error={ledger.error} onRetry={ledger.reload} empty={!ledger.loading && !asList(ledger.data).length} title="No journal entries yet" body="Receipts, payments and adjustments appear here after they are posted." />
-          <ul className="border border-slate-800 bg-white text-sm">
+          <ul className="live-list">
             {asList(ledger.data).map((entry) => (
-              <li key={entry.entry_id} className="border-b border-slate-800 px-3 py-3 last:border-b-0">
-                <button type="button" className="w-full text-left" onClick={() => onOpen?.(entry.entry_type === "payment" ? "expenses" : "collections")}>
-                  <div className="flex justify-between gap-3">
+              <li key={entry.entry_id}>
+                <button type="button" className="row" onClick={() => onOpen?.(entry.entry_type === "payment" ? "expenses" : "collections")}>
+                  <span>
                     <strong>{entry.entry_type}</strong>
-                    <span className="tabular">{inr(entry.amount)}</span>
-                  </div>
-                  <p className="text-slate-400">{entry.occurred_on} · {entry.narration}</p>
-                  <p className="font-mono text-xs text-slate-500">{entry.entry_id}</p>
+                    <br />
+                    <span className="demo-secondary">{entry.occurred_on} · {entry.narration}</span>
+                  </span>
+                  <strong className="tabular">{inr(entry.amount)}</strong>
                 </button>
               </li>
             ))}
           </ul>
-        </div>
+        </article>
       )}
 
-      <div className="mb-6 grid gap-4 lg:grid-cols-2">
-        <div className="border border-slate-800 bg-white p-3">
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="font-semibold">Announcements</h3>
-            <button type="button" className="text-sm font-semibold text-[#0878E8]" onClick={() => onOpen?.("notices")}>All notices</button>
+      <div className="dash-grid">
+        <article className="card">
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
+            <h2 style={{ margin: 0 }}>Announcements</h2>
+            <button type="button" className="demo-text-button" onClick={() => onOpen?.("notices")}>All notices</button>
           </div>
-          <PageStatus loading={query.loading} error={null} empty={!query.loading && !(dash?.announcements || []).length} title="No announcements" body="Published notices and notifications appear here." />
-          <ul className="mt-2 space-y-2 text-sm">
+          <PageStatus loading={query.loading} error={null} empty={!query.loading && !(dash?.announcements || []).length} title="No announcements" body="Published notices appear here." />
+          <ul className="live-list">
             {(dash?.announcements || []).map((item, index) => (
               <li key={`${item.title}-${index}`}>
-                <button type="button" className="w-full border border-slate-800 px-3 py-2 text-left" onClick={() => onOpen?.(item.event_type ? "notifications" : "notices")}>
-                  <strong>{item.title}</strong>
-                  <p className="text-slate-400">{item.body}</p>
+                <button type="button" className="row" onClick={() => onOpen?.(item.event_type ? "notifications" : "notices")}>
+                  <span>
+                    <strong>{item.title}</strong>
+                    <br />
+                    <span className="demo-secondary">{item.body}</span>
+                  </span>
                 </button>
               </li>
             ))}
           </ul>
-        </div>
-        <div className="border border-slate-800 bg-white p-3">
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="font-semibold">Upcoming meetings</h3>
-            <button type="button" className="text-sm font-semibold text-[#0878E8]" onClick={() => onOpen?.("decisions")}>Meetings</button>
+        </article>
+        <article className="card">
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
+            <h2 style={{ margin: 0 }}>Upcoming meetings</h2>
+            <button type="button" className="demo-text-button" onClick={() => onOpen?.("decisions")}>Meetings</button>
           </div>
-          <PageStatus loading={query.loading} error={null} empty={!query.loading && !(dash?.upcoming_meetings || []).length} title="No upcoming meetings" body="Schedule a meeting from Meetings when the committee is ready." />
-          <ul className="mt-2 space-y-2 text-sm">
+          <PageStatus loading={query.loading} error={null} empty={!query.loading && !(dash?.upcoming_meetings || []).length} title="No upcoming meetings" body="Scheduled meetings appear here when the committee posts them." />
+          <ul className="live-list">
             {(dash?.upcoming_meetings || []).map((meeting, index) => (
               <li key={`${meeting.title}-${index}`}>
-                <button type="button" className="w-full border border-slate-800 px-3 py-2 text-left" onClick={() => onOpen?.("decisions")}>
-                  <strong>{meeting.title}</strong>
-                  <p className="text-slate-400">{new Date(meeting.held_on).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} · {meeting.venue || "Venue TBA"}</p>
+                <button type="button" className="row" onClick={() => onOpen?.("decisions")}>
+                  <span>
+                    <strong>{meeting.title}</strong>
+                    <br />
+                    <span className="demo-secondary">{new Date(meeting.held_on).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} · {meeting.venue || "Venue TBA"}</span>
+                  </span>
                 </button>
               </li>
             ))}
           </ul>
           {nextMeeting && financial && statement && !["published", "published_with_exceptions"].includes(statement.status) && (
-            <button type="button" className="mt-3 min-h-12 w-full bg-[#252525] px-3 font-semibold text-white" onClick={() => onOpen?.("finance")}>Review latest statement</button>
+            <div className="demo-actions">
+              <button type="button" className="demo-primary" onClick={() => onOpen?.("finance")}>Review latest statement</button>
+            </div>
           )}
-        </div>
+        </article>
       </div>
 
       {dash && (
-        <div className="grid gap-6">
+        <div className="dash-grid">
           <List title="Recently resolved concerns" items={dash.recently_resolved} render={(item) => `${item.number}: ${item.subject}`} empty="No resolved public concerns yet." />
           {financial && <List title="Bank book balances" items={dash.banks} render={(item) => `${item.name}: ${inr(item.book_balance)}`} empty="No bank ledger has been opened." />}
         </div>
       )}
     </section>
-  );
-}
-
-function MetricButton({ label, value, hint, onClick }) {
-  return (
-    <button type="button" className="border border-slate-800 bg-white p-3 text-left" onClick={onClick}>
-      <span className="text-sm text-slate-400">{label}</span>
-      <span className="mt-1 block tabular text-xl font-semibold">{value}</span>
-      {hint && <span className="mt-1 block text-xs text-slate-500">{hint} · open</span>}
-    </button>
   );
 }
 
@@ -282,19 +294,25 @@ function Row({ term, value }) {
 
 function Card({ label, value }) {
   return (
-    <article className="border border-slate-800 bg-white p-3">
-      <p className="text-sm text-slate-400">{label}</p>
-      <p className="tabular mt-1 text-xl font-semibold">{value}</p>
+    <article className="metric">
+      <span>{label}</span>
+      <strong>{value}</strong>
     </article>
   );
 }
 
 function List({ title, items, render, empty }) {
   return (
-    <div>
-      <h3 className="mb-2 font-semibold">{title}</h3>
-      {items?.length ? <ul className="border border-slate-800 bg-white text-sm">{items.map((item, index) => <li key={index} className="border-b border-slate-800 px-3 py-3 last:border-b-0">{render(item)}</li>)}</ul> : <p className="text-sm text-slate-400">{empty}</p>}
-    </div>
+    <article className="card">
+      <h2>{title}</h2>
+      {items?.length ? (
+        <ul className="live-list">
+          {items.map((item, index) => <li key={index} className="row"><span>{render(item)}</span></li>)}
+        </ul>
+      ) : (
+        <p className="demo-secondary">{empty}</p>
+      )}
+    </article>
   );
 }
 
@@ -355,32 +373,38 @@ export function FinanceScreen({ communityId, roles, focus }) {
   };
 
   return (
-    <section className="space-y-8">
+    <section className="dash">
+      <header className="dash-welcome">
+        <h1>Finance</h1>
+        <p>Live ledger records for this community.</p>
+      </header>
       <Field label="Section">
         <select className={control} value={sections.some(([id]) => id === section) ? section : "funds"} onChange={(event) => setSection(event.target.value)} aria-label="Finance section">
           {sections.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
         </select>
       </Field>
       {show("funds") && (
-        <div>
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <h2 className="text-xl font-semibold">Funds</h2>
-            <button type="button" className="rounded-lg border border-slate-600 px-3 py-2 text-sm" onClick={exportBalances}>Export CSV</button>
+        <article className="card">
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
+            <h2 style={{ margin: 0 }}>Funds</h2>
+            <button type="button" className="demo-text-button" onClick={exportBalances}>Export CSV</button>
           </div>
           <PageStatus loading={funds.loading} error={funds.error} onRetry={funds.reload} empty={!funds.loading && !funds.error && !(funds.data || []).length} title="No funds opened" body="Open a maintenance, corpus, special, emergency, or other fund before posting money." />
-          <ul className="border border-slate-800 bg-white">
+          <ul className="live-list">
             {(funds.data || []).map((row) => (
-              <li key={row.account_id} className="border-b border-slate-800 px-3 py-3 last:border-b-0">
-                <div className="flex items-baseline justify-between gap-3">
+              <li key={row.account_id} className="row">
+                <span>
                   <strong>{row.name}</strong>
-                  <span className="tabular">{inr(row.closing)}</span>
-                </div>
-                <p className="mt-1 text-sm text-slate-400">Opening {inr(row.opening)} · Receipts {inr(row.receipts)} · Payments {inr(row.payments)}</p>
-                <p className="text-sm text-slate-400">Transfers in {inr(row.transfers_in)} · out {inr(row.transfers_out)}</p>
+                  <br />
+                  <span className="demo-secondary">Opening {inr(row.opening)} · Receipts {inr(row.receipts)} · Payments {inr(row.payments)}</span>
+                  <br />
+                  <span className="demo-secondary">Transfers in {inr(row.transfers_in)} · out {inr(row.transfers_out)}</span>
+                </span>
+                <strong className="tabular">{inr(row.closing)}</strong>
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-xs text-slate-500">Closing = opening + receipts − payments + transfers in − transfers out + adjustments. Individual flat dues are not shown here.</p>
+          <p className="demo-secondary" style={{ marginTop: 8, fontSize: 12 }}>Closing = opening + receipts − payments + transfers in − transfers out + adjustments. Individual flat dues are not shown here.</p>
           {canPost && (
             <SaveForm submitLabel="Open fund" onSubmit={(data) => rpc("open_fund", { p_community: communityId, p_code: data.code, p_name: data.name, p_kind: data.kind, p_description: data.description }).then(funds.reload)}>
               <Field label="Code"><input className={control} name="code" required /></Field>
@@ -406,7 +430,7 @@ export function FinanceScreen({ communityId, roles, focus }) {
               <Field label="Idempotency key"><input className={control} name="key" /></Field>
             </SaveForm>
           )}
-        </div>
+        </article>
       )}
 
       {show("collections") && (
@@ -515,28 +539,33 @@ function Collections({ communityId, canPost, periods, ledger, onPosted }) {
   };
 
   return (
-    <div>
-      <h2 className="mb-3 text-xl font-semibold">Collections &amp; payments</h2>
-      <p className="mb-4 text-sm text-slate-400">Uploading a UPI or bank transfer screenshot does not mark dues paid. The treasurer verifies the proof, then the ledger posts.</p>
+    <div className="dash">
+      <header className="dash-welcome">
+        <h1>Collections &amp; payments</h1>
+        <p>Uploading a UPI or bank transfer screenshot does not mark dues paid. The treasurer verifies the proof, then the ledger posts.</p>
+      </header>
 
-      <h3 className="mb-2 font-semibold">Your unit dues</h3>
+      <article className="card">
+      <h2>Your unit dues</h2>
       <PageStatus loading={myDues.loading} error={myDues.error} onRetry={myDues.reload} empty={!myDues.loading && !myDues.error && !asList(myDues.data).length} title="No demands on your units" body="When the treasurer opens a collection period for your flat, it appears here." />
       {!!asList(myDues.data).length && (
-        <ul className="mb-4 border border-slate-800 bg-white text-sm">
+        <ul className="live-list">
           {asList(myDues.data).map((row) => (
-            <li key={row.demand_id} className="border-b border-slate-800 px-3 py-3 last:border-b-0">
-              <div className="flex justify-between gap-3">
-                <span>Unit {row.unit_number} · {row.financial_year} · due {row.due_on}</span>
-                <strong className="tabular">{inr(row.outstanding_amount)} due</strong>
-              </div>
-              <p className="text-slate-400">Expected {inr(row.expected_amount)} · Collected {inr(row.collected_amount)}</p>
+            <li key={row.demand_id} className="row">
+              <span>
+                Unit {row.unit_number} · {row.financial_year} · due {row.due_on}
+                <br />
+                <span className="demo-secondary">Expected {inr(row.expected_amount)} · Collected {inr(row.collected_amount)}</span>
+              </span>
+              <strong className="tabular">{inr(row.outstanding_amount)} due</strong>
             </li>
           ))}
         </ul>
       )}
+      </article>
 
       {!!outstanding.length && (
-        <form className="mb-6 grid gap-3 border border-slate-800 bg-white p-3" onSubmit={submitProof}>
+        <form className="live-panel grid gap-3" onSubmit={submitProof}>
           <h3 className="font-semibold">Submit payment proof</h3>
           <Field label="Demand">
             <select className={control} name="demand" required>
@@ -1027,10 +1056,14 @@ export function ConcernsScreen({ communityId, roles }) {
     [openId],
   );
   return (
-    <section>
-      <h2 className="mb-1 font-display text-xl font-semibold">Concerns</h2>
-      <p className="mb-4 text-sm text-slate-400">A public concern can be read by residents. A private concern stays with you and the committee.</p>
-      <button type="button" className="min-h-12 w-full bg-[#0878E8] px-3 font-semibold text-white" onClick={() => setRaising((open) => !open)}>{raising ? "Close the form" : "Raise concern"}</button>
+    <section className="dash">
+      <header className="dash-welcome">
+        <h1>Concerns</h1>
+        <p>A public concern can be read by residents. A private concern stays with you and the committee.</p>
+      </header>
+      <div className="demo-actions">
+        <button type="button" className="demo-primary" onClick={() => setRaising((open) => !open)}>{raising ? "Close the form" : "Raise concern"}</button>
+      </div>
       {raising && (
       <SaveForm submitLabel="Submit concern" onSubmit={(data) => rpc("create_ticket", {
         p_community: communityId,
@@ -1054,19 +1087,22 @@ export function ConcernsScreen({ communityId, roles }) {
         <Field label="Description"><textarea className={control} name="description" rows={4} required /></Field>
       </SaveForm>
       )}
-      <div className="mt-4">
+      <article className="card" style={{ marginTop: 12 }}>
       <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && !(query.data || []).length} title="No concerns yet" body="Raise a public or private concern and it receives a SOC-YYYY-XXXXX number." />
-      <ul className="space-y-2 text-sm">
+      <ul className="live-list">
         {(query.data || []).map((ticket) => (
-          <li key={ticket.id} className="border border-slate-800 bg-white p-3">
-            <div className="flex items-baseline justify-between gap-3">
-              <strong>{ticket.ticket_number}</strong>
-              <span>{ticket.status}</span>
+          <li key={ticket.id} style={{ paddingTop: 12, paddingBottom: 12 }}>
+            <div className="row">
+              <span>
+                <strong>{ticket.ticket_number}</strong>
+                <br />
+                {ticket.subject}
+                <br />
+                <span className="demo-secondary">{ticket.visibility === "private" ? "Private" : "Public"} · {ticket.category} · {ticket.priority}</span>
+              </span>
+              <span className="demo-status">{ticket.status}</span>
             </div>
-            <p className="mt-1">{ticket.subject}</p>
-            <p className="text-slate-400">{ticket.visibility === "private" ? "Private" : "Public"} · {ticket.category} · {ticket.priority}</p>
-            <p className="text-sm text-slate-400">Updated {ticket.updated_at ? new Date(ticket.updated_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) : "when recorded"}</p>
-            <button type="button" className="mt-2 min-h-12 w-full border border-slate-800" onClick={() => setOpenId(openId === ticket.id ? "" : ticket.id)}>{openId === ticket.id ? "Hide updates" : "Show updates"}</button>
+            <button type="button" className="demo-text-button" style={{ marginTop: 8 }} onClick={() => setOpenId(openId === ticket.id ? "" : ticket.id)}>{openId === ticket.id ? "Hide updates" : "Show updates"}</button>
             {openId === ticket.id && (
               <div className="mt-2">
                 <PageStatus loading={updates.loading} error={updates.error} onRetry={updates.reload} empty={!updates.loading && !updates.error && !(updates.data || []).length} title="No written updates yet" body="Status changes from the committee appear as notes on the concern." />
@@ -1084,15 +1120,15 @@ export function ConcernsScreen({ communityId, roles }) {
               </SaveForm>
             )}
             {ticket.status === "resolved" && (
-              <div className="mt-2 grid gap-2">
-                <button type="button" className="min-h-12 border border-slate-800" onClick={() => rpc("transition_ticket", { p_ticket: ticket.id, p_status: "closed", p_note: "Resident confirmed" }).then(query.reload)}>Confirm</button>
-                <button type="button" className="min-h-12 border border-slate-800" onClick={() => rpc("transition_ticket", { p_ticket: ticket.id, p_status: "reopened", p_note: "Resident reopened" }).then(query.reload)}>Reopen</button>
+              <div className="demo-actions" style={{ marginTop: 8 }}>
+                <button type="button" onClick={() => rpc("transition_ticket", { p_ticket: ticket.id, p_status: "closed", p_note: "Resident confirmed" }).then(query.reload)}>Confirm</button>
+                <button type="button" onClick={() => rpc("transition_ticket", { p_ticket: ticket.id, p_status: "reopened", p_note: "Resident reopened" }).then(query.reload)}>Reopen</button>
               </div>
             )}
           </li>
         ))}
       </ul>
-      </div>
+      </article>
     </section>
   );
 }
@@ -1103,25 +1139,33 @@ export function DecisionsScreen({ communityId, roles }) {
   const meetings = useLoad(() => rows(supabase.from("meetings").select("id,title,meeting_type,held_on,venue,minutes").eq("community_id", communityId).order("held_on", { ascending: false })), [communityId]);
   const resolutions = useLoad(() => rows(supabase.from("resolutions").select("id,title,description,status,voting_starts_at,voting_ends_at,meeting_id").eq("community_id", communityId).order("created_at", { ascending: false })), [communityId]);
   return (
-    <section className="space-y-6">
-      <div>
-        <h2 className="mb-3 text-xl font-semibold">Meetings</h2>
+    <section className="dash">
+      <header className="dash-welcome">
+        <h1>Meetings &amp; votes</h1>
+        <p>Scheduled meetings and formal resolutions for this community.</p>
+      </header>
+      <article className="card">
+        <h2>Meetings</h2>
         <PageStatus loading={meetings.loading} error={meetings.error} onRetry={meetings.reload} empty={!meetings.loading && !meetings.error && !(meetings.data || []).length} title="No meetings recorded" body="Committee, general body, emergency, and special meetings are listed after they are scheduled." />
-        <ul className="space-y-2 text-sm">{(meetings.data || []).map((meeting) => {
+        <ul className="live-list">{(meetings.data || []).map((meeting) => {
           const upcoming = new Date(meeting.held_on).getTime() >= Date.now();
           const linked = (resolutions.data || []).filter((row) => row.meeting_id === meeting.id);
           return (
-            <li key={meeting.id} className="border border-slate-800 bg-white p-3">
-              <button type="button" className="w-full text-left" onClick={() => setOpenMeeting(openMeeting === meeting.id ? "" : meeting.id)}>
-                <p className="text-sm text-slate-400">{upcoming ? "Upcoming" : "Past"} · {meeting.meeting_type}</p>
-                <strong>{meeting.title}</strong>
-                <p className="text-slate-400">{new Date(meeting.held_on).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} · {meeting.venue || "Venue not recorded"}</p>
+            <li key={meeting.id} style={{ paddingTop: 12, paddingBottom: 12 }}>
+              <button type="button" className="row" onClick={() => setOpenMeeting(openMeeting === meeting.id ? "" : meeting.id)}>
+                <span>
+                  <span className="demo-status">{upcoming ? "Upcoming" : "Past"}</span>{" "}
+                  <span className="demo-secondary">{meeting.meeting_type}</span>
+                  <br />
+                  <strong>{meeting.title}</strong>
+                  <br />
+                  <span className="demo-secondary">{new Date(meeting.held_on).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} · {meeting.venue || "Venue not recorded"}</span>
+                </span>
               </button>
               {openMeeting === meeting.id && (
-                <div className="mt-3 border-t border-slate-800 pt-3">
-                  <p className="font-mono text-xs text-slate-500">Meeting {meeting.id}</p>
-                  <p className="mt-2"><span className="text-slate-400">Minutes / agenda: </span>{meeting.minutes || "Not published yet"}</p>
-                  <p className="mt-2 text-slate-400">Linked resolutions: {linked.length ? linked.map((row) => row.title).join("; ") : "None yet"}</p>
+                <div className="demo-detail">
+                  <p><span className="demo-secondary">Minutes / agenda: </span>{meeting.minutes || "Not published yet"}</p>
+                  <p className="demo-secondary">Linked resolutions: {linked.length ? linked.map((row) => row.title).join("; ") : "None yet"}</p>
                 </div>
               )}
             </li>
@@ -1135,18 +1179,24 @@ export function DecisionsScreen({ communityId, roles }) {
             <Field label="Venue or link"><input className={control} name="venue" /></Field>
           </SaveForm>
         )}
-      </div>
-      <div>
-        <h2 className="mb-3 text-xl font-semibold">Resolutions</h2>
+      </article>
+      <article className="card">
+        <h2>Resolutions</h2>
         <PageStatus loading={resolutions.loading} error={resolutions.error} onRetry={resolutions.reload} empty={!resolutions.loading && !resolutions.error && !(resolutions.data || []).length} title="No resolutions" body="A resolution is a formal decision. A chat poll is not recorded as approved." />
-        <ul className="space-y-2 text-sm">
+        <ul className="live-list">
           {(resolutions.data || []).map((resolution) => (
-            <li key={resolution.id} className="rounded-lg border border-slate-800 p-3">
-              <strong>{resolution.title}</strong> · {resolution.status}
-              <p>{resolution.description}</p>
-              <div className="mt-2 grid grid-cols-3 gap-2">
-                {["yes", "no", "abstain"].map((vote) => <button key={vote} type="button" className="min-h-12 border border-slate-800 bg-white" onClick={() => rpc("cast_vote", { p_resolution: resolution.id, p_vote: vote }).then(resolutions.reload)}>{vote}</button>)}
-                {committee && <button type="button" className="col-span-3 min-h-12 border border-slate-800" onClick={() => { if (window.confirm("Close this vote?")) rpc("close_vote", { p_resolution: resolution.id }).then(resolutions.reload); }}>Close vote</button>}
+            <li key={resolution.id} style={{ paddingTop: 12, paddingBottom: 12 }}>
+              <div className="row">
+                <span>
+                  <strong>{resolution.title}</strong>
+                  <br />
+                  <span className="demo-secondary">{resolution.description}</span>
+                </span>
+                <span className="demo-status">{resolution.status}</span>
+              </div>
+              <div className="demo-actions" style={{ marginTop: 8 }}>
+                {["yes", "no", "abstain"].map((vote) => <button key={vote} type="button" onClick={() => rpc("cast_vote", { p_resolution: resolution.id, p_vote: vote }).then(resolutions.reload)}>{vote}</button>)}
+                {committee && <button type="button" onClick={() => { if (window.confirm("Close this vote?")) rpc("close_vote", { p_resolution: resolution.id }).then(resolutions.reload); }}>Close vote</button>}
               </div>
             </li>
           ))}
@@ -1172,7 +1222,7 @@ export function DecisionsScreen({ communityId, roles }) {
             <Field label="Voting ends"><input className={control} type="datetime-local" name="ends" required /></Field>
           </SaveForm>
         )}
-      </div>
+      </article>
     </section>
   );
 }
