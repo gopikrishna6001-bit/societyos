@@ -43,7 +43,7 @@ test('web image renders HTML and serves immutable CSS from its packaged dependen
   const response = await fetch(web)
   assert.equal(response.status, 200)
   const html = await response.text()
-  assert.match(html, /OpenSociety/)
+  assert.match(html, /SABHA/)
   const cssPath = html.match(/\/assets\/[^"\s]+\.css/)?.[0]
   assert.ok(cssPath)
   const css = await fetch(`${web}${cssPath}`)
