@@ -357,6 +357,7 @@ const TAB_ICONS = {
 function notificationTarget(note) {
   if (note?.event_type === "payment_proof_submitted") return "collections";
   if (note?.event_type?.startsWith("payment_proof")) return "finance";
+  if (note?.event_type?.includes("visitor")) return "visitors";
   if (note?.event_type?.includes("ticket") || note?.event_type?.includes("concern")) return "concerns";
   if (note?.event_type?.includes("meeting") || note?.event_type?.includes("resolution")) return "decisions";
   if (note?.event_type?.includes("notice")) return "notices";

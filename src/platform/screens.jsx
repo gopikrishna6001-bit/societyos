@@ -5,9 +5,9 @@ import { Field, FilterSheet, FlatPicker, PageStatus, SaveForm, control, useLoad 
 import { brand } from "../brand.js";
 import InviteResident from "./InviteResident.jsx";
 import { adminHomeShortcuts, residentHomeShortcuts, residentHouseholdLinks } from "./appNav.js";
+import { TICKET_CATEGORIES } from "./flowConstants.js";
 import { copy, isFinanceOps, navLabel } from "./roleCopy.js";
 
-const TICKET_CATEGORIES = ["Maintenance", "Water", "Electricity", "Security", "Housekeeping", "Lift and facilities", "Finance", "Governance", "General", "Other"];
 const EXPENSE_CATEGORIES = ["Security", "Housekeeping", "Electricity", "Water", "Lift maintenance", "Plumbing", "Civil repairs", "Gardening", "Administration", "Insurance", "Emergency repairs", "Other"];
 
 function accountsOf(list, type) {
@@ -710,12 +710,22 @@ function Collections({ communityId, canPost, periods, ledger, onPosted, resident
         <PageStatus loading={myDues.loading} error={myDues.error} onRetry={myDues.reload} empty={!myDues.loading && !myDues.error && !asList(myDues.data).length} title={t.yourDuesEmpty} body={t.yourDuesEmptyBody} />
         <div className="record-bill-grid">
           {asList(myDues.data).map((row) => {
-            const due = Number(row.outstanding_amount) > 0;
+            const billed = Number(row.expected_amount || 0);
+            const outstandingAmt = Number(row.outstanding_amount || 0);
+            const paid = Math.max(0, billed - outstandingAmt);
+            const pendingForDemand = asList(proofs.data).some((proof) => proof.demand_id === row.demand_id && proof.status === "pending");
+            const status = outstandingAmt <= 0 ? "Paid" : pendingForDemand ? "Proof sent" : paid > 0 ? "Partly paid" : "Due";
             return (
-              <article key={row.demand_id} className={`record-bill-card${due ? " due" : ""}`}>
-                <p className="record-meta">Flat {row.unit_number} · {row.financial_year}</p>
-                <strong>{inr(row.outstanding_amount)}</strong>
-                <p className="record-meta">{due ? `Pay by ${row.due_on}` : "Paid"} · Billed {inr(row.expected_amount)}</p>
+              <article key={row.demand_id} className={`record-bill-card${outstandingAmt > 0 ? " due" : ""}`}>
+                <div className="record-panel-head" style={{ marginBottom: 4 }}>
+                  <p className="record-meta" style={{ margin: 0 }}>Flat {row.unit_number} · {row.financial_year}{row.period_month ? ` · ${row.period_month}` : ""}</p>
+                  <span className={`record-chip${outstandingAmt > 0 ? " warn" : ""}`}>{status}</span>
+                </div>
+                <strong>{inr(billed)}</strong>
+                <p className="record-meta">
+                  {outstandingAmt > 0 ? `${inr(outstandingAmt)} still due · pay by ${row.due_on}` : "Fully paid"}
+                  {paid > 0 && outstandingAmt > 0 ? ` · ${inr(paid)} already in` : ""}
+                </p>
               </article>
             );
           })}
@@ -751,6 +761,35 @@ function Collections({ communityId, canPost, periods, ledger, onPosted, resident
           <button disabled={proofBusy} type="submit" className="demo-primary">{proofBusy ? "Sending…" : "Send proof to treasurer"}</button>
         </form>
       )}
+
+      <div className="record-panel">
+        <h2>Payment history</h2>
+        <PageStatus
+          loading={proofs.loading}
+          error={proofs.error}
+          onRetry={proofs.reload}
+          empty={!proofs.loading && !asList(proofs.data).length}
+          title="No payments yet"
+          body="After you upload a proof — or the treasurer records a receipt — it shows here."
+        />
+        <ul className="record-attention">
+          {asList(proofs.data).slice(0, residentView ? 20 : 8).map((proof) => (
+            <li key={proof.id}>
+              <div className="record-money-row">
+                <span>
+                  <strong>{inr(proof.amount)} · {(proof.payment_mode || "").replace("_", " ")}</strong>
+                  <br />
+                  <span className="record-muted">
+                    Paid {proof.paid_on}
+                    {proof.bank_reference ? ` · ${proof.bank_reference}` : ""}
+                  </span>
+                </span>
+                <span className={`record-chip${proof.status === "pending" ? " warn" : ""}`}>{proof.status}</span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
 
       {!residentView && (
         <>
@@ -1167,86 +1206,105 @@ function Statements({ communityId, canPost, canReview }) {
 
 export function ConcernsScreen({ communityId, roles }) {
   const committee = roles.includes("committee_admin") || roles.includes("platform_admin");
-  const [raising, setRaising] = useState(false);
   const [openId, setOpenId] = useState("");
+  const [savedMsg, setSavedMsg] = useState("");
   const query = useLoad(() => rows(supabase.from("tickets").select("id,ticket_number,subject,category,visibility,status,priority,created_at,updated_at").eq("community_id", communityId).order("created_at", { ascending: false })), [communityId]);
   const updates = useLoad(
     () => openId ? rows(supabase.from("ticket_updates").select("id,body,created_at").eq("ticket_id", openId).order("created_at")) : Promise.resolve([]),
     [openId],
   );
+  const statusClass = (status) => ({
+    open: "warn",
+    assigned: "warn",
+    in_progress: "",
+    awaiting_resident: "warn",
+    resolved: "",
+    closed: "",
+    rejected: "",
+    on_hold: "warn",
+    reopened: "warn",
+  }[status] || "");
   return (
     <section className="record">
       <header className="record-hero">
         <h1>Maintenance</h1>
-        <p>Raise a ticket for something that needs fixing, and track it until it’s done.</p>
+        <p>Raise a ticket and track it until the work is done.</p>
       </header>
-      <div className="demo-actions">
-        <button type="button" className="demo-primary" onClick={() => setRaising((open) => !open)}>{raising ? "Cancel" : "Raise ticket"}</button>
+
+      <div className="record-panel">
+        <h2>Raise a ticket</h2>
+        <SaveForm submitLabel="Submit ticket" onSubmit={(data) => rpc("create_ticket", {
+          p_community: communityId,
+          p_subject: data.subject,
+          p_category: data.category,
+          p_description: data.description,
+          p_visibility: data.visibility,
+          p_unit_number: data.unit || null,
+          p_priority: data.priority,
+        }).then(() => {
+          setSavedMsg("Ticket submitted. Track it below.");
+          query.reload();
+        })}>
+          <Field label="What’s the issue"><input className={control} name="subject" required /></Field>
+          <Field label="Details"><textarea className={control} name="description" rows={4} required /></Field>
+          <FlatPicker communityId={communityId} roles={roles} name="unit" label="Flat" required={!committee} />
+          <Field label="Category"><select className={control} name="category">{TICKET_CATEGORIES.map((category) => <option key={category}>{category}</option>)}</select></Field>
+          <Field label="Who can see this">
+            <select className={control} name="visibility" defaultValue="private">
+              <option value="private">Only you and the committee</option>
+              <option value="public">All residents</option>
+            </select>
+          </Field>
+          <Field label="Urgency"><select className={control} name="priority" defaultValue="medium"><option>low</option><option>medium</option><option>high</option></select></Field>
+        </SaveForm>
+        {savedMsg && <p role="status" className="record-meta" style={{ color: "#0f766e" }}>{savedMsg}</p>}
       </div>
-      {raising && (
-      <SaveForm submitLabel="Submit ticket" onSubmit={(data) => rpc("create_ticket", {
-        p_community: communityId,
-        p_subject: data.subject,
-        p_category: data.category,
-        p_description: data.description,
-        p_visibility: data.visibility,
-        p_unit_number: data.unit || null,
-        p_priority: data.priority,
-      }).then(() => { setRaising(false); query.reload(); })}>
-        <Field label="What’s the issue"><input className={control} name="subject" required /></Field>
-        <Field label="Category"><select className={control} name="category">{TICKET_CATEGORIES.map((category) => <option key={category}>{category}</option>)}</select></Field>
-        <Field label="Who can see this">
-          <select className={control} name="visibility" defaultValue="private">
-            <option value="private">Only you and the committee</option>
-            <option value="public">All residents</option>
-          </select>
-        </Field>
-        <FlatPicker communityId={communityId} roles={roles} name="unit" label="Flat" required={!committee} />
-        <Field label="Urgency"><select className={control} name="priority" defaultValue="medium"><option>low</option><option>medium</option><option>high</option></select></Field>
-        <Field label="Details"><textarea className={control} name="description" rows={4} required /></Field>
-      </SaveForm>
-      )}
-      <div className="record-panel" style={{ marginTop: 12 }}>
-      <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && !(query.data || []).length} title="No tickets yet" body="Tap Raise ticket when something needs fixing." />
-      <ul className="live-list">
-        {(query.data || []).map((ticket) => (
-          <li key={ticket.id} style={{ paddingTop: 12, paddingBottom: 12 }}>
-            <div className="row">
-              <span>
-                <strong>{ticket.ticket_number}</strong>
-                <br />
-                {ticket.subject}
-                <br />
-                <span className="demo-secondary">{ticket.visibility === "private" ? "Private" : "Public"} · {ticket.category} · {ticket.priority}</span>
-              </span>
-              <span className="demo-status">{ticket.status}</span>
-            </div>
-            <button type="button" className="demo-text-button" style={{ marginTop: 8 }} onClick={() => setOpenId(openId === ticket.id ? "" : ticket.id)}>{openId === ticket.id ? "Hide updates" : "Show updates"}</button>
-            {openId === ticket.id && (
-              <div className="mt-2">
-                <PageStatus loading={updates.loading} error={updates.error} onRetry={updates.reload} empty={!updates.loading && !updates.error && !(updates.data || []).length} title="No updates yet" body="When the committee replies, notes appear here." />
-                <ul className="space-y-2">{(updates.data || []).map((update) => <li key={update.id} className="border-t border-slate-800 pt-2">{update.body}<p className="text-slate-400">{new Date(update.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</p></li>)}</ul>
+
+      <div className="record-panel">
+        <h2>Your tickets</h2>
+        <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && !(query.data || []).length} title="No tickets yet" body="Submit a ticket above when something needs fixing." />
+        <ul className="record-attention">
+          {(query.data || []).map((ticket) => (
+            <li key={ticket.id}>
+              <div className="record-money-row">
+                <span>
+                  <strong>{ticket.subject}</strong>
+                  <br />
+                  <span className="record-muted">{ticket.ticket_number} · {ticket.category} · {ticket.priority}</span>
+                </span>
+                <span className={`record-chip ${statusClass(ticket.status)}`}>{ticket.status}</span>
               </div>
-            )}
-            {committee && (
-              <SaveForm submitLabel="Update status" onSubmit={(data) => rpc("transition_ticket", { p_ticket: ticket.id, p_status: data.status, p_note: data.note || null, p_assignee: null }).then(query.reload)}>
-                <Field label="Status">
-                  <select className={control} name="status">
-                    {["assigned", "in_progress", "awaiting_resident", "resolved", "on_hold", "rejected", "closed"].map((status) => <option key={status}>{status}</option>)}
-                  </select>
-                </Field>
-                <Field label="Note"><input className={control} name="note" /></Field>
-              </SaveForm>
-            )}
-            {ticket.status === "resolved" && (
-              <div className="demo-actions" style={{ marginTop: 8 }}>
-                <button type="button" onClick={() => rpc("transition_ticket", { p_ticket: ticket.id, p_status: "closed", p_note: "Resident confirmed", p_assignee: null }).then(query.reload)}>Confirm fixed</button>
-                <button type="button" onClick={() => rpc("transition_ticket", { p_ticket: ticket.id, p_status: "reopened", p_note: "Still not fixed", p_assignee: null }).then(query.reload)}>Still not fixed</button>
-              </div>
-            )}
-          </li>
-        ))}
-      </ul>
+              <button type="button" className="demo-text-button" style={{ marginTop: 8 }} onClick={() => setOpenId(openId === ticket.id ? "" : ticket.id)}>{openId === ticket.id ? "Hide updates" : "Show updates"}</button>
+              {openId === ticket.id && (
+                <div className="mt-2">
+                  <PageStatus loading={updates.loading} error={updates.error} onRetry={updates.reload} empty={!updates.loading && !updates.error && !(updates.data || []).length} title="No updates yet" body="When the committee replies, notes appear here." />
+                  <ul className="record-attention">{(updates.data || []).map((update) => (
+                    <li key={update.id}>
+                      <span className="record-muted">{update.body}</span>
+                      <p className="record-meta">{new Date(update.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</p>
+                    </li>
+                  ))}</ul>
+                </div>
+              )}
+              {committee && (
+                <SaveForm submitLabel="Update status" onSubmit={(data) => rpc("transition_ticket", { p_ticket: ticket.id, p_status: data.status, p_note: data.note || null, p_assignee: null }).then(query.reload)}>
+                  <Field label="Status">
+                    <select className={control} name="status" defaultValue={ticket.status}>
+                      {["assigned", "in_progress", "awaiting_resident", "resolved", "on_hold", "rejected", "closed", "reopened"].map((status) => <option key={status}>{status}</option>)}
+                    </select>
+                  </Field>
+                  <Field label="Note"><input className={control} name="note" /></Field>
+                </SaveForm>
+              )}
+              {ticket.status === "resolved" && (
+                <div className="demo-actions" style={{ marginTop: 8 }}>
+                  <button type="button" onClick={() => rpc("transition_ticket", { p_ticket: ticket.id, p_status: "closed", p_note: "Resident confirmed", p_assignee: null }).then(query.reload)}>Confirm fixed</button>
+                  <button type="button" onClick={() => rpc("transition_ticket", { p_ticket: ticket.id, p_status: "reopened", p_note: "Still not fixed", p_assignee: null }).then(query.reload)}>Still not fixed</button>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   );
@@ -1637,16 +1695,30 @@ export function ProfileScreen({ email, roles, onSignOut }) {
 export function NoticesScreen({ communityId, roles }) {
   const committee = roles.includes("committee_admin") || roles.includes("platform_admin");
   const [compose, setCompose] = useState(false);
+  const [search, setSearch] = useState("");
   const query = useLoad(
     () => rows(supabase.from("community_notices").select("id,title,body,audience,pinned,published_at,created_at").eq("community_id", communityId).order("pinned", { ascending: false }).order("published_at", { ascending: false })),
     [communityId],
   );
+  const reads = useLoad(
+    () => rows(supabase.from("community_notice_reads").select("notice_id,read_at")),
+    [communityId],
+  );
+  const readIds = new Set((reads.data || []).map((row) => row.notice_id));
+  const filtered = (query.data || []).filter((notice) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return `${notice.title} ${notice.body}`.toLowerCase().includes(q);
+  });
   return (
     <section className="record">
       <header className="record-hero">
         <h1>Notices</h1>
-        <p>Official society updates for residents.</p>
+        <p>Official society updates. Mark them read when you’ve seen them.</p>
       </header>
+      <Field label="Search notices">
+        <input className={control} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search title or message" />
+      </Field>
       {committee && (
         <div className="demo-actions">
           <button type="button" className="demo-primary" onClick={() => setCompose((open) => !open)}>{compose ? "Cancel" : "Post notice"}</button>
@@ -1679,46 +1751,141 @@ export function NoticesScreen({ communityId, roles }) {
         </SaveForm>
       )}
       <div className="record-panel">
-        <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && !(query.data || []).length} title="No notices yet" body="Committee notices will appear here." />
+        <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && !filtered.length} title={search ? "No matching notices" : "No notices yet"} body={search ? "Try a different search." : "Committee notices will appear here."} />
         <ul className="record-attention">
-          {(query.data || []).map((notice) => (
-            <li key={notice.id}>
-              <div className="record-money-row">
-                <span>
-                  <strong>{notice.title}</strong>
-                  <br />
-                  <span className="record-muted" style={{ whiteSpace: "pre-wrap" }}>{notice.body}</span>
-                  <br />
-                  <span className="record-meta">{notice.audience} · {notice.published_at ? new Date(notice.published_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) : "draft"}</span>
-                </span>
-                {notice.pinned && <span className="record-chip">Pinned</span>}
-              </div>
-            </li>
-          ))}
+          {filtered.map((notice) => {
+            const unread = !readIds.has(notice.id);
+            return (
+              <li key={notice.id}>
+                <div className="record-money-row">
+                  <span>
+                    <strong>{notice.title}</strong>
+                    <br />
+                    <span className="record-muted" style={{ whiteSpace: "pre-wrap" }}>{notice.body}</span>
+                    <br />
+                    <span className="record-meta">{notice.audience} · {notice.published_at ? new Date(notice.published_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) : "draft"}</span>
+                  </span>
+                  <span style={{ display: "grid", gap: 6, justifyItems: "end" }}>
+                    {unread && <span className="record-chip warn">New</span>}
+                    {notice.pinned && <span className="record-chip">Pinned</span>}
+                  </span>
+                </div>
+                {unread && (
+                  <button
+                    type="button"
+                    className="demo-primary"
+                    style={{ marginTop: 8 }}
+                    onClick={() => rpc("mark_notice_read", { p_notice: notice.id }).then(reads.reload)}
+                  >
+                    Mark as read
+                  </button>
+                )}
+              </li>
+            );
+          })}
         </ul>
       </div>
     </section>
   );
 }
 
+async function sharePassText(message) {
+  if (navigator.share) {
+    await navigator.share({ title: "Guest pass", text: message });
+    return "shared";
+  }
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(message);
+    return "copied";
+  }
+  throw new Error("Share is not available on this device");
+}
+
 export function VisitorsScreen({ communityId, roles }) {
-  const committee = roles.includes("committee_admin") || roles.includes("platform_admin");
-  const [compose, setCompose] = useState(false);
+  const gate = roles.some((role) => ["committee_admin", "platform_admin", "treasurer"].includes(role));
+  const [compose, setCompose] = useState(true);
+  const [created, setCreated] = useState(null);
+  const [gateMsg, setGateMsg] = useState("");
+  const [shareMsg, setShareMsg] = useState("");
   const query = useLoad(
     () => rows(supabase.from("visitor_passes").select("id,visitor_name,visitor_phone,purpose,pass_code,status,expected_at,checked_in_at,checked_out_at,created_at").eq("community_id", communityId).order("created_at", { ascending: false }).limit(40)),
     [communityId],
   );
+
+  if (created) {
+    const code = created.pass_code;
+    const message = `${created.visitor_name}\nPass code: ${code}\nShow this code at the gate.`;
+    return (
+      <section className="record">
+        <header className="record-hero">
+          <h1>Pass ready</h1>
+          <p>Show this to {created.visitor_name} at the gate, or share the code.</p>
+        </header>
+        <div className="os-pass-card">
+          <p className="os-pass-label">Pass code</p>
+          <p className="os-pass-code" aria-label={`Pass code ${code.split("").join(" ")}`}>{code}</p>
+          <p className="record-muted">Valid until checked in · {created.visitor_name}</p>
+        </div>
+        <div className="demo-actions">
+          <button
+            type="button"
+            className="demo-primary"
+            onClick={async () => {
+              setShareMsg("");
+              try {
+                const result = await sharePassText(message);
+                setShareMsg(result === "shared" ? "Shared." : "Copied to clipboard.");
+              } catch (cause) {
+                setShareMsg(cause?.message || "Could not share.");
+              }
+            }}
+          >
+            Share pass
+          </button>
+          <button type="button" onClick={() => { setCreated(null); setCompose(true); setShareMsg(""); }}>Create another</button>
+          <button type="button" onClick={() => { setCreated(null); setCompose(false); query.reload(); }}>Back to guests</button>
+        </div>
+        {shareMsg && <p role="status" className="record-meta">{shareMsg}</p>}
+      </section>
+    );
+  }
+
   return (
     <section className="record">
       <header className="record-hero">
         <h1>Guests</h1>
-        <p>Invite a guest and share the pass code at the gate.</p>
+        <p>Create a pass, share the code, and check guests in at the gate.</p>
       </header>
+
+      {gate && (
+        <div className="record-panel">
+          <h2>Gate desk</h2>
+          <p className="record-muted">Enter the pass code the guest shows you.</p>
+          <SaveForm
+            submitLabel="Check in by code"
+            onSubmit={async (data) => {
+              setGateMsg("");
+              const result = await rpc("check_in_visitor_by_code", {
+                p_community: communityId,
+                p_code: data.code,
+                p_notes: data.notes || null,
+              });
+              setGateMsg(`${result?.visitor_name || "Guest"} checked in (${result?.pass_code || data.code}).`);
+              query.reload();
+            }}
+          >
+            <Field label="Pass code"><input className={control} name="code" required autoCapitalize="characters" placeholder="ABC123" /></Field>
+            <Field label="Gate note"><input className={control} name="notes" placeholder="Optional" /></Field>
+          </SaveForm>
+          {gateMsg && <p role="status" className="record-meta" style={{ color: "#0f766e" }}>{gateMsg}</p>}
+        </div>
+      )}
+
       <div className="demo-actions">
-        <button type="button" className="demo-primary" onClick={() => setCompose((open) => !open)}>{compose ? "Cancel" : "Invite guest"}</button>
+        <button type="button" className="demo-primary" onClick={() => setCompose((open) => !open)}>{compose ? "Hide form" : "Create pass"}</button>
       </div>
       {compose && (
-        <SaveForm submitLabel="Create pass" onSubmit={async (data) => {
+        <SaveForm submitLabel="Generate pass" onSubmit={async (data) => {
           const result = await rpc("create_visitor_pass", {
             p_community: communityId,
             p_visitor_name: data.name,
@@ -1728,20 +1895,26 @@ export function VisitorsScreen({ communityId, roles }) {
             p_vehicle_number: data.vehicle || null,
             p_expected_at: data.expected || null,
           });
-          window.alert(`Pass ready. Code: ${result?.pass_code || result}`);
+          setCreated({
+            pass_code: result?.pass_code || result,
+            visitor_name: data.name,
+            id: result?.id,
+          });
           setCompose(false);
           query.reload();
         }}>
           <Field label="Guest name"><input className={control} name="name" required /></Field>
-          <Field label="Phone"><input className={control} name="phone" inputMode="tel" /></Field>
+          <Field label="Phone (optional)"><input className={control} name="phone" inputMode="tel" /></Field>
           <FlatPicker communityId={communityId} roles={roles} name="unit" label="Flat" required />
           <Field label="Purpose"><input className={control} name="purpose" placeholder="Family / delivery / cab" /></Field>
           <Field label="Vehicle number"><input className={control} name="vehicle" /></Field>
           <Field label="Expected at"><input className={control} type="datetime-local" name="expected" /></Field>
         </SaveForm>
       )}
+
       <div className="record-panel">
-        <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && !(query.data || []).length} title="No guest passes" body="Tap Invite guest to create a gate pass." />
+        <h2>Your passes</h2>
+        <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && !(query.data || []).length} title="No guest passes" body="Create a pass, then share the code with your guest." />
         <ul className="record-attention">
           {(query.data || []).map((pass) => (
             <li key={pass.id}>
@@ -1753,13 +1926,30 @@ export function VisitorsScreen({ communityId, roles }) {
                 </span>
                 <span className="record-chip">{pass.pass_code}</span>
               </div>
-              <p className="record-meta">{pass.status}</p>
-              {committee && pass.status === "expected" && (
-                <button type="button" className="demo-primary" onClick={() => rpc("check_in_visitor", { p_pass: pass.id }).then(query.reload)}>Check in</button>
-              )}
-              {committee && pass.status === "checked_in" && (
-                <button type="button" className="demo-primary" onClick={() => rpc("check_out_visitor", { p_pass: pass.id }).then(query.reload)}>Check out</button>
-              )}
+              <p className="record-meta">{pass.status}{pass.checked_in_at ? ` · in ${new Date(pass.checked_in_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}` : ""}</p>
+              <div className="demo-actions" style={{ marginTop: 8 }}>
+                {pass.status === "expected" && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await sharePassText(`${pass.visitor_name}\nPass code: ${pass.pass_code}\nShow this code at the gate.`);
+                      } catch { /* ignore */ }
+                    }}
+                  >
+                    Share
+                  </button>
+                )}
+                {pass.status === "expected" && (
+                  <button type="button" onClick={() => rpc("cancel_visitor_pass", { p_pass: pass.id }).then(query.reload)}>Cancel</button>
+                )}
+                {gate && pass.status === "expected" && (
+                  <button type="button" className="demo-primary" onClick={() => rpc("check_in_visitor", { p_pass: pass.id }).then(query.reload)}>Check in</button>
+                )}
+                {gate && pass.status === "checked_in" && (
+                  <button type="button" className="demo-primary" onClick={() => rpc("check_out_visitor", { p_pass: pass.id }).then(query.reload)}>Check out</button>
+                )}
+              </div>
             </li>
           ))}
         </ul>

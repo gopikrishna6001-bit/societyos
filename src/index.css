@@ -1346,6 +1346,40 @@ button.metric {
   }
 }
 
+.os-pass-card {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  margin: 8px 0 16px;
+  padding: 28px 20px;
+  border-radius: 24px;
+  background: linear-gradient(160deg, #031d27 0%, #0878e8 100%);
+  color: #ffffff;
+  text-align: center;
+}
+
+.os-pass-label {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.os-pass-code {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: clamp(2rem, 10vw, 2.75rem);
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  line-height: 1.1;
+}
+
+.os-pass-card .record-muted {
+  color: rgba(255, 255, 255, 0.8);
+}
+
 /* OpenSociety-shaped home + mode switch */
 .os-brand-mark {
   margin: 0 0 6px;
