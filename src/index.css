@@ -1074,6 +1074,75 @@ button.metric {
   color: var(--warn-ink);
 }
 
+.app-bell {
+  position: relative;
+}
+
+.app-bell-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #c2410c;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+
+.app-popover-wide {
+  width: min(360px, calc(100vw - 24px));
+  max-height: 70vh;
+  overflow: auto;
+}
+
+.app-note-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.app-note-list button {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  text-align: left;
+  min-height: 48px;
+}
+
+.record-bill-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.record-bill-card {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--white);
+}
+
+.record-bill-card strong {
+  display: block;
+  margin: 6px 0;
+  font-size: 1.35rem;
+  font-family: Manrope, sans-serif;
+  color: var(--navy);
+}
+
+.record-bill-card.due {
+  border-color: #f0c27a;
+  background: var(--warn-bg);
+}
+
 .record-shortcuts {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

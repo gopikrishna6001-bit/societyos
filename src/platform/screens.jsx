@@ -328,8 +328,14 @@ export function FinanceScreen({ communityId, roles, focus }) {
   const ops = isFinanceOps(roles);
   const canSeeRecon = ops;
   const t = copy.finance;
-  const defaultSection = ops ? "funds" : "collections";
+  const defaultSection = "collections";
   const funds = useLoad(() => rpc("account_balances", { p_community: communityId }), [communityId]);
+  const pendingProofs = useLoad(
+    () => (ops
+      ? rows(supabase.from("payment_proofs").select("id,amount,paid_on,payment_mode,status,created_at").eq("community_id", communityId).eq("status", "pending").order("created_at", { ascending: false }).limit(20))
+      : Promise.resolve([])),
+    [communityId, ops],
+  );
   const ledger = useLoad(
     () => rows(supabase.from("accounts").select("id,name,code,account_type,fund_kind").eq("community_id", communityId)),
     [communityId],
@@ -362,15 +368,15 @@ export function FinanceScreen({ communityId, roles, focus }) {
   );
   const sections = ops
     ? [
-      ["funds", navLabel("funds", roles)],
       ["collections", navLabel("collections", roles)],
       ["expenses", navLabel("expenses", roles)],
+      ["funds", navLabel("funds", roles)],
       ["transactions", navLabel("transactions", roles)],
       ...(canSeeRecon ? [["reconciliation", navLabel("reconciliation", roles)]] : []),
       ["reviews", navLabel("reviews", roles)],
       ["statements", navLabel("statements", roles)],
     ]
-    : [["collections", "Your dues"]];
+    : [["collections", "Your bills"]];
 
   const entryLabel = (type) => ({
     receipt: "Money received",
@@ -410,15 +416,24 @@ export function FinanceScreen({ communityId, roles, focus }) {
         <div className="record-band">
           <h2>{t.snapshotOps}</h2>
           <div className="record-health">
+            <button type="button" onClick={() => setSection("collections")}>
+              <span>Proofs waiting</span>
+              <strong>{(pendingProofs.data || []).length}</strong>
+            </button>
             <div className="tile"><span>{t.fundsCount}</span><strong>{(funds.data || []).length}</strong></div>
             <div className="tile"><span>{t.fundBalances}</span><strong>{inr(fundTotal)}</strong></div>
             <div className="tile"><span>{t.openPeriods}</span><strong>{(periods.data || []).length}</strong></div>
           </div>
+          {!!(pendingProofs.data || []).length && (
+            <button type="button" className="demo-primary" style={{ marginTop: 12 }} onClick={() => setSection("collections")}>
+              Review {(pendingProofs.data || []).length} payment proof{(pendingProofs.data || []).length === 1 ? "" : "s"}
+            </button>
+          )}
         </div>
       ) : null}
 
       {ops && (
-        <div className="record-segments" role="tablist" aria-label="Money sections">
+        <div className="record-segments" role="tablist" aria-label="Accounts sections">
           {sections.map(([id, label]) => (
             <button
               key={id}
@@ -427,7 +442,7 @@ export function FinanceScreen({ communityId, roles, focus }) {
               aria-selected={activeSection === id}
               onClick={() => setSection(id)}
             >
-              {label}
+              {label}{id === "collections" && (pendingProofs.data || []).length ? ` (${(pendingProofs.data || []).length})` : ""}
             </button>
           ))}
         </div>
@@ -608,27 +623,82 @@ function Collections({ communityId, canPost, periods, ledger, onPosted, resident
   return (
     <div className="record" style={{ gap: 12 }}>
       <div className="record-panel-head">
-        <h2>{residentView ? t.yourDues : "Collections"}</h2>
+        <h2>{residentView ? t.yourDues : "Collect dues"}</h2>
       </div>
-      <p className="record-muted">{residentView ? t.submitProofHint : "Proof from a resident counts as paid only after you confirm it."}</p>
+      <p className="record-muted">{residentView ? t.submitProofHint : "Confirm resident payment screenshots here. Only then does the bill show as paid."}</p>
 
-      <div>
-      <h3 style={{ margin: "0 0 8px", fontSize: "1rem" }}>{residentView ? "Your flat" : "Your flats (as resident)"}</h3>
-      <PageStatus loading={myDues.loading} error={myDues.error} onRetry={myDues.reload} empty={!myDues.loading && !myDues.error && !asList(myDues.data).length} title={t.yourDuesEmpty} body={t.yourDuesEmptyBody} />
-      {!!asList(myDues.data).length && (
-        <ul className="live-list">
-          {asList(myDues.data).map((row) => (
-            <li key={row.demand_id} className="row">
-              <span>
-                Flat {row.unit_number} · {row.financial_year} · pay by {row.due_on}
-                <br />
-                <span className="demo-secondary">Billed {inr(row.expected_amount)} · Paid {inr(row.collected_amount)}</span>
-              </span>
-              <strong className="tabular">{inr(row.outstanding_amount)} still due</strong>
-            </li>
-          ))}
-        </ul>
+      {!residentView && (
+        <div className="record-panel" style={{ background: pendingProofs.length ? "var(--warn-bg)" : undefined }}>
+          <div className="record-panel-head">
+            <h2>{t.pendingProofs}</h2>
+            {pendingProofs.length > 0 && <span className="record-chip warn">{pendingProofs.length}</span>}
+          </div>
+          <PageStatus loading={proofs.loading} error={proofs.error} onRetry={proofs.reload} empty={!proofs.loading && !pendingProofs.length} title="No proofs waiting" body="When a resident uploads a UPI/bank screenshot, it appears here." />
+          <ul className="record-attention">
+            {pendingProofs.map((proof) => (
+              <li key={proof.id}>
+                <div className="record-money-row">
+                  <span>
+                    <strong>{inr(proof.amount)} · {proof.payment_mode}</strong>
+                    <br />
+                    <span className="record-muted">Paid on {proof.paid_on} · {proof.bank_reference || "No UPI ref"}</span>
+                  </span>
+                  <span className="record-chip warn">Waiting</span>
+                </div>
+                {canPost ? (
+                  <>
+                    <SaveForm
+                      confirmMessage="Confirm this proof and mark the dues paid?"
+                      submitLabel="Confirm and mark paid"
+                      onSubmit={(data) => rpc("review_payment_proof", {
+                        p_proof: proof.id,
+                        p_decision: "verified",
+                        p_receipt_number: data.receipt,
+                        p_bank_account: data.bank,
+                        p_fund_account: data.fund,
+                        p_key: data.key || `proof:${proof.id}`,
+                      }).then(() => { proofs.reload(); summary.reload(); onPosted(); myDues.reload(); })}
+                    >
+                      <Field label="Receipt number"><input className={control} name="receipt" required /></Field>
+                      <AccountSelect label="Bank account" name="bank" accounts={accountsOf(ledger, "bank")} />
+                      <AccountSelect label="Society fund" name="fund" accounts={accountsOf(ledger, "fund")} />
+                    </SaveForm>
+                    <SaveForm
+                      confirmMessage="Reject this payment proof?"
+                      submitLabel="Reject proof"
+                      onSubmit={(data) => rpc("review_payment_proof", {
+                        p_proof: proof.id,
+                        p_decision: "rejected",
+                        p_rejection_reason: data.reason,
+                      }).then(() => { proofs.reload(); myDues.reload(); })}
+                    >
+                      <Field label="Why rejected"><input className={control} name="reason" required /></Field>
+                    </SaveForm>
+                  </>
+                ) : (
+                  <p className="record-muted">Treasurer confirms payments. You can see this alert; ask the treasurer to mark it paid.</p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
+
+      <div className="record-panel">
+        <h2>{residentView ? "Your bills" : "Your flat (if you also live here)"}</h2>
+        <PageStatus loading={myDues.loading} error={myDues.error} onRetry={myDues.reload} empty={!myDues.loading && !myDues.error && !asList(myDues.data).length} title={t.yourDuesEmpty} body={t.yourDuesEmptyBody} />
+        <div className="record-bill-grid">
+          {asList(myDues.data).map((row) => {
+            const due = Number(row.outstanding_amount) > 0;
+            return (
+              <article key={row.demand_id} className={`record-bill-card${due ? " due" : ""}`}>
+                <p className="record-meta">Flat {row.unit_number} · {row.financial_year}</p>
+                <strong>{inr(row.outstanding_amount)}</strong>
+                <p className="record-meta">{due ? `Pay by ${row.due_on}` : "Paid"} · Billed {inr(row.expected_amount)}</p>
+              </article>
+            );
+          })}
+        </div>
       </div>
 
       {!!outstanding.length && (
@@ -656,52 +726,9 @@ function Collections({ communityId, canPost, periods, ledger, onPosted, resident
           <Field label="UPI / bank reference"><input className={control} name="reference" /></Field>
           <Field label="Screenshot or PDF"><input className={control} type="file" accept="image/*,application/pdf" required /></Field>
           <Field label="Note for treasurer"><input className={control} name="notes" /></Field>
-          {proofMessage && <p role="status" className="text-sm text-slate-600">{proofMessage}</p>}
-          <button disabled={proofBusy} type="submit" className="min-h-12 bg-[#0878E8] px-3 font-semibold text-white">{proofBusy ? "Sending…" : "Send proof"}</button>
+          {proofMessage && <p role="status" className="text-sm" style={{ color: proofMessage.includes("Proof sent") ? "#0f766e" : "#9f1239" }}>{proofMessage}</p>}
+          <button disabled={proofBusy} type="submit" className="demo-primary">{proofBusy ? "Sending…" : "Send proof to treasurer"}</button>
         </form>
-      )}
-
-      {canPost && (
-        <div className="mb-6">
-          <h3 className="mb-2 font-semibold">{t.pendingProofs}</h3>
-          <PageStatus loading={proofs.loading} error={proofs.error} onRetry={proofs.reload} empty={!proofs.loading && !pendingProofs.length} title="Nothing waiting" body="When a resident sends payment proof, it appears here for you to confirm." />
-          <ul className="space-y-3">
-            {pendingProofs.map((proof) => (
-              <li key={proof.id} className="border border-slate-800 bg-white p-3 text-sm">
-                <p className="font-semibold">{inr(proof.amount)} · {proof.payment_mode} · {proof.paid_on}</p>
-                <p className="text-slate-400">{proof.bank_reference || "No reference"} · {proof.storage_path}</p>
-                <SaveForm
-                  confirmMessage="Confirm this proof and mark the dues paid?"
-                  submitLabel="Confirm and mark paid"
-                  onSubmit={(data) => rpc("review_payment_proof", {
-                    p_proof: proof.id,
-                    p_decision: "verified",
-                    p_receipt_number: data.receipt,
-                    p_bank_account: data.bank,
-                    p_fund_account: data.fund,
-                    p_key: data.key || `proof:${proof.id}`,
-                  }).then(() => { proofs.reload(); summary.reload(); onPosted(); myDues.reload(); })}
-                >
-                  <Field label="Receipt number"><input className={control} name="receipt" required /></Field>
-                  <AccountSelect label="Bank account" name="bank" accounts={accountsOf(ledger, "bank")} />
-                  <AccountSelect label="Society fund" name="fund" accounts={accountsOf(ledger, "fund")} />
-                  <Field label="Idempotency key"><input className={control} name="key" placeholder="Leave blank" /></Field>
-                </SaveForm>
-                <SaveForm
-                  confirmMessage="Reject this payment proof?"
-                  submitLabel="Reject proof"
-                  onSubmit={(data) => rpc("review_payment_proof", {
-                    p_proof: proof.id,
-                    p_decision: "rejected",
-                    p_rejection_reason: data.reason,
-                  }).then(() => { proofs.reload(); myDues.reload(); })}
-                >
-                  <Field label="Why rejected"><input className={control} name="reason" required /></Field>
-                </SaveForm>
-              </li>
-            ))}
-          </ul>
-        </div>
       )}
 
       {!residentView && (
@@ -1207,63 +1234,67 @@ export function ConcernsScreen({ communityId, roles }) {
 export function DecisionsScreen({ communityId, roles }) {
   const committee = roles.includes("committee_admin") || roles.includes("platform_admin");
   const [openMeeting, setOpenMeeting] = useState("");
+  const [schedule, setSchedule] = useState(false);
   const meetings = useLoad(() => rows(supabase.from("meetings").select("id,title,meeting_type,held_on,venue,minutes").eq("community_id", communityId).order("held_on", { ascending: false })), [communityId]);
   const resolutions = useLoad(() => rows(supabase.from("resolutions").select("id,title,description,status,voting_starts_at,voting_ends_at,meeting_id").eq("community_id", communityId).order("created_at", { ascending: false })), [communityId]);
   return (
-    <section className="dash">
-      <header className="dash-welcome">
-        <h1>Meetings &amp; votes</h1>
-        <p>Scheduled meetings and formal resolutions for this community.</p>
+    <section className="record">
+      <header className="record-hero">
+        <h1>Meetings</h1>
+        <p>Upcoming meetings and votes you can take part in.</p>
       </header>
-      <article className="card">
-        <h2>Meetings</h2>
-        <PageStatus loading={meetings.loading} error={meetings.error} onRetry={meetings.reload} empty={!meetings.loading && !meetings.error && !(meetings.data || []).length} title="No meetings recorded" body="Committee, general body, emergency, and special meetings are listed after they are scheduled." />
-        <ul className="live-list">{(meetings.data || []).map((meeting) => {
+      {committee && (
+        <div className="demo-actions">
+          <button type="button" className="demo-primary" onClick={() => setSchedule((open) => !open)}>{schedule ? "Cancel" : "Schedule meeting"}</button>
+        </div>
+      )}
+      {schedule && (
+        <SaveForm submitLabel="Save meeting" onSubmit={(data) => rpc("create_meeting", { p_community: communityId, p_type: data.type, p_title: data.title, p_held_on: new Date(data.when).toISOString(), p_venue: data.venue }).then(() => { setSchedule(false); meetings.reload(); })}>
+          <Field label="Type"><select className={control} name="type">{["committee", "general_body", "emergency", "special"].map((type) => <option key={type}>{type}</option>)}</select></Field>
+          <Field label="Title"><input className={control} name="title" required /></Field>
+          <Field label="When"><input className={control} type="datetime-local" name="when" required /></Field>
+          <Field label="Venue"><input className={control} name="venue" placeholder="Clubhouse" /></Field>
+        </SaveForm>
+      )}
+      <div className="record-panel">
+        <h2>Upcoming & past</h2>
+        <PageStatus loading={meetings.loading} error={meetings.error} onRetry={meetings.reload} empty={!meetings.loading && !meetings.error && !(meetings.data || []).length} title="No meetings yet" body="When the committee schedules one, it shows here." />
+        <ul className="record-attention">{(meetings.data || []).map((meeting) => {
           const upcoming = new Date(meeting.held_on).getTime() >= Date.now();
           const linked = (resolutions.data || []).filter((row) => row.meeting_id === meeting.id);
           return (
-            <li key={meeting.id} style={{ paddingTop: 12, paddingBottom: 12 }}>
-              <button type="button" className="row" onClick={() => setOpenMeeting(openMeeting === meeting.id ? "" : meeting.id)}>
+            <li key={meeting.id}>
+              <button type="button" className="record-money-row" style={{ width: "100%", border: 0, background: "transparent", cursor: "pointer", textAlign: "left", font: "inherit" }} onClick={() => setOpenMeeting(openMeeting === meeting.id ? "" : meeting.id)}>
                 <span>
-                  <span className="demo-status">{upcoming ? "Upcoming" : "Past"}</span>{" "}
-                  <span className="demo-secondary">{meeting.meeting_type}</span>
-                  <br />
                   <strong>{meeting.title}</strong>
                   <br />
-                  <span className="demo-secondary">{new Date(meeting.held_on).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} · {meeting.venue || "Venue not recorded"}</span>
+                  <span className="record-muted">{new Date(meeting.held_on).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} · {meeting.venue || "Venue TBA"}</span>
                 </span>
+                <span className="record-chip">{upcoming ? "Upcoming" : "Past"}</span>
               </button>
               {openMeeting === meeting.id && (
                 <div className="demo-detail">
-                  <p><span className="demo-secondary">Minutes / agenda: </span>{meeting.minutes || "Not published yet"}</p>
-                  <p className="demo-secondary">Linked resolutions: {linked.length ? linked.map((row) => row.title).join("; ") : "None yet"}</p>
+                  <p className="record-meta">Agenda / minutes: {meeting.minutes || "Not published yet"}</p>
+                  <p className="record-meta">Linked votes: {linked.length ? linked.map((row) => row.title).join("; ") : "None yet"}</p>
                 </div>
               )}
             </li>
           );
         })}</ul>
-        {committee && (
-          <SaveForm submitLabel="Schedule meeting" onSubmit={(data) => rpc("create_meeting", { p_community: communityId, p_type: data.type, p_title: data.title, p_held_on: new Date(data.when).toISOString(), p_venue: data.venue }).then(meetings.reload)}>
-            <Field label="Type"><select className={control} name="type">{["committee", "general_body", "emergency", "special"].map((type) => <option key={type}>{type}</option>)}</select></Field>
-            <Field label="Title"><input className={control} name="title" required /></Field>
-            <Field label="When"><input className={control} type="datetime-local" name="when" required /></Field>
-            <Field label="Venue or link"><input className={control} name="venue" /></Field>
-          </SaveForm>
-        )}
-      </article>
-      <article className="card">
-        <h2>Resolutions</h2>
-        <PageStatus loading={resolutions.loading} error={resolutions.error} onRetry={resolutions.reload} empty={!resolutions.loading && !resolutions.error && !(resolutions.data || []).length} title="No resolutions" body="A resolution is a formal decision. A chat poll is not recorded as approved." />
-        <ul className="live-list">
+      </div>
+      <div className="record-panel">
+        <h2>Votes</h2>
+        <PageStatus loading={resolutions.loading} error={resolutions.error} onRetry={resolutions.reload} empty={!resolutions.loading && !resolutions.error && !(resolutions.data || []).length} title="No open votes" body="Society resolutions open for voting appear here." />
+        <ul className="record-attention">
           {(resolutions.data || []).map((resolution) => (
-            <li key={resolution.id} style={{ paddingTop: 12, paddingBottom: 12 }}>
-              <div className="row">
+            <li key={resolution.id}>
+              <div className="record-money-row">
                 <span>
                   <strong>{resolution.title}</strong>
                   <br />
-                  <span className="demo-secondary">{resolution.description}</span>
+                  <span className="record-muted">{resolution.description}</span>
                 </span>
-                <span className="demo-status">{resolution.status}</span>
+                <span className="record-chip">{resolution.status}</span>
               </div>
               <div className="demo-actions" style={{ marginTop: 8 }}>
                 {["yes", "no", "abstain"].map((vote) => <button key={vote} type="button" onClick={() => rpc("cast_vote", { p_resolution: resolution.id, p_vote: vote }).then(resolutions.reload)}>{vote}</button>)}
@@ -1273,7 +1304,7 @@ export function DecisionsScreen({ communityId, roles }) {
           ))}
         </ul>
         {committee && (
-          <SaveForm submitLabel="Propose resolution" onSubmit={(data) => rpc("propose_resolution", {
+          <SaveForm submitLabel="Start a vote" onSubmit={(data) => rpc("propose_resolution", {
             p_community: communityId,
             p_meeting: data.meeting || null,
             p_title: data.title,
@@ -1288,12 +1319,12 @@ export function DecisionsScreen({ communityId, roles }) {
               </select>
             </Field>
             <Field label="Title"><input className={control} name="title" required /></Field>
-            <Field label="Description"><textarea className={control} name="description" required /></Field>
+            <Field label="Details"><textarea className={control} name="description" required /></Field>
             <Field label="Voting starts"><input className={control} type="datetime-local" name="starts" required /></Field>
             <Field label="Voting ends"><input className={control} type="datetime-local" name="ends" required /></Field>
           </SaveForm>
         )}
-      </article>
+      </div>
     </section>
   );
 }
@@ -1416,22 +1447,43 @@ function parseUnits(text, existing) {
   return { rows, errors };
 }
 
+function noteKind(eventType) {
+  if (String(eventType || "").startsWith("payment_proof")) return "Payment";
+  if (String(eventType || "").includes("ticket") || String(eventType || "").includes("concern")) return "Complaint";
+  if (String(eventType || "").includes("meeting") || String(eventType || "").includes("resolution") || String(eventType || "").includes("statement")) return "Meeting";
+  return "Alert";
+}
+
 export function NotificationsScreen({ communityId }) {
   const query = useLoad(() => rows(supabase.from("notifications").select("id,title,body,event_type,read_at,created_at").eq("community_id", communityId).order("created_at", { ascending: false })), [communityId]);
   return (
-    <section>
-      <h2 className="mb-3 text-xl font-semibold">Notifications</h2>
-      <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && !(query.data || []).length} title="No notifications" body="Statement publication, meetings, and concern updates appear here. Email and WhatsApp are not sent yet." />
-      <ul className="space-y-2 text-sm">
-        {(query.data || []).map((note) => (
-          <li key={note.id} className="border border-slate-800 bg-white p-3">
-            <p className="text-sm text-slate-400">{["statement_published", "meeting_scheduled", "resolution_proposed", "ticket_updated"].includes(note.event_type) ? "Governance" : "Notice"} · {new Date(note.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</p>
-            <strong>{note.title}</strong>
-            <p>{note.body}</p>
-            {!note.read_at && <button type="button" className="mt-2 text-amber-300" onClick={() => supabase.from("notifications").update({ read_at: new Date().toISOString() }).eq("id", note.id).then(query.reload)}>Mark read</button>}
-          </li>
-        ))}
-      </ul>
+    <section className="record">
+      <header className="record-hero">
+        <h1>Alerts</h1>
+        <p>Payment proofs, complaints, and meeting updates for you.</p>
+      </header>
+      <div className="record-panel">
+        <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && !(query.data || []).length} title="No alerts yet" body="When a resident pays or raises a complaint, it shows up here." />
+        <ul className="record-attention">
+          {(query.data || []).map((note) => (
+            <li key={note.id}>
+              <div className="record-money-row">
+                <span>
+                  <span className="record-meta">{noteKind(note.event_type)} · {new Date(note.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</span>
+                  <br />
+                  <strong>{note.title}</strong>
+                  <br />
+                  <span className="record-muted">{note.body}</span>
+                </span>
+                {!note.read_at ? <span className="record-chip warn">New</span> : <span className="record-chip">Read</span>}
+              </div>
+              {!note.read_at && (
+                <button type="button" className="demo-text-button" onClick={() => supabase.from("notifications").update({ read_at: new Date().toISOString() }).eq("id", note.id).then(query.reload)}>Mark read</button>
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
     </section>
   );
 }
@@ -1563,24 +1615,32 @@ export function ProfileScreen({ email, roles, onSignOut }) {
 
 export function NoticesScreen({ communityId, roles }) {
   const committee = roles.includes("committee_admin") || roles.includes("platform_admin");
+  const [compose, setCompose] = useState(false);
   const query = useLoad(
     () => rows(supabase.from("community_notices").select("id,title,body,audience,pinned,published_at,created_at").eq("community_id", communityId).order("pinned", { ascending: false }).order("published_at", { ascending: false })),
     [communityId],
   );
   return (
-    <section>
-      <h2 className="mb-1 font-display text-xl font-semibold">Notices</h2>
-      <p className="mb-4 text-sm text-slate-400">Official society notices live here. WhatsApp is only a delivery channel.</p>
+    <section className="record">
+      <header className="record-hero">
+        <h1>Notices</h1>
+        <p>Official society updates for residents.</p>
+      </header>
       {committee && (
-        <SaveForm submitLabel="Publish notice" onSubmit={(data) => rpc("publish_community_notice", {
+        <div className="demo-actions">
+          <button type="button" className="demo-primary" onClick={() => setCompose((open) => !open)}>{compose ? "Cancel" : "Post notice"}</button>
+        </div>
+      )}
+      {compose && (
+        <SaveForm submitLabel="Post notice" onSubmit={(data) => rpc("publish_community_notice", {
           p_community: communityId,
           p_title: data.title,
           p_body: data.body,
           p_audience: data.audience,
           p_pinned: data.pinned === "true",
-        }).then(query.reload)}>
+        }).then(() => { setCompose(false); query.reload(); })}>
           <Field label="Title"><input className={control} name="title" required /></Field>
-          <Field label="Audience">
+          <Field label="Who should see it">
             <select className={control} name="audience" defaultValue="all">
               <option value="all">All residents</option>
               <option value="owners">Owners</option>
@@ -1588,26 +1648,30 @@ export function NoticesScreen({ communityId, roles }) {
               <option value="committee">Committee</option>
             </select>
           </Field>
-          <Field label="Pin">
+          <Field label="Pin to top">
             <select className={control} name="pinned" defaultValue="false">
               <option value="false">No</option>
               <option value="true">Yes</option>
             </select>
           </Field>
-          <Field label="Body"><textarea className={control} name="body" rows={5} required /></Field>
+          <Field label="Message"><textarea className={control} name="body" rows={5} required /></Field>
         </SaveForm>
       )}
-      <div className="mt-4">
-        <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && !(query.data || []).length} title="No notices yet" body="When the secretary publishes a notice, it appears here for every member." />
-        <ul className="space-y-3">
+      <div className="record-panel">
+        <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && !(query.data || []).length} title="No notices yet" body="Committee notices will appear here." />
+        <ul className="record-attention">
           {(query.data || []).map((notice) => (
-            <li key={notice.id} className="border border-slate-800 bg-white p-3">
-              <div className="flex justify-between gap-3">
-                <strong>{notice.title}</strong>
-                {notice.pinned && <span className="text-xs font-semibold text-[#0878E8]">Pinned</span>}
+            <li key={notice.id}>
+              <div className="record-money-row">
+                <span>
+                  <strong>{notice.title}</strong>
+                  <br />
+                  <span className="record-muted" style={{ whiteSpace: "pre-wrap" }}>{notice.body}</span>
+                  <br />
+                  <span className="record-meta">{notice.audience} · {notice.published_at ? new Date(notice.published_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) : "draft"}</span>
+                </span>
+                {notice.pinned && <span className="record-chip">Pinned</span>}
               </div>
-              <p className="mt-2 whitespace-pre-wrap text-sm">{notice.body}</p>
-              <p className="mt-2 text-xs text-slate-400">{notice.audience} · {notice.published_at ? new Date(notice.published_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) : "draft"}</p>
             </li>
           ))}
         </ul>
@@ -1618,49 +1682,62 @@ export function NoticesScreen({ communityId, roles }) {
 
 export function VisitorsScreen({ communityId, roles }) {
   const committee = roles.includes("committee_admin") || roles.includes("platform_admin");
+  const [compose, setCompose] = useState(false);
   const query = useLoad(
     () => rows(supabase.from("visitor_passes").select("id,visitor_name,visitor_phone,purpose,pass_code,status,expected_at,checked_in_at,checked_out_at,created_at").eq("community_id", communityId).order("created_at", { ascending: false }).limit(40)),
     [communityId],
   );
   return (
-    <section>
-      <h2 className="mb-1 font-display text-xl font-semibold">Visitors</h2>
-      <p className="mb-4 text-sm text-slate-400">Pre-approve guests with a pass code. Gate staff check visitors in and out. No financial data is shown here.</p>
-      <SaveForm submitLabel="Create visitor pass" onSubmit={async (data) => {
-        const result = await rpc("create_visitor_pass", {
-          p_community: communityId,
-          p_visitor_name: data.name,
-          p_visitor_phone: data.phone || null,
-          p_purpose: data.purpose || null,
-          p_unit_number: data.unit || null,
-          p_vehicle_number: data.vehicle || null,
-          p_expected_at: data.expected || null,
-        });
-        window.alert(`Pass created. Code: ${result?.pass_code || result}`);
-        query.reload();
-      }}>
-        <Field label="Visitor name"><input className={control} name="name" required /></Field>
-        <Field label="Phone"><input className={control} name="phone" inputMode="tel" /></Field>
-        <Field label="Unit number"><input className={control} name="unit" /></Field>
-        <Field label="Purpose"><input className={control} name="purpose" /></Field>
-        <Field label="Vehicle"><input className={control} name="vehicle" /></Field>
-        <Field label="Expected at"><input className={control} type="datetime-local" name="expected" /></Field>
-      </SaveForm>
-      <div className="mt-4">
-        <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && !(query.data || []).length} title="No visitor passes" body="Create a pass for an expected guest. The gate uses the pass code at entry." />
-        <ul className="space-y-2 text-sm">
+    <section className="record">
+      <header className="record-hero">
+        <h1>Guests</h1>
+        <p>Invite a guest and share the pass code at the gate.</p>
+      </header>
+      <div className="demo-actions">
+        <button type="button" className="demo-primary" onClick={() => setCompose((open) => !open)}>{compose ? "Cancel" : "Invite guest"}</button>
+      </div>
+      {compose && (
+        <SaveForm submitLabel="Create pass" onSubmit={async (data) => {
+          const result = await rpc("create_visitor_pass", {
+            p_community: communityId,
+            p_visitor_name: data.name,
+            p_visitor_phone: data.phone || null,
+            p_purpose: data.purpose || null,
+            p_unit_number: data.unit || null,
+            p_vehicle_number: data.vehicle || null,
+            p_expected_at: data.expected || null,
+          });
+          window.alert(`Pass ready. Code: ${result?.pass_code || result}`);
+          setCompose(false);
+          query.reload();
+        }}>
+          <Field label="Guest name"><input className={control} name="name" required /></Field>
+          <Field label="Phone"><input className={control} name="phone" inputMode="tel" /></Field>
+          <Field label="Flat number"><input className={control} name="unit" /></Field>
+          <Field label="Purpose"><input className={control} name="purpose" placeholder="Family / delivery / cab" /></Field>
+          <Field label="Vehicle number"><input className={control} name="vehicle" /></Field>
+          <Field label="Expected at"><input className={control} type="datetime-local" name="expected" /></Field>
+        </SaveForm>
+      )}
+      <div className="record-panel">
+        <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && !(query.data || []).length} title="No guest passes" body="Tap Invite guest to create a gate pass." />
+        <ul className="record-attention">
           {(query.data || []).map((pass) => (
-            <li key={pass.id} className="border border-slate-800 bg-white p-3">
-              <div className="flex flex-wrap justify-between gap-2">
-                <strong>{pass.visitor_name}</strong>
-                <span className="font-mono">{pass.pass_code}</span>
+            <li key={pass.id}>
+              <div className="record-money-row">
+                <span>
+                  <strong>{pass.visitor_name}</strong>
+                  <br />
+                  <span className="record-muted">{pass.purpose || "Visit"} · {pass.visitor_phone || "no phone"}</span>
+                </span>
+                <span className="record-chip">{pass.pass_code}</span>
               </div>
-              <p className="text-slate-400">{pass.status} · {pass.purpose || "Visit"} · {pass.visitor_phone || "no phone"}</p>
+              <p className="record-meta">{pass.status}</p>
               {committee && pass.status === "expected" && (
-                <button type="button" className="mt-2 min-h-10 border border-slate-600 px-3" onClick={() => rpc("check_in_visitor", { p_pass: pass.id }).then(query.reload)}>Check in</button>
+                <button type="button" className="demo-primary" onClick={() => rpc("check_in_visitor", { p_pass: pass.id }).then(query.reload)}>Check in</button>
               )}
               {committee && pass.status === "checked_in" && (
-                <button type="button" className="mt-2 min-h-10 border border-slate-600 px-3" onClick={() => rpc("check_out_visitor", { p_pass: pass.id }).then(query.reload)}>Check out</button>
+                <button type="button" className="demo-primary" onClick={() => rpc("check_out_visitor", { p_pass: pass.id }).then(query.reload)}>Check out</button>
               )}
             </li>
           ))}
@@ -1672,6 +1749,7 @@ export function VisitorsScreen({ communityId, roles }) {
 
 export function AmenitiesScreen({ communityId, roles }) {
   const committee = roles.includes("committee_admin") || roles.includes("platform_admin");
+  const [booking, setBooking] = useState(false);
   const amenities = useLoad(
     () => rows(supabase.from("amenities").select("id,name,description,requires_approval,slot_minutes,is_active").eq("community_id", communityId).eq("is_active", true).order("name")),
     [communityId],
@@ -1681,11 +1759,27 @@ export function AmenitiesScreen({ communityId, roles }) {
     [communityId],
   );
   return (
-    <section>
-      <h2 className="mb-1 font-display text-xl font-semibold">Amenities</h2>
-      <p className="mb-4 text-sm text-slate-400">Book community spaces. Overlapping confirmed bookings are rejected.</p>
+    <section className="record">
+      <header className="record-hero">
+        <h1>Book hall</h1>
+        <p>Reserve clubhouse and other society spaces.</p>
+      </header>
+      <div className="record-shortcuts" role="list">
+        {(amenities.data || []).map((item) => (
+          <button key={item.id} type="button" onClick={() => setBooking(true)}>
+            {item.name}
+            <span className="record-meta" style={{ display: "block", fontWeight: 500 }}>{item.slot_minutes} min slots</span>
+          </button>
+        ))}
+      </div>
+      <PageStatus loading={amenities.loading} error={amenities.error} onRetry={amenities.reload} empty={!amenities.loading && !amenities.error && !(amenities.data || []).length} title="No spaces listed yet" body="Committee can add clubhouse, court, or guest room." />
+      <div className="demo-actions">
+        {!!(amenities.data || []).length && (
+          <button type="button" className="demo-primary" onClick={() => setBooking((open) => !open)}>{booking ? "Cancel" : "New booking"}</button>
+        )}
+      </div>
       {committee && (
-        <SaveForm submitLabel="Add amenity" onSubmit={async (data) => {
+        <SaveForm submitLabel="Add space" onSubmit={async (data) => {
           const { error } = await supabase.from("amenities").insert({
             community_id: communityId,
             name: data.name,
@@ -1696,48 +1790,56 @@ export function AmenitiesScreen({ communityId, roles }) {
           if (error) throw new Error(error.message);
           amenities.reload();
         }}>
-          <Field label="Name"><input className={control} name="name" required /></Field>
+          <Field label="Name"><input className={control} name="name" required placeholder="Clubhouse" /></Field>
           <Field label="Description"><input className={control} name="description" /></Field>
           <Field label="Slot minutes"><input className={control} name="minutes" type="number" defaultValue="60" min="15" /></Field>
           <Field label="Needs approval">
             <select className={control} name="approval" defaultValue="false">
               <option value="false">No — confirm immediately</option>
-              <option value="true">Yes — pending until committee approves</option>
+              <option value="true">Yes — committee approves</option>
             </select>
           </Field>
         </SaveForm>
       )}
-      <PageStatus loading={amenities.loading} error={amenities.error} onRetry={amenities.reload} empty={!amenities.loading && !amenities.error && !(amenities.data || []).length} title="No amenities configured" body="Committee can add clubhouse, courts, guest rooms and other bookable spaces." />
-      {!!(amenities.data || []).length && (
+      {booking && !!(amenities.data || []).length && (
         <SaveForm submitLabel="Request booking" onSubmit={(data) => rpc("book_amenity", {
           p_amenity: data.amenity,
           p_starts_at: new Date(data.start).toISOString(),
           p_ends_at: new Date(data.end).toISOString(),
           p_purpose: data.purpose || null,
           p_unit_number: data.unit || null,
-        }).then(bookings.reload)}>
-          <Field label="Amenity">
+        }).then(() => { setBooking(false); bookings.reload(); })}>
+          <Field label="Space">
             <select className={control} name="amenity" required>
               {(amenities.data || []).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
             </select>
           </Field>
           <Field label="Starts"><input className={control} type="datetime-local" name="start" required /></Field>
           <Field label="Ends"><input className={control} type="datetime-local" name="end" required /></Field>
-          <Field label="Unit number"><input className={control} name="unit" /></Field>
-          <Field label="Purpose"><input className={control} name="purpose" /></Field>
+          <Field label="Flat number"><input className={control} name="unit" /></Field>
+          <Field label="Purpose"><input className={control} name="purpose" placeholder="Birthday / meeting" /></Field>
         </SaveForm>
       )}
-      <h3 className="mb-2 mt-6 font-semibold">Recent bookings</h3>
-      <PageStatus loading={bookings.loading} error={bookings.error} onRetry={bookings.reload} empty={!bookings.loading && !bookings.error && !(bookings.data || []).length} title="No bookings yet" body="Your confirmed and pending amenity bookings appear here." />
-      <ul className="space-y-2 text-sm">
-        {(bookings.data || []).map((booking) => (
-          <li key={booking.id} className="border border-slate-800 bg-white p-3">
-            <strong>{booking.amenities?.name || "Amenity"}</strong>
-            <p>{new Date(booking.starts_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} → {new Date(booking.ends_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</p>
-            <p className="text-slate-400">{booking.status} · {booking.purpose || "No purpose noted"}</p>
-          </li>
-        ))}
-      </ul>
+      <div className="record-panel">
+        <h2>Your bookings</h2>
+        <PageStatus loading={bookings.loading} error={bookings.error} onRetry={bookings.reload} empty={!bookings.loading && !bookings.error && !(bookings.data || []).length} title="No bookings yet" body="Confirmed and pending bookings appear here." />
+        <ul className="record-attention">
+          {(bookings.data || []).map((row) => (
+            <li key={row.id}>
+              <div className="record-money-row">
+                <span>
+                  <strong>{row.amenities?.name || "Space"}</strong>
+                  <br />
+                  <span className="record-muted">{new Date(row.starts_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} → {new Date(row.ends_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</span>
+                  <br />
+                  <span className="record-meta">{row.purpose || "No purpose"}</span>
+                </span>
+                <span className="record-chip">{row.status}</span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
     </section>
   );
 }

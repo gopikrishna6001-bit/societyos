@@ -9,7 +9,7 @@ import {
   FinanceScreen, HistoryScreen, HomeScreen, NoticesScreen, NotificationsScreen, ProfileScreen,
   SettingsScreen, StaffScreen, UnitsScreen, VisitorsScreen,
 } from "./screens.jsx";
-import { Field, PageStatus, control } from "./ui.jsx";
+import { Field, PageStatus, control, useLoad } from "./ui.jsx";
 import { brand } from "../brand.js";
 import { passwordRule, signInMessage } from "../lib/authPolicy.js";
 import { Mark, Wordmark } from "../brand/Mark.jsx";
@@ -384,12 +384,26 @@ const TAB_ICONS = {
   decisions: Building2,
 };
 
+function notificationTarget(note) {
+  if (note?.event_type === "payment_proof_submitted") return "collections";
+  if (note?.event_type?.startsWith("payment_proof")) return "finance";
+  if (note?.event_type?.includes("ticket") || note?.event_type?.includes("concern")) return "concerns";
+  if (note?.event_type?.includes("meeting") || note?.event_type?.includes("resolution")) return "decisions";
+  if (note?.event_type?.includes("notice")) return "notices";
+  return "notifications";
+}
+
 function Shell({ email, community, communities, communityId, onCommunity, roles, onSignOut }) {
   const items = navigation(roles);
   const primary = primaryNav(roles);
   const overflow = moreNav(roles);
   const [page, setPage] = useState(items[0]?.[0] || "home");
   const [menu, setMenu] = useState("");
+  const notes = useLoad(
+    () => rows(supabase.from("notifications").select("id,title,body,event_type,read_at,created_at").eq("community_id", communityId).order("created_at", { ascending: false }).limit(12)),
+    [communityId],
+  );
+  const unread = (notes.data || []).filter((note) => !note.read_at).length;
   const unique = [...new Map(communities.map((row) => [row.community_id, row])).values()];
   const openPage = (id) => { setPage(id); setMenu(""); };
   const current = ["collections", "expenses", "funds", "reconciliation", "reviews", "transactions"].includes(page) ? "finance" : page;
@@ -400,6 +414,14 @@ function Shell({ email, community, communities, communityId, onCommunity, roles,
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() || "")
     .join("") || "?";
+
+  const openNote = async (note) => {
+    if (!note.read_at) {
+      await supabase.from("notifications").update({ read_at: new Date().toISOString() }).eq("id", note.id);
+      notes.reload();
+    }
+    openPage(notificationTarget(note));
+  };
 
   return (
     <div className="app-shell">
@@ -442,17 +464,33 @@ function Shell({ email, community, communities, communityId, onCommunity, roles,
                 ))}
               </select>
             )}
-            <button type="button" aria-label="Notifications" aria-expanded={menu === "notes"} onClick={() => setMenu((value) => (value === "notes" ? "" : "notes"))}>
+            <button type="button" className="app-bell" aria-label={unread ? `${unread} unread alerts` : "Alerts"} aria-expanded={menu === "notes"} onClick={() => setMenu((value) => (value === "notes" ? "" : "notes"))}>
               <Bell size={18} aria-hidden="true" />
+              {unread > 0 && <span className="app-bell-badge">{unread > 9 ? "9+" : unread}</span>}
             </button>
             <button type="button" className="app-avatar" aria-label="Profile" aria-expanded={menu === "profile"} onClick={() => setMenu((value) => (value === "profile" ? "" : "profile"))}>
               {initials}
             </button>
           </div>
           {menu === "notes" && (
-            <div className="app-popover" role="dialog" aria-label="Notifications">
-              <p className="demo-secondary">Open Notifications from More for the full list.</p>
-              <button type="button" onClick={() => openPage("notifications")}>Open notifications</button>
+            <div className="app-popover app-popover-wide" role="dialog" aria-label="Alerts">
+              <strong>Alerts</strong>
+              <PageStatus loading={notes.loading} error={notes.error} onRetry={notes.reload} empty={!notes.loading && !(notes.data || []).length} title="No alerts yet" body="Payment proofs, complaints, and meeting updates show here." />
+              <ul className="app-note-list">
+                {(notes.data || []).slice(0, 8).map((note) => (
+                  <li key={note.id}>
+                    <button type="button" onClick={() => openNote(note)}>
+                      <span>
+                        <strong>{note.title}</strong>
+                        <br />
+                        <span className="demo-secondary">{note.body}</span>
+                      </span>
+                      {!note.read_at && <span className="record-chip warn">New</span>}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <button type="button" onClick={() => openPage("notifications")}>See all alerts</button>
             </div>
           )}
           {menu === "profile" && (
