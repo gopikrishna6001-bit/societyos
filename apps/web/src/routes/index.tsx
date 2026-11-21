@@ -36,14 +36,14 @@ function App() {
             Every rupee. Every decision. Accounted for.
           </p>
           <p className="text-muted-foreground mt-5 text-sm">
-            Start with the setup wizard — configure your society and units in the browser demo. No database or signup needed.
+            Explore the sample society, or start the setup wizard to configure society and units. Runs in your browser — no database or signup needed.
           </p>
           <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
             <Button asChild size="lg">
-              <a href="/demo/setup">Start setup wizard</a>
+              <a href="/demo">Explore the demo</a>
             </Button>
             <Button asChild size="lg" variant="outline">
-              <a href="/demo">Explore the demo</a>
+              <a href="/demo/setup">Start setup wizard</a>
             </Button>
           </div>
         </div>

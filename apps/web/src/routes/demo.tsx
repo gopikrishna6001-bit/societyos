@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useRouterState } from '@tanstack/react-router'
 import { QueryClient, QueryClientProvider, MutationCache, useIsMutating } from '@tanstack/react-query'
 import { AdminLayout } from './admin'
 import { resetDemoClient } from '@/lib/demo/client'
@@ -22,6 +22,8 @@ function newDemoQueryClient() {
 
 function DemoLayout() {
   const { t } = useT()
+  const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const setupOnly = pathname === '/demo/setup' || pathname.startsWith('/demo/setup/')
   const [session, setSession] = useState(() => ({ client: newDemoQueryClient(), revision: 0 }))
   const [resetting, setResetting] = useState(false)
   const mutating = useIsMutating(undefined, session.client)
@@ -36,18 +38,20 @@ function DemoLayout() {
   }
   return (
     <QueryClientProvider client={session.client} key={session.revision}>
-      <div className="border-b border-cyan-200 bg-cyan-50 px-6 py-3 text-cyan-950 dark:border-cyan-900 dark:bg-cyan-950 dark:text-cyan-50">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="font-semibold">{t('demo.title')}</p>
-            <p className="mt-1 text-sm">{t('demo.description')}</p>
-          </div>
-          <div className="flex shrink-0 items-center gap-3">
-            <Button variant="outline" size="sm" onClick={reset} disabled={resetting || mutating > 0}>{t('demo.reset')}</Button>
-            <a href="/" className="text-sm font-medium underline">{t('demo.exit')}</a>
+      {!setupOnly && (
+        <div className="border-b border-cyan-200 bg-cyan-50 px-6 py-3 text-cyan-950 dark:border-cyan-900 dark:bg-cyan-950 dark:text-cyan-50">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="font-semibold">{t('demo.title')}</p>
+              <p className="mt-1 text-sm">{t('demo.description')}</p>
+            </div>
+            <div className="flex shrink-0 items-center gap-3">
+              <Button variant="outline" size="sm" onClick={reset} disabled={resetting || mutating > 0}>{t('demo.reset')}</Button>
+              <a href="/" className="text-sm font-medium underline">{t('demo.exit')}</a>
+            </div>
           </div>
         </div>
-      </div>
+      )}
       <AdminLayout />
     </QueryClientProvider>
   )
