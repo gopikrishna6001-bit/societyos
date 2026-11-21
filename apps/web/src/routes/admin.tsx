@@ -116,14 +116,15 @@ export function AdminLayout() {
               </nav>
             )}
             <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
-              {demo ? (
-                <Badge>{t('demo.badge')}</Badge>
-              ) : (
-                <Badge variant={health.isSuccess ? 'default' : 'destructive'}>
-                  {t('header.api')}{' '}
-                  {health.isLoading ? '…' : health.isSuccess ? t('header.apiOnline') : t('header.apiOffline')}
-                </Badge>
-              )}
+              {!setupOnly &&
+                (demo ? (
+                  <Badge>{t('demo.badge')}</Badge>
+                ) : (
+                  <Badge variant={health.isSuccess ? 'default' : 'destructive'}>
+                    {t('header.api')}{' '}
+                    {health.isLoading ? '…' : health.isSuccess ? t('header.apiOnline') : t('header.apiOffline')}
+                  </Badge>
+                ))}
               <LanguageSwitcher />
               {CLERK_ENABLED && !demo && <AuthControls />}
               <ThemeToggle />

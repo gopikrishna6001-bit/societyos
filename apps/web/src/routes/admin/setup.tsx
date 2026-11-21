@@ -172,7 +172,16 @@ function SetupWizard() {
           )}
 
           <div className="mt-8 flex items-center justify-between">
-            <Button variant="outline" onClick={() => setStep((s) => s - 1)} disabled={step === 0}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (step === 0) {
+                  void navigate({ to: '/' })
+                  return
+                }
+                setStep((s) => s - 1)
+              }}
+            >
               {t('common.back')}
             </Button>
             {step < SETUP_STEPS.length - 1 ? (
