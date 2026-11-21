@@ -12,13 +12,13 @@ export function isCommittee(roles = []) {
   return roles.includes("committee_admin") || roles.includes("platform_admin");
 }
 
-/** Primary tab labels */
-export function navLabel(id, roles = []) {
-  const ops = isFinanceOps(roles);
+/** Primary tab / sidebar labels (OpenSociety vocabulary). */
+export function navLabel(id, roles = [], mode = "resident") {
+  const ops = mode === "admin" || isFinanceOps(roles);
   const map = {
-    home: "Home",
-    finance: ops ? "Accounts" : "Bills",
-    concerns: "Complaints",
+    home: mode === "admin" ? "Overview" : "Home",
+    finance: mode === "admin" ? "Billing" : "Bills",
+    concerns: "Maintenance",
     decisions: "Meetings",
     collections: ops ? "Collect dues" : "Pay dues",
     expenses: "Expenses",
@@ -29,7 +29,7 @@ export function navLabel(id, roles = []) {
     statements: "Monthly report",
     notices: "Notices",
     visitors: "Guests",
-    amenities: "Book hall",
+    amenities: mode === "admin" ? "Amenities" : "Book hall",
     assets: "Property",
     staff: "Staff",
     assistant: "Ask SABHA",
@@ -45,30 +45,38 @@ export function navLabel(id, roles = []) {
 
 export const copy = {
   home: {
-    titleResident: "Home",
-    titleOps: "Home",
-    leadResident: "Pay dues, raise a complaint, or check notices.",
-    leadOps: "Collect dues, track expenses, and handle complaints.",
+    titleResident: "A little closer to home",
+    titleOps: "Society overview",
+    leadResident: "Welcome guests, pay bills, read notices, and raise maintenance from one place.",
+    leadOps: "Billing, maintenance tickets, guests, and notices for the community.",
+    inviteLabel: "Guest pass",
+    inviteTitle: "Invite someone over",
+    inviteHint: "Create a pass code they can show at the gate.",
+    inviteCta: "Create pass",
+    everyday: "Everyday",
+    household: "Household",
     statusResident: "Your dues",
     statusOps: "This month’s collection",
     needsYou: "To do",
     needsYouEmpty: "Nothing pending",
-    needsYouEmptyBody: "New bills, complaints, or meeting votes will show here.",
+    needsYouEmptyBody: "New bills, maintenance tickets, or meeting votes will show here.",
     noDues: "No maintenance due right now",
     hasDues: (n) => (n === 1 ? "1 bill to pay" : `${n} bills to pay`),
     payCta: "Pay maintenance",
     payCtaOps: "Collect dues",
-    raiseConcern: "Raise complaint",
+    raiseConcern: "Raise maintenance",
     notices: "Notices",
     meetings: "Meetings",
     announcements: "Notices",
     upcoming: "Upcoming meetings",
     recentMoney: "Recent payments",
     recentMoneyEmpty: "No payments yet this month",
-    communityBooksHint: "Full society accounts are with the treasurer. You can still pay dues and read notices here.",
+    communityBooksHint: "Society accounts stay with the treasurer. You can still pay dues and read notices here.",
+    myHome: "My home",
+    manage: "Manage society",
     shortcuts: {
       pay: "Pay maintenance",
-      complaint: "Raise complaint",
+      complaint: "Raise maintenance",
       book: "Book hall",
       guest: "Invite guest",
       notices: "Notices",
@@ -76,8 +84,8 @@ export const copy = {
     },
   },
   finance: {
-    titleResident: "Bills & payments",
-    titleOps: "Accounts",
+    titleResident: "Bills",
+    titleOps: "Billing",
     leadResident: "See your maintenance bill and upload UPI / bank proof.",
     leadOps: "Collect dues, record expenses, and check society funds.",
     snapshotOps: "Summary",

@@ -43,12 +43,13 @@ test("signs out from the profile and shows the adaptive home status", async () =
   const user = userEvent.setup();
   render(<Platform />);
   expect((await screen.findAllByText("Palm Court")).length).toBeGreaterThan(0);
-  expect(await screen.findByRole("heading", { name: "Home" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: /closer to home/i })).toBeInTheDocument();
   expect(screen.getByText(/No maintenance due right now/i)).toBeInTheDocument();
   expect(screen.getAllByRole("button", { name: "Bills" }).length).toBeGreaterThan(0);
-  expect(screen.getAllByRole("button", { name: "Complaints" }).length).toBeGreaterThan(0);
-  expect(screen.getAllByRole("button", { name: "Pay maintenance" }).length).toBeGreaterThan(0);
-  expect(screen.getAllByRole("button", { name: "Raise complaint" }).length).toBeGreaterThan(0);
+  expect(screen.getAllByRole("button", { name: "Guests" }).length).toBeGreaterThan(0);
+  expect(screen.getAllByRole("button", { name: "Notices" }).length).toBeGreaterThan(0);
+  expect(screen.getByRole("button", { name: /Create pass/i })).toBeInTheDocument();
+  expect(screen.getByText("Everyday")).toBeInTheDocument();
   expect(screen.getByText("More")).toBeInTheDocument();
   expect(screen.queryByText(/₹/)).not.toBeInTheDocument();
   expect(screen.queryByText(/ledger/i)).not.toBeInTheDocument();

@@ -1,9 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Bell, Building2, Ellipsis, Home, Landmark, LifeBuoy } from "lucide-react";
+import {
+  Bell, Building2, ClipboardList, Ellipsis, Home, Landmark, LifeBuoy, Megaphone, Users,
+} from "lucide-react";
 import { isSupabaseConfigured, rpc, rows, supabase, withTimeout } from "./api.js";
 import { explain } from "./api.js";
 import { isDemoEmail } from "./demo/data.js";
+import {
+  ADMIN_NAV, RESIDENT_MORE, RESIDENT_TABS, canSeePage, isOpsRole,
+} from "./appNav.js";
 import {
   AmenitiesScreen, AssetsScreen, AssistantScreen, ConcernsScreen, DecisionsScreen, DocumentsScreen,
   FinanceScreen, HistoryScreen, HomeScreen, NoticesScreen, NotificationsScreen, ProfileScreen,
@@ -13,7 +18,7 @@ import { Field, PageStatus, control, useLoad } from "./ui.jsx";
 import { brand } from "../brand.js";
 import { passwordRule, signInMessage } from "../lib/authPolicy.js";
 import { Mark, Wordmark } from "../brand/Mark.jsx";
-import { navLabel } from "./roleCopy.js";
+import { copy, navLabel } from "./roleCopy.js";
 export default function Platform() {
   if (!isSupabaseConfigured) return <ConfigRequired />;
   return <SignedInApp />;
@@ -328,44 +333,6 @@ function Setup({ onCreated, email, onSignOut }) {
   );
 }
 
-function canSee(roles, id) {
-  const committee = roles.includes("committee_admin") || roles.includes("platform_admin");
-  const treasurer = roles.includes("treasurer");
-  const auditor = roles.includes("resident_auditor");
-  const financeOps = committee || treasurer;
-  if (id === "units" || id === "settings") return committee;
-  if (id === "staff") return committee || treasurer;
-  if (id === "funds") return financeOps;
-  if (id === "collections") return true; // residents submit proofs; treasurers verify
-  if (id === "reconciliation" || id === "expenses" || id === "reviews" || id === "history" || id === "transactions") return financeOps || auditor;
-  return ["home", "finance", "concerns", "decisions", "documents", "notifications", "profile", "notices", "visitors", "amenities", "assets", "assistant"].includes(id);
-}
-
-const PRIMARY_IDS = ["home", "finance", "concerns", "decisions"];
-const MORE_IDS = [
-  "notices", "visitors", "amenities", "assets", "staff", "assistant", "documents",
-  "notifications", "profile", "collections", "expenses", "transactions", "funds",
-  "reconciliation", "reviews", "units", "settings", "history",
-];
-
-function navigation(roles) {
-  return [...PRIMARY_IDS, ...MORE_IDS]
-    .filter((id) => canSee(roles, id))
-    .map((id) => [id, navLabel(id, roles)]);
-}
-
-function primaryNav(roles) {
-  return PRIMARY_IDS.filter((id) => canSee(roles, id)).map((id) => [id, navLabel(id, roles)]);
-}
-
-function moreNav(roles) {
-  const ops = roles.some((role) => ["treasurer", "resident_auditor", "committee_admin", "platform_admin"].includes(role));
-  return MORE_IDS
-    .filter((id) => canSee(roles, id))
-    .filter((id) => ops || id !== "collections") // residents use Bills tab, not a second Pay dues entry
-    .map((id) => [id, navLabel(id, roles)]);
-}
-
 function roleLabel(roles) {
   const names = {
     platform_admin: "Platform admin",
@@ -379,9 +346,12 @@ function roleLabel(roles) {
 
 const TAB_ICONS = {
   home: Home,
+  visitors: Users,
   finance: Landmark,
+  notices: Megaphone,
   concerns: LifeBuoy,
   decisions: Building2,
+  amenities: ClipboardList,
 };
 
 function notificationTarget(note) {
@@ -393,11 +363,28 @@ function notificationTarget(note) {
   return "notifications";
 }
 
+function readViewMode(roles) {
+  try {
+    const saved = localStorage.getItem("sabha-view-mode");
+    if (saved === "admin" || saved === "resident") return saved;
+  } catch { /* ignore */ }
+  return isOpsRole(roles) ? "admin" : "resident";
+}
+
 function Shell({ email, community, communities, communityId, onCommunity, roles, onSignOut }) {
-  const items = navigation(roles);
-  const primary = primaryNav(roles);
-  const overflow = moreNav(roles);
-  const [page, setPage] = useState(items[0]?.[0] || "home");
+  const ops = isOpsRole(roles);
+  const [mode, setMode] = useState(() => readViewMode(roles));
+  const view = ops ? mode : "resident";
+  const sidebar = view === "admin"
+    ? ADMIN_NAV.filter(([id]) => canSeePage(roles, id)).map(([id]) => [id, navLabel(id, roles, "admin")])
+    : RESIDENT_TABS.map(([id]) => [id, navLabel(id, roles, "resident")]);
+  const primary = view === "resident"
+    ? RESIDENT_TABS.map(([id]) => [id, navLabel(id, roles, "resident")])
+    : sidebar.slice(0, 4);
+  const overflow = view === "resident"
+    ? RESIDENT_MORE.map(([id]) => [id, navLabel(id, roles, "resident")])
+    : sidebar.slice(4);
+  const [page, setPage] = useState("home");
   const [menu, setMenu] = useState("");
   const notes = useLoad(
     () => rows(supabase.from("notifications").select("id,title,body,event_type,read_at,created_at").eq("community_id", communityId).order("created_at", { ascending: false }).limit(12)),
@@ -415,6 +402,13 @@ function Shell({ email, community, communities, communityId, onCommunity, roles,
     .map((part) => part[0]?.toUpperCase() || "")
     .join("") || "?";
 
+  const switchMode = (next) => {
+    setMode(next);
+    try { localStorage.setItem("sabha-view-mode", next); } catch { /* ignore */ }
+    setPage("home");
+    setMenu("");
+  };
+
   const openNote = async (note) => {
     if (!note.read_at) {
       await supabase.from("notifications").update({ read_at: new Date().toISOString() }).eq("id", note.id);
@@ -424,7 +418,7 @@ function Shell({ email, community, communities, communityId, onCommunity, roles,
   };
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${view === "admin" ? "app-shell-admin" : "app-shell-resident"}`}>
       <aside className="app-sidebar">
         <div className="app-brand">
           <Mark size={40} />
@@ -433,8 +427,14 @@ function Shell({ email, community, communities, communityId, onCommunity, roles,
         <p>{brand.tagline}</p>
         <p className="demo-secondary" style={{ color: "#d6f6fa", marginTop: 8 }}>{community?.name}</p>
         <p className="demo-secondary" style={{ color: "#b7ecef", fontSize: 12 }}>{roleLabel(roles)}</p>
-        <nav aria-label="Primary" style={{ marginTop: 16 }}>
-          {items.map(([id, label]) => (
+        {ops && (
+          <div className="app-mode-toggle" role="group" aria-label="App mode">
+            <button type="button" aria-pressed={view === "resident"} onClick={() => switchMode("resident")}>{copy.home.myHome}</button>
+            <button type="button" aria-pressed={view === "admin"} onClick={() => switchMode("admin")}>{copy.home.manage}</button>
+          </div>
+        )}
+        <nav aria-label={view === "admin" ? "Society admin" : "Resident"} style={{ marginTop: 16 }}>
+          {(view === "admin" ? sidebar : [...primary, ...overflow]).map(([id, label]) => (
             <button key={id} type="button" aria-current={page === id ? "page" : undefined} onClick={() => openPage(id)}>
               <span>{label}</span>
             </button>
@@ -475,7 +475,7 @@ function Shell({ email, community, communities, communityId, onCommunity, roles,
           {menu === "notes" && (
             <div className="app-popover app-popover-wide" role="dialog" aria-label="Alerts">
               <strong>Alerts</strong>
-              <PageStatus loading={notes.loading} error={notes.error} onRetry={notes.reload} empty={!notes.loading && !(notes.data || []).length} title="No alerts yet" body="Payment proofs, complaints, and meeting updates show here." />
+              <PageStatus loading={notes.loading} error={notes.error} onRetry={notes.reload} empty={!notes.loading && !(notes.data || []).length} title="No alerts yet" body="Payment proofs, maintenance tickets, and meeting updates show here." />
               <ul className="app-note-list">
                 {(notes.data || []).slice(0, 8).map((note) => (
                   <li key={note.id}>
@@ -496,14 +496,27 @@ function Shell({ email, community, communities, communityId, onCommunity, roles,
           {menu === "profile" && (
             <div className="app-popover" role="dialog" aria-label="Profile">
               <p><strong>{roleLabel(roles)}</strong><br />{email}</p>
+              {ops && (
+                <>
+                  <button type="button" onClick={() => switchMode(view === "admin" ? "resident" : "admin")}>
+                    {view === "admin" ? copy.home.myHome : copy.home.manage}
+                  </button>
+                </>
+              )}
               <button type="button" onClick={() => openPage("profile")}>Profile</button>
               <button type="button" onClick={onSignOut}>Sign out</button>
             </div>
           )}
         </header>
+        {ops && (
+          <div className="app-mode-bar" role="group" aria-label="App mode">
+            <button type="button" aria-pressed={view === "resident"} onClick={() => switchMode("resident")}>{copy.home.myHome}</button>
+            <button type="button" aria-pressed={view === "admin"} onClick={() => switchMode("admin")}>{copy.home.manage}</button>
+          </div>
+        )}
         <p className="app-note record-context">{roleLabel(roles)} · {email}</p>
         <main className="app-main">
-          <Screen page={page} communityId={communityId} roles={roles} email={email} onSignOut={onSignOut} onOpen={openPage} />
+          <Screen page={page} communityId={communityId} roles={roles} email={email} onSignOut={onSignOut} onOpen={openPage} view={view} />
         </main>
       </div>
       <nav className="app-tabbar" aria-label="Mobile">
@@ -539,8 +552,8 @@ function Shell({ email, community, communities, communityId, onCommunity, roles,
   );
 }
 
-function Screen({ page, communityId, roles, email, onSignOut, onOpen }) {
-  if (page === "home") return <HomeScreen communityId={communityId} roles={roles} onOpen={onOpen} />;
+function Screen({ page, communityId, roles, email, onSignOut, onOpen, view }) {
+  if (page === "home") return <HomeScreen communityId={communityId} roles={roles} onOpen={onOpen} view={view} />;
   if (["finance", "collections", "expenses", "funds", "reconciliation", "reviews", "transactions"].includes(page)) {
     return <FinanceScreen communityId={communityId} roles={roles} focus={page} />;
   }

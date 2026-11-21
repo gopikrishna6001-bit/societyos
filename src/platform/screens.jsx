@@ -4,6 +4,7 @@ import { downloadText, inr, toCsv } from "./money.js";
 import { Field, FilterSheet, FlatPicker, PageStatus, SaveForm, control, useLoad } from "./ui.jsx";
 import { brand } from "../brand.js";
 import InviteResident from "./InviteResident.jsx";
+import { adminHomeShortcuts, residentHomeShortcuts, residentHouseholdLinks } from "./appNav.js";
 import { copy, isFinanceOps, navLabel } from "./roleCopy.js";
 
 const TICKET_CATEGORIES = ["Maintenance", "Water", "Electricity", "Security", "Housekeeping", "Lift and facilities", "Finance", "Governance", "General", "Other"];
@@ -18,7 +19,7 @@ function asList(data) {
   return Array.isArray(data) ? data : [data];
 }
 
-export function HomeScreen({ communityId, roles = [], onOpen }) {
+export function HomeScreen({ communityId, roles = [], onOpen, view = "resident" }) {
   const query = useLoad(() => rpc("resident_dashboard", { p_community: communityId }), [communityId]);
   const actions = useLoad(() => rpc("action_centre", { p_community: communityId }), [communityId]);
   const dues = useLoad(() => rpc("my_unit_demands", { p_community: communityId }), [communityId]);
@@ -30,7 +31,8 @@ export function HomeScreen({ communityId, roles = [], onOpen }) {
   useEffect(() => {
     if (!periodId && periods.data?.[0]?.id) setPeriodId(periods.data[0].id);
   }, [periods.data, periodId]);
-  const financial = isFinanceOps(roles);
+  const admin = view === "admin" || (view !== "resident" && isFinanceOps(roles));
+  const financial = admin && isFinanceOps(roles);
   const t = copy.home;
   const summary = useLoad(
     () => (financial && periodId
@@ -73,12 +75,13 @@ export function HomeScreen({ communityId, roles = [], onOpen }) {
   const billed = Number(summary.data?.expected || 0);
   const periodOutstanding = Number(summary.data?.outstanding || 0);
   const progress = billed > 0 ? Math.round((collected / billed) * 1000) / 10 : 0;
-
   const periodLabel = selectedPeriod
     ? `${selectedPeriod.financial_year} · ${selectedPeriod.period_month}`
     : "No billing period opened yet";
   const attentionCount = actionItems.length + outstanding.length;
   const maintClosing = maintenance.reduce((sum, row) => sum + Number(row.closing || 0), 0);
+  const everyday = admin ? adminHomeShortcuts(roles) : residentHomeShortcuts();
+  const household = residentHouseholdLinks();
 
   const entryLabel = (type) => ({
     receipt: "Money received",
@@ -90,22 +93,35 @@ export function HomeScreen({ communityId, roles = [], onOpen }) {
   }[type] || type);
 
   return (
-    <section className="record">
+    <section className="record os-home">
       <header className="record-hero">
-        <h1>{financial ? t.titleOps : t.titleResident}</h1>
-        <p>{financial ? t.leadOps : t.leadResident}</p>
+        <p className="os-brand-mark">{brand.name}</p>
+        <h1>{admin ? t.titleOps : t.titleResident}</h1>
+        <p>{admin ? t.leadOps : t.leadResident}</p>
       </header>
 
-      <div className="record-shortcuts" role="navigation" aria-label="Quick actions">
-        <button type="button" onClick={() => onOpen?.(financial ? "collections" : "collections")}>{financial ? t.payCtaOps : t.shortcuts.pay}</button>
-        <button type="button" onClick={() => onOpen?.("concerns")}>{t.shortcuts.complaint}</button>
-        <button type="button" onClick={() => onOpen?.("amenities")}>{t.shortcuts.book}</button>
-        <button type="button" onClick={() => onOpen?.("visitors")}>{t.shortcuts.guest}</button>
-        <button type="button" onClick={() => onOpen?.("notices")}>{t.shortcuts.notices}</button>
-        <button type="button" onClick={() => onOpen?.("decisions")}>{t.shortcuts.meetings}</button>
+      {!admin && (
+        <button type="button" className="os-invite" onClick={() => onOpen?.("visitors")}>
+          <span className="os-invite-label">{t.inviteLabel}</span>
+          <strong className="os-invite-title">{t.inviteTitle}</strong>
+          <span className="os-invite-hint">{t.inviteHint}</span>
+          <span className="os-invite-cta">{t.inviteCta}</span>
+        </button>
+      )}
+
+      <div className="os-section">
+        <h2>{admin ? "Operations" : t.everyday}</h2>
+        <div className="os-destinations" role="navigation" aria-label={admin ? "Operations" : t.everyday}>
+          {everyday.map((item) => (
+            <button key={item.id} type="button" className="os-destination" onClick={() => onOpen?.(item.id)}>
+              <strong>{item.label}</strong>
+              <span>{item.hint}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
-      {financial ? (
+      {admin ? (
         <div className="record-band">
           <div className="record-panel-head">
             <h2>{t.statusOps}</h2>
@@ -125,7 +141,7 @@ export function HomeScreen({ communityId, roles = [], onOpen }) {
               <span className="record-meta">{periodLabel}</span>
             )}
           </div>
-          <PageStatus loading={periods.loading || summary.loading} error={periods.error || summary.error} onRetry={() => { periods.reload(); summary.reload(); }} empty={!periods.loading && !(periods.data || []).length} title="No billing month yet" body="Open a month under Money → Collections so collection progress can appear." />
+          <PageStatus loading={periods.loading || summary.loading} error={periods.error || summary.error} onRetry={() => { periods.reload(); summary.reload(); }} empty={!periods.loading && !(periods.data || []).length} title="No billing month yet" body="Open a month under Billing so collection progress can appear." />
           {selectedPeriod && (
             <>
               <div className="record-progress">
@@ -155,7 +171,7 @@ export function HomeScreen({ communityId, roles = [], onOpen }) {
           {!!outstanding.length && (
             <div className="record-health">
               {outstanding.slice(0, 2).map((row) => (
-                <button key={row.demand_id} type="button" onClick={() => onOpen?.("collections")}>
+                <button key={row.demand_id} type="button" onClick={() => onOpen?.("finance")}>
                   <span>Flat {row.unit_number}</span>
                   <strong>{inr(row.outstanding_amount)}</strong>
                 </button>
@@ -171,7 +187,7 @@ export function HomeScreen({ communityId, roles = [], onOpen }) {
           {attentionCount > 0 && <span className="record-chip warn">{attentionCount}</span>}
         </div>
         <PageStatus loading={actions.loading} error={actions.error} onRetry={actions.reload} empty={!actions.loading && !actions.error && actionItems.length === 0 && !outstanding.length} title={t.needsYouEmpty} body={t.needsYouEmptyBody} />
-        {!!outstanding.length && (
+        {!!outstanding.length && !admin && (
           <div className="record-dues">
             <strong>Maintenance still due</strong>
             <ul>
@@ -182,7 +198,7 @@ export function HomeScreen({ communityId, roles = [], onOpen }) {
                 </li>
               ))}
             </ul>
-            <button type="button" className="demo-primary" onClick={() => onOpen?.("collections")}>{t.payCta}</button>
+            <button type="button" className="demo-primary" onClick={() => onOpen?.("finance")}>{t.payCta}</button>
           </div>
         )}
         {!!actionItems.length && (
@@ -203,12 +219,19 @@ export function HomeScreen({ communityId, roles = [], onOpen }) {
         )}
       </div>
 
-      <div className="record-actions">
-        <button type="button" className="primary" onClick={() => onOpen?.("collections")}>{financial ? t.payCtaOps : t.payCta}</button>
-        <button type="button" onClick={() => onOpen?.("concerns")}>{t.raiseConcern}</button>
-        <button type="button" onClick={() => onOpen?.("notices")}>{t.notices}</button>
-        <button type="button" onClick={() => onOpen?.("decisions")}>{t.meetings}</button>
-      </div>
+      {!admin && (
+        <div className="os-section">
+          <h2>{t.household}</h2>
+          <div className="os-household">
+            {household.map((item) => (
+              <button key={item.id} type="button" onClick={() => onOpen?.(item.id)}>
+                <strong>{item.label}</strong>
+                <span>{item.hint}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="record-split">
         <div className="record-panel">
@@ -282,9 +305,7 @@ export function HomeScreen({ communityId, roles = [], onOpen }) {
         </div>
       )}
 
-      {!financial && (
-        <p className="record-muted">{t.communityBooksHint}</p>
-      )}
+      {!admin && <p className="record-muted">{t.communityBooksHint}</p>}
     </section>
   );
 }
@@ -1156,14 +1177,14 @@ export function ConcernsScreen({ communityId, roles }) {
   return (
     <section className="record">
       <header className="record-hero">
-        <h1>Complaints</h1>
-        <p>Tell the committee what’s wrong. Track progress until it’s fixed.</p>
+        <h1>Maintenance</h1>
+        <p>Raise a ticket for something that needs fixing, and track it until it’s done.</p>
       </header>
       <div className="demo-actions">
-        <button type="button" className="demo-primary" onClick={() => setRaising((open) => !open)}>{raising ? "Cancel" : "Raise complaint"}</button>
+        <button type="button" className="demo-primary" onClick={() => setRaising((open) => !open)}>{raising ? "Cancel" : "Raise ticket"}</button>
       </div>
       {raising && (
-      <SaveForm submitLabel="Submit complaint" onSubmit={(data) => rpc("create_ticket", {
+      <SaveForm submitLabel="Submit ticket" onSubmit={(data) => rpc("create_ticket", {
         p_community: communityId,
         p_subject: data.subject,
         p_category: data.category,
@@ -1186,7 +1207,7 @@ export function ConcernsScreen({ communityId, roles }) {
       </SaveForm>
       )}
       <div className="record-panel" style={{ marginTop: 12 }}>
-      <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && !(query.data || []).length} title="No complaints yet" body="Tap Raise complaint when something needs fixing." />
+      <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && !(query.data || []).length} title="No tickets yet" body="Tap Raise ticket when something needs fixing." />
       <ul className="live-list">
         {(query.data || []).map((ticket) => (
           <li key={ticket.id} style={{ paddingTop: 12, paddingBottom: 12 }}>
@@ -1460,10 +1481,10 @@ export function NotificationsScreen({ communityId }) {
     <section className="record">
       <header className="record-hero">
         <h1>Alerts</h1>
-        <p>Payment proofs, complaints, and meeting updates for you.</p>
+        <p>Payment proofs, maintenance tickets, and meeting updates for you.</p>
       </header>
       <div className="record-panel">
-        <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && !(query.data || []).length} title="No alerts yet" body="When a resident pays or raises a complaint, it shows up here." />
+        <PageStatus loading={query.loading} error={query.error} onRetry={query.reload} empty={!query.loading && !query.error && !(query.data || []).length} title="No alerts yet" body="When a resident pays or raises a ticket, it shows up here." />
         <ul className="record-attention">
           {(query.data || []).map((note) => (
             <li key={note.id}>
