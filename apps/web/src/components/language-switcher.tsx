@@ -1,11 +1,12 @@
 import { useT, type Language } from '@/lib/i18n'
 
-// Compact English/हिंदी toggle. Persists via the i18n provider (localStorage).
+// Compact English/हिंदी/తెలుగు toggle. Persists via the i18n provider (localStorage).
 export function LanguageSwitcher() {
   const { language, setLanguage, t } = useT()
   const options: { value: Language; label: string }[] = [
     { value: 'en', label: t('lang.english') },
     { value: 'hi', label: t('lang.hindi') },
+    { value: 'te', label: t('lang.telugu') },
   ]
   return (
     <div className="border-input inline-flex overflow-hidden rounded-md border text-xs" role="group" aria-label={t('lang.label')}>

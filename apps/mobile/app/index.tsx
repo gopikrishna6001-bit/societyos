@@ -197,6 +197,7 @@ export default function Index() {
           <View className="flex-row flex-wrap justify-center gap-2">
             <Chip label="English" selected={language === 'en'} onPress={() => setLanguage('en')} />
             <Chip label="हिंदी" selected={language === 'hi'} onPress={() => setLanguage('hi')} />
+            <Chip label="తెలుగు" selected={language === 'te'} onPress={() => setLanguage('te')} />
           </View>
           <Text className="text-center text-xs text-muted-foreground">{t('design.promise')}</Text>
         </View>

@@ -16,7 +16,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   // Apply the stored preference on the client after the (English) first render.
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY) as Language | null
-    if (stored === 'hi' || stored === 'en') {
+    if (stored === 'hi' || stored === 'en' || stored === 'te') {
       setLanguageState(stored)
       document.documentElement.lang = stored
     }

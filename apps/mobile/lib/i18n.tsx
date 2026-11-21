@@ -20,7 +20,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY)
       .then((stored) => {
-        if (stored === 'hi' || stored === 'en') setLanguageState(stored)
+        if (stored === 'hi' || stored === 'en' || stored === 'te') setLanguageState(stored)
       })
       .catch(() => {})
   }, [])
