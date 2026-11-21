@@ -79,7 +79,7 @@ Cloudflare production tracks **`main`**. All SABHA delivery work is on PR branch
 
 - https://cursor-sabha-product-deliver.societyos.pages.dev
 
-Until PR #10 is merged (or production is pointed at this branch) **and** hosted Supabase migrations are applied, production will not show admin/finance/platform changes. That promote needs explicit authorization.
+Hosted migrations are applied. Until PR #10 is merged (or production is pointed at this branch), production Pages will not show the polished shell — only the older `main` frontend.
 
 **iPhone shortcut icon:** iOS caches PWA icons aggressively. After production is updated, delete the home-screen icon and Add to Home Screen again. Cache-bust query `?v=20261121` is on icons/manifest for the next deploy.
 
