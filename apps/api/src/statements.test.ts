@@ -6,7 +6,7 @@ import {
   receiptsAndPayments,
   type AccountBalance,
   type CashEntryLine,
-} from '@opensociety/shared'
+} from '@sabha/shared'
 
 // A tiny but complete, genuinely balanced society ledger (Σdebit = Σcredit),
 // from: opening bank 1000 (Cr surplus), a 1000+18% GST bill, its payment, 200 FD

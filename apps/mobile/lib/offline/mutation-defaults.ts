@@ -1,5 +1,5 @@
 import type { QueryClient } from '@tanstack/react-query'
-import type { CreateVisitorEntry, VisitorEntry } from '@opensociety/shared'
+import type { CreateVisitorEntry, VisitorEntry } from '@sabha/shared'
 
 import { apiClient } from '../../api/client'
 import { buildOptimisticVisitor } from './optimistic'

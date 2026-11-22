@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { agingBucketFor, bucketAging } from '@opensociety/shared'
+import { agingBucketFor, bucketAging } from '@sabha/shared'
 
 const asOf = Date.UTC(2026, 2, 31) // 2026-03-31
 const daysBefore = (n: number) => asOf - n * 86_400_000

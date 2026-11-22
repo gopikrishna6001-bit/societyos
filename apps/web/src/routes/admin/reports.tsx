@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { formatPaise, collectionRatePct, collectionReportToCsv, towerCollectionToCsv } from '@opensociety/shared'
+import { formatPaise, collectionRatePct, collectionReportToCsv, towerCollectionToCsv } from '@sabha/shared'
 
 import { apiClient } from '../../lib/api'
 import { useT } from '@/lib/i18n'

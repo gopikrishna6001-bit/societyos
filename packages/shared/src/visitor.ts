@@ -88,21 +88,25 @@ export type RedeemPreApproval = z.infer<typeof redeemPreApprovalSchema>
 
 // Pre-approval QR: the QR encodes the redeemable code behind a namespace prefix
 // so the guard scanner can recognize our codes and ignore unrelated QRs.
-export const PRE_APPROVAL_QR_PREFIX = 'OS-PA:'
+export const PRE_APPROVAL_QR_PREFIX = 'SABHA-PA:'
+/** Legacy OpenSociety-era prefix — still accepted when scanning existing passes. */
+export const LEGACY_PRE_APPROVAL_QR_PREFIX = 'OS-PA:'
 
 // The string to encode in a resident's pre-approval QR.
 export function preApprovalQrValue(code: string): string {
   return `${PRE_APPROVAL_QR_PREFIX}${code.trim().toUpperCase()}`
 }
 
-// Extract a redeemable code from a scanned QR value. Accepts our prefixed form
-// (`OS-PA:CODE`), a URL carrying a `code` query param, or a bare code — returns
-// the normalized code, or null when it doesn't look like a pre-approval code.
+// Extract a redeemable code from a scanned QR value. Accepts SABHA or legacy
+// (`SABHA-PA:` / `OS-PA:`), a URL carrying a `code` query param, or a bare code.
 export function parsePreApprovalQrValue(scanned: string): string | null {
   let candidate = scanned.trim()
   if (candidate === '') return null
-  if (candidate.toUpperCase().startsWith(PRE_APPROVAL_QR_PREFIX)) {
+  const upper = candidate.toUpperCase()
+  if (upper.startsWith(PRE_APPROVAL_QR_PREFIX)) {
     candidate = candidate.slice(PRE_APPROVAL_QR_PREFIX.length)
+  } else if (upper.startsWith(LEGACY_PRE_APPROVAL_QR_PREFIX)) {
+    candidate = candidate.slice(LEGACY_PRE_APPROVAL_QR_PREFIX.length)
   } else if (/[?&]code=/i.test(candidate)) {
     const match = candidate.match(/[?&]code=([^&\s]+)/i)
     candidate = match ? match[1] : ''

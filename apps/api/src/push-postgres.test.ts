@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto'
 import { PGlite } from '@electric-sql/pglite'
 import { drizzle } from 'drizzle-orm/pglite'
 import { eq } from 'drizzle-orm'
-import { apartments, maintenanceBills, payments, pushDeliveries, pushDevices, users, type Database } from '@opensociety/db'
+import { apartments, maintenanceBills, payments, pushDeliveries, pushDevices, users, type Database } from '@sabha/db'
 import { enqueuePush, processPushQueue } from './lib/push-queue'
 
 const postgres = new PGlite()

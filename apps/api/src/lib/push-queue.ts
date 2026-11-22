@@ -1,7 +1,7 @@
 import type { BatchItem } from 'drizzle-orm/batch'
 import { and, eq, gt, inArray, lte, sql } from 'drizzle-orm'
-import { pushDevices, pushDeliveries, users, maintenanceBills, type Database } from '@opensociety/db'
-import { pushMessageSchema, type PushMessage } from '@opensociety/shared'
+import { pushDevices, pushDeliveries, users, maintenanceBills, type Database } from '@sabha/db'
+import { pushMessageSchema, type PushMessage } from '@sabha/shared'
 import { getExpoReceipts, isRetryablePushError, PushTransportError, pushRetryAt, sendExpoMessages, type ExpoResult } from './expo-push'
 
 const MAX_ATTEMPTS = 5

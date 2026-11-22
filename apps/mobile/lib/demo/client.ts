@@ -1,4 +1,4 @@
-import * as s from '@opensociety/shared'
+import * as s from '@sabha/shared'
 import { clone, find, nowIso, scope, type DemoMethods, type DemoRole, type MobileApi, type MobileDemoStore } from './store'
 import { demoVisitors } from './visitors'
 

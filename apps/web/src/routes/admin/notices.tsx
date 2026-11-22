@@ -1,8 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import type { CreateNotice, NoticeCategory, NoticePriority } from '@opensociety/shared'
-import { noticePrioritySchema, noticeCategorySchema } from '@opensociety/shared'
+import type { CreateNotice, NoticeCategory, NoticePriority } from '@sabha/shared'
+import { noticePrioritySchema, noticeCategorySchema } from '@sabha/shared'
 
 import { apiClient } from '../../lib/api'
 import { useT } from '@/lib/i18n'

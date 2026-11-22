@@ -1,4 +1,4 @@
-import * as s from '@opensociety/shared'
+import * as s from '@sabha/shared'
 import { DEMO_ADMIN, type DemoData } from './data'
 import { find, inRange, newRecord, nowIso, type DemoMethods } from './helpers'
 

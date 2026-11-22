@@ -1,8 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import type { Apartment, BhkType, CreateApartment, UpdateApartment } from '@opensociety/shared'
-import { bhkTypeSchema } from '@opensociety/shared'
+import type { Apartment, BhkType, CreateApartment, UpdateApartment } from '@sabha/shared'
+import { bhkTypeSchema } from '@sabha/shared'
 
 import { apiClient } from '../../lib/api'
 import { useT } from '@/lib/i18n'

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeTrustScore, verificationLevel, updateVerificationSchema } from '@opensociety/shared'
+import { computeTrustScore, verificationLevel, updateVerificationSchema } from '@sabha/shared'
 
 const base = { ratingTrust: 60, idVerified: false, backgroundCheck: 'PENDING' as const, tenureDays: 0, incidentCount: 0 }
 

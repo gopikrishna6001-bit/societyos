@@ -9,7 +9,7 @@ import {
   approveUserSchema,
   visitorStatusSchema,
   userRoleSchema,
-} from '@opensociety/shared'
+} from '@sabha/shared'
 
 describe('apartment contracts', () => {
   it('requires tower and apartmentNo on create', () => {

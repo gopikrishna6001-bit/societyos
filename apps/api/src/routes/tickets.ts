@@ -2,15 +2,15 @@ import { Hono } from 'hono'
 import type { Context } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { and, desc, eq, inArray, isNull } from 'drizzle-orm'
-import { maintenanceTickets, residencies, users } from '@opensociety/db'
-import type { TicketStatus, TicketAction } from '@opensociety/shared'
+import { maintenanceTickets, residencies, users } from '@sabha/db'
+import type { TicketStatus, TicketAction } from '@sabha/shared'
 import {
   createTicketSchema,
   transitionTicketSchema,
   assignTicketSchema,
   TICKET_TRANSITIONS,
   canTicketTransition,
-} from '@opensociety/shared'
+} from '@sabha/shared'
 import { withDb, withAuth, requireAuth, requireRole, actingUserId } from '../middleware'
 import type { AppEnv } from '../types'
 

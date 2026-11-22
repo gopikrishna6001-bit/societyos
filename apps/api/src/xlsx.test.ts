@@ -44,7 +44,7 @@ describe('buildXlsx (dependency-free .xlsx writer)', () => {
     vi.stubGlobal('TextEncoder', undefined)
     vi.resetModules()
     try {
-      const shared = await import('@opensociety/shared')
+      const shared = await import('@sabha/shared')
       expect(typeof shared.buildXlsx).toBe('function')
       expect(shared.visitorStatusSchema.parse('PENDING')).toBe('PENDING')
     } finally {

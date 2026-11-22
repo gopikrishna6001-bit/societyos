@@ -1,1 +1,1 @@
-export { buildXlsx, type Cell, type Sheet } from '@opensociety/shared'
+export { buildXlsx, type Cell, type Sheet } from '@sabha/shared'

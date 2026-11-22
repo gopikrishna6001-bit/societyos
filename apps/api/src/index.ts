@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import { createDb, billConfig } from '@opensociety/db'
-import { periodMonthOf, dueDateForPeriod } from '@opensociety/shared'
+import { createDb, billConfig } from '@sabha/db'
+import { periodMonthOf, dueDateForPeriod } from '@sabha/shared'
 import type { AppEnv, Bindings } from './types'
 import { generateMonthlyBills } from './lib/generate-bills'
 import { postMonthlyBills } from './lib/ledger-posting'
@@ -33,13 +33,13 @@ app.use('*', cors({
   origin: (origin, c) => {
     const configured: string | undefined = c.env?.WEB_ORIGINS
     const allowed = configured?.split(',').map((value) => value.trim()) ??
-      (c.env?.CLERK_SECRET_KEY ? [] : ['http://localhost:3000', 'http://localhost:8081'])
+      (c.env?.CLERK_SECRET_KEY ? [] : ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:8081'])
     return allowed.includes(origin) ? origin : undefined
   },
 }))
 
 // Health checks intentionally avoid the DB so they work without DATABASE_URL.
-app.get('/', (c) => c.json({ name: 'opensociety-api', status: 'ok' }))
+app.get('/', (c) => c.json({ name: 'sabha-api', status: 'ok' }))
 app.get('/health', (c) => c.json({ status: 'ok' }))
 
 app.route('/society', societyRoutes)

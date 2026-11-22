@@ -16,8 +16,8 @@ const { fakeDb, setQueue } = vi.hoisted(() => {
   return { fakeDb: () => makeChain(), setQueue: (q: unknown[][]) => (queue = q) }
 })
 
-vi.mock('@opensociety/db', async (orig) => ({
-  ...(await orig<typeof import('@opensociety/db')>()),
+vi.mock('@sabha/db', async (orig) => ({
+  ...(await orig<typeof import('@sabha/db')>()),
   createDb: () => fakeDb(),
 }))
 

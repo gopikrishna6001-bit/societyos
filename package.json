@@ -1,5 +1,5 @@
 {
-  "name": "opensociety",
+  "name": "sabha",
   "version": "0.0.0",
   "private": true,
   "license": "MIT",
@@ -10,7 +10,7 @@
     "format": "prettier --write .",
     "check-types": "turbo run check-types",
     "test": "turbo run test",
-    "pages:build": "pnpm --filter @opensociety/shared build && pnpm --filter @opensociety/web build && node scripts/prepare-cloudflare-pages.mjs"
+    "pages:build": "pnpm --filter @sabha/shared build && pnpm --filter @sabha/web build && node scripts/prepare-cloudflare-pages.mjs"
   },
   "devDependencies": {
     "prettier": "^3.8.0",

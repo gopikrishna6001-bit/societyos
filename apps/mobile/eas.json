@@ -35,7 +35,7 @@
   "submit": {
     "play-internal": {
       "android": {
-        "applicationId": "com.opensociety.app",
+        "applicationId": "com.sabha.app",
         "track": "internal",
         "releaseStatus": "draft"
       }

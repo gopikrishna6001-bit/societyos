@@ -1,9 +1,9 @@
-// OpenSociety Database Schema
+// SABHA Database Schema
 // Last updated: 2026-06-28
 // Auth: Clerk (authn-only) — identity/credentials live in Clerk; we mirror profile + role locally.
 // Tenancy: SINGLE-TENANT per society (one DB per society). Use society_config (1 row); no society_id on tables.
 
-Project opensociety {
+Project sabha {
   database_type: 'PostgreSQL'
   Note: 'Open-source society management platform'
 }

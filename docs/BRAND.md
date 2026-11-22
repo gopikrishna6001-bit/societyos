@@ -20,7 +20,9 @@ Every rupee. Every decision. Accounted for.
 
 ## What this repository is
 
-This repository is OpenSociety with the SABHA brand applied. Product flows, screens, and APIs stay OpenSociety. Only the name, colours, and typography change for the product surface.
+This repository is the SABHA product monorepo. All packages, mobile identifiers, and deploy names use SABHA (`@sabha/*`, `com.sabha.app*`). There is no runtime dependency on an external OpenSociety service or package registry.
+
+Preserve the full capability set in [SABHA-CAPABILITY-INVENTORY.md](./SABHA-CAPABILITY-INVENTORY.md) when changing product surfaces.
 
 ## Voice
 
@@ -43,10 +45,8 @@ Manrope is used for the wordmark and headings. Inter is used for interface text.
 
 Brand SVG/PNG assets live under `public/brand/` and `apps/web/public/brand/`.
 
-## Retained technical names
+## Technical names
 
-These still say OpenSociety / opensociety because renaming them would break the monorepo, package graph, or mobile identifiers:
-
-- npm workspace packages `@opensociety/*`
-- Mobile URL schemes and bundle IDs `com.opensociety.app*`
-- Upstream documentation that describes the OpenSociety architecture
+- npm workspace packages `@sabha/*`
+- Mobile URL schemes and bundle IDs `com.sabha.app*` / `sabha` / `sabha-dev`
+- Pre-approval QR prefix `SABHA-PA:` (legacy `OS-PA:` still accepted when scanning)

@@ -1,8 +1,8 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { eq } from 'drizzle-orm'
-import { societyConfig } from '@opensociety/db'
-import { updateSocietyConfigSchema } from '@opensociety/shared'
+import { societyConfig } from '@sabha/db'
+import { updateSocietyConfigSchema } from '@sabha/shared'
 import { withDb, withAuth, requireAuth, requireRole } from '../middleware'
 import type { AppEnv } from '../types'
 

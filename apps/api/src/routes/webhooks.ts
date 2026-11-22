@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { eq } from 'drizzle-orm'
 import { Webhook } from 'svix'
-import { users } from '@opensociety/db'
+import { users } from '@sabha/db'
 import { withDb } from '../middleware'
 import type { AppEnv } from '../types'
 

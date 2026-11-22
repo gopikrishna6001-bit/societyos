@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { preApprovalQrValue, parsePreApprovalQrValue, PRE_APPROVAL_QR_PREFIX } from '@opensociety/shared'
+import { preApprovalQrValue, parsePreApprovalQrValue, PRE_APPROVAL_QR_PREFIX } from '@sabha/shared'
 
 describe('preApprovalQrValue', () => {
   it('prefixes and upper-cases the code', () => {
-    expect(preApprovalQrValue('7f56bdfe')).toBe('OS-PA:7F56BDFE')
+    expect(preApprovalQrValue('7f56bdfe')).toBe('SABHA-PA:7F56BDFE')
     expect(preApprovalQrValue(' abc123 ')).toBe(`${PRE_APPROVAL_QR_PREFIX}ABC123`)
   })
 })
@@ -13,7 +13,12 @@ describe('parsePreApprovalQrValue', () => {
     expect(parsePreApprovalQrValue(preApprovalQrValue('7f56bdfe'))).toBe('7F56BDFE')
   })
 
-  it('reads the prefixed form case-insensitively', () => {
+  it('reads the SABHA prefixed form case-insensitively', () => {
+    expect(parsePreApprovalQrValue('SABHA-PA:ABCD1234')).toBe('ABCD1234')
+    expect(parsePreApprovalQrValue('sabha-pa:abcd1234')).toBe('ABCD1234')
+  })
+
+  it('still accepts legacy OS-PA passes', () => {
     expect(parsePreApprovalQrValue('OS-PA:ABCD1234')).toBe('ABCD1234')
     expect(parsePreApprovalQrValue('os-pa:abcd1234')).toBe('ABCD1234')
   })
@@ -25,13 +30,15 @@ describe('parsePreApprovalQrValue', () => {
 
   it('extracts a code query param from a URL', () => {
     expect(parsePreApprovalQrValue('https://gate.example.com/redeem?code=ABCD1234')).toBe('ABCD1234')
-    expect(parsePreApprovalQrValue('opensociety://gate?foo=1&code=abcd1234')).toBe('ABCD1234')
+    expect(parsePreApprovalQrValue('sabha://gate?foo=1&code=abcd1234')).toBe('ABCD1234')
   })
 
   it('rejects empty / non-code values', () => {
     expect(parsePreApprovalQrValue('')).toBeNull()
     expect(parsePreApprovalQrValue('   ')).toBeNull()
     expect(parsePreApprovalQrValue('https://example.com/no-code-here')).toBeNull()
+    expect(parsePreApprovalQrValue('SABHA-PA:')).toBeNull()
+    expect(parsePreApprovalQrValue('SABHA-PA:short')).toBeNull()
     expect(parsePreApprovalQrValue('OS-PA:')).toBeNull()
     expect(parsePreApprovalQrValue('OS-PA:short')).toBeNull()
     expect(parsePreApprovalQrValue('has spaces inside')).toBeNull()

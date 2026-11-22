@@ -7,7 +7,7 @@ import {
   payerBucket,
   analyzePayers,
   towerCollectionToCsv,
-} from '@opensociety/shared'
+} from '@sabha/shared'
 
 const DAY = 86_400_000
 

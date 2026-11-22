@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import type { Context } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { and, asc, desc, eq, gte, isNull, lte } from 'drizzle-orm'
-import { guards, guardDutySessions, guardDevices } from '@opensociety/db'
+import { guards, guardDutySessions, guardDevices } from '@sabha/db'
 import {
   createGuardSchema,
   updateGuardSchema,
@@ -10,7 +10,7 @@ import {
   clockOutSchema,
   bindGuardDeviceSchema,
   isGuardDeviceAllowed,
-} from '@opensociety/shared'
+} from '@sabha/shared'
 import { withDb, withAuth, requireAuth, requireRole } from '../middleware'
 import type { AppEnv } from '../types'
 

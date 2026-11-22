@@ -13,7 +13,7 @@ import {
   accounts,
   journalEntries,
   journalLines,
-} from '@opensociety/db'
+} from '@sabha/db'
 import {
   analyzePayers,
   collectionRatePct,
@@ -37,13 +37,13 @@ import {
   type AccountBalance,
   type CashEntryLine,
   type TallyVoucher,
-} from '@opensociety/shared'
-import type { VisitorTrends } from '@opensociety/shared'
+} from '@sabha/shared'
+import type { VisitorTrends } from '@sabha/shared'
 import { withDb, withAuth, requireRole } from '../middleware'
 import { renderVisitorTrendsPdf } from '../lib/visitor-trends-pdf'
 import { renderTablePdf } from '../lib/statements-pdf'
 import { tableExport } from '../lib/report-export'
-import type { Table } from '@opensociety/shared'
+import type { Table } from '@sabha/shared'
 import type { AppEnv } from '../types'
 
 // Export a statement Table as pdf/xlsx/csv per ?format, else null (-> JSON).

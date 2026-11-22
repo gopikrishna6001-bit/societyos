@@ -22,7 +22,7 @@ export const queryClient = new QueryClient({
 
 const persister = createAsyncStoragePersister({
   storage: AsyncStorage,
-  key: 'opensociety-query-cache',
+  key: 'sabha-query-cache',
   throttleTime: 1000,
 })
 

@@ -2,8 +2,8 @@ import { Hono } from 'hono'
 import type { Context } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { and, desc, eq, inArray, isNotNull, isNull, ne, sql } from 'drizzle-orm'
-import { maintenanceBills, billLineItems, payments, apartments, residencies, societyConfig, billConfig } from '@opensociety/db'
-import type { BillStatus } from '@opensociety/shared'
+import { maintenanceBills, billLineItems, payments, apartments, residencies, societyConfig, billConfig } from '@sabha/db'
+import type { BillStatus } from '@sabha/shared'
 import {
   generateBillsSchema,
   createBillSchema,
@@ -14,7 +14,7 @@ import {
   ACCOUNT_CODES,
   INTEREST_BILL_TITLE_PREFIX as INTEREST_TITLE_PREFIX,
   duesTable,
-} from '@opensociety/shared'
+} from '@sabha/shared'
 import { withDb, withAuth, requireAuth, requireRole, actingUserId } from '../middleware'
 import { generateMonthlyBills } from '../lib/generate-bills'
 import { safePostMonthlyBills, safePostBill, safeReverseBill, resolveAccounts } from '../lib/ledger-posting'

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { canManageHouseHelp } from '@opensociety/shared'
+import { canManageHouseHelp } from '@sabha/shared'
 
 const REGISTRAR = 'user-1'
 const OTHER = 'user-2'

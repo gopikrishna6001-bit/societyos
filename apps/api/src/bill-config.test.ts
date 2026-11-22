@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { periodMonthOf, dueDateForPeriod } from '@opensociety/shared'
+import { periodMonthOf, dueDateForPeriod } from '@sabha/shared'
 
 describe('periodMonthOf', () => {
   it('formats a date as YYYY-MM (UTC, zero-padded)', () => {

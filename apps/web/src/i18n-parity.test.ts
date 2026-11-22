@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { webResources, mobileResources } from '@opensociety/shared'
+import { webResources, mobileResources } from '@sabha/shared'
 
 // Guard: every key must exist in BOTH en and hi for each app's dictionary, so a
 // key never renders in the wrong language (or leaks the raw key). Catches a

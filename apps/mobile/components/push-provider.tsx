@@ -4,7 +4,7 @@ import { useAuth } from '@clerk/clerk-expo'
 import Constants from 'expo-constants'
 import * as Notifications from 'expo-notifications'
 import { router } from 'expo-router'
-import { pushScreenSchema } from '@opensociety/shared'
+import { pushScreenSchema } from '@sabha/shared'
 import { apiClient } from '../api/client'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 

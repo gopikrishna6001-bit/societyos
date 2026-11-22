@@ -1,6 +1,6 @@
 import { and, gte, inArray, isNotNull, isNull, lte, sql } from 'drizzle-orm'
-import { maintenanceBills, residencies, type Database } from '@opensociety/db'
-import { formatPaise } from '@opensociety/shared'
+import { maintenanceBills, residencies, type Database } from '@sabha/db'
+import { formatPaise } from '@sabha/shared'
 import { enqueuePushBatch } from './push-queue'
 
 export function reminderOffsets(value = '-7,0,3') {

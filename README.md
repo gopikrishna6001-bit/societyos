@@ -2,9 +2,7 @@
 
 **Clarity in Community.**
 
-SABHA is the branded product build of [OpenSociety](https://github.com/opencore-x/opensociety): the same resident app, gate desk, and admin dashboard — guests, notices, bills, maintenance, house help, parking, and reports — with SABHA name, colours, and typography only.
-
-Product behaviour and flows are OpenSociety as-is. Do not treat this as a separate feature fork.
+SABHA is a Community Governance & Transparency Platform: resident app, gate desk, and admin dashboard — guests, notices, bills, maintenance, house help, parking, and reports.
 
 | For | What you can do |
 | --- | --- |
@@ -12,7 +10,7 @@ Product behaviour and flows are OpenSociety as-is. Do not treat this as a separa
 | **Gate staff** | Register visitors, scan passes or enter codes, check people in and out, verify vehicles, and record duty attendance. |
 | **Administrators** | Manage apartments and resident approvals, gate staff, notices, billing, expenses, maintenance tickets, parking, and reports from the web dashboard. |
 
-Brand rules: [docs/BRAND.md](docs/BRAND.md). Upstream product and deploy notes: [deploy/README.md](deploy/README.md), [docs/mobile.md](docs/mobile.md).
+Brand rules: [docs/BRAND.md](docs/BRAND.md). Capability checklist: [docs/SABHA-CAPABILITY-INVENTORY.md](docs/SABHA-CAPABILITY-INVENTORY.md). Deploy notes: [deploy/README.md](deploy/README.md), [docs/mobile.md](docs/mobile.md).
 
 ## Try the demo
 
@@ -28,15 +26,16 @@ cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env
 ```
 
-Set `DATABASE_URL` and Clerk credentials as described in the OpenSociety deploy guide when running live (not demo). Then:
+Set `DATABASE_URL` (and Clerk credentials for production auth). For local live admin without Clerk, set `VITE_DEV_USER_ID` to the seeded admin id after migrate+seed. Then:
 
 ```sh
-pnpm --filter @opensociety/db db:migrate
+pnpm --filter @sabha/db db:migrate
+pnpm --filter @sabha/db exec node --env-file=../../apps/api/.env src/seed.ts
 pnpm dev
 ```
 
 Open **http://localhost:3000** (marketing + demo) or **http://localhost:3000/admin**. API on **http://localhost:8787**.
 
-Technical package names remain `@opensociety/*` so the upstream monorepo stays intact. User-facing product name is SABHA.
+Workspace packages are `@sabha/*`. User-facing product name is SABHA.
 
 Do not promote a production deployment without explicit OK.

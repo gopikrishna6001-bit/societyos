@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { FlatList, View } from 'react-native'
-import { availableVisitorActions } from '@opensociety/shared'
+import { availableVisitorActions } from '@sabha/shared'
 import { useApiClient } from '../api/context'
 import { useT } from '../lib/i18n'
 import { Button } from '../components/ui/button'

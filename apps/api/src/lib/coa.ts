@@ -1,7 +1,7 @@
-import type { Database } from '@opensociety/db'
-import { accounts } from '@opensociety/db'
+import type { Database } from '@sabha/db'
+import { accounts } from '@sabha/db'
 import { eq } from 'drizzle-orm'
-import { DEFAULT_CHART_OF_ACCOUNTS } from '@opensociety/shared'
+import { DEFAULT_CHART_OF_ACCOUNTS } from '@sabha/shared'
 
 // Idempotently seed the default chart of accounts (#97). Safe to call
 // repeatedly: existing codes are left untouched, only missing accounts are

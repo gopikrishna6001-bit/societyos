@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { View } from 'react-native';
-import type { TicketCategory, TicketPriority, TicketStatus } from '@opensociety/shared';
-import { ticketCategorySchema, ticketPrioritySchema } from '@opensociety/shared';
+import type { TicketCategory, TicketPriority, TicketStatus } from '@sabha/shared';
+import { ticketCategorySchema, ticketPrioritySchema } from '@sabha/shared';
 import { useApiClient } from '../api/context';
 import { useT } from '../lib/i18n';
 import { useSyncStatus } from '../lib/offline/use-sync-status';

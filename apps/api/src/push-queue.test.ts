@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { Database } from '@opensociety/db'
+import type { Database } from '@sabha/db'
 import { PgDialect } from 'drizzle-orm/pg-core'
 import type { SQL } from 'drizzle-orm'
 import { enqueuePush, processPushQueue } from './lib/push-queue'

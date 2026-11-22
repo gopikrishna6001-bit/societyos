@@ -2,7 +2,7 @@
 
 These are unmodified PNG captures of the native app using fictional local demo data, taken on 2026-10-03. Names, apartment details, balances, notices, and the guest pass are examples. They do not represent a live deployment. The guest QR contains the sample code `AB12CD`.
 
-The gallery represents the mobile design merged in [PR #111](https://github.com/opencore-x/opensociety/pull/111), with final implementation revision `ed729d7479345f67f3dceb1f7cf8d33f302d1e04`. Captures used an iPhone 17 Pro simulator (iOS 26.5) and an Android emulator (API 36.1), at their normal text sizes. Simulator review does not replace physical-device or screen-reader acceptance.
+The gallery represents the mobile design merged in [PR #111](https://github.com/gopikrishna6001-bit/societyos/pull/111), with final implementation revision `ed729d7479345f67f3dceb1f7cf8d33f302d1e04`. Captures used an iPhone 17 Pro simulator (iOS 26.5) and an Android emulator (API 36.1), at their normal text sizes. Simulator review does not replace physical-device or screen-reader acceptance.
 
 | File | Screen | Platform |
 | --- | --- | --- |

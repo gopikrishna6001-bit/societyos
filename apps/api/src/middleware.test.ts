@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { Hono } from 'hono'
-import type { Database } from '@opensociety/db'
-import type { UserRole, UserStatus } from '@opensociety/shared'
+import type { Database } from '@sabha/db'
+import type { UserRole, UserStatus } from '@sabha/shared'
 import { withAuth, requireAuth, requireRole } from './middleware'
 import type { AppEnv } from './types'
 

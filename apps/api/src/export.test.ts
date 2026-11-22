@@ -6,7 +6,7 @@ import {
   tallyParentForType,
   type TrialBalance,
   type TallyVoucher,
-} from '@opensociety/shared'
+} from '@sabha/shared'
 
 describe('tableToCsv', () => {
   it('serializes rows and escapes commas/quotes/newlines', () => {

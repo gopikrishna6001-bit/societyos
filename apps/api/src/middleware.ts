@@ -2,8 +2,8 @@ import { createMiddleware } from 'hono/factory'
 import type { Context } from 'hono'
 import { verifyToken } from '@clerk/backend'
 import { eq } from 'drizzle-orm'
-import { createDb, users } from '@opensociety/db'
-import type { UserRole } from '@opensociety/shared'
+import { createDb, users } from '@sabha/db'
+import type { UserRole } from '@sabha/shared'
 import type { AppEnv } from './types'
 
 // Builds a per-request Drizzle client from the Worker env binding.

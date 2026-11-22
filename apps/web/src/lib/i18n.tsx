@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { type Language, translate, webResources } from '@opensociety/shared'
+import { type Language, translate, webResources } from '@sabha/shared'
 
-// Dictionaries live in @opensociety/shared (single source of truth, shared with
+// Dictionaries live in @sabha/shared (single source of truth, shared with
 // the mobile app). This module is just the web React provider + hook.
 export type { Language }
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { noticeMatchesQuery } from '@opensociety/shared'
+import { noticeMatchesQuery } from '@sabha/shared'
 
 const n = { title: 'Water supply maintenance', body: 'Tank cleaning on Sunday morning.' }
 

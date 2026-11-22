@@ -1,6 +1,6 @@
 import { useCallback, useSyncExternalStore } from 'react'
 import { onlineManager, useMutationState, useQueryClient } from '@tanstack/react-query'
-import type { CreateVisitorEntry } from '@opensociety/shared'
+import type { CreateVisitorEntry } from '@sabha/shared'
 
 import { useSession } from '../session'
 

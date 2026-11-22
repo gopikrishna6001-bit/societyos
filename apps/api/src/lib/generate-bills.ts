@@ -1,6 +1,6 @@
-import type { Database } from '@opensociety/db'
+import type { Database } from '@sabha/db'
 import { sql } from 'drizzle-orm'
-import { computeBill, type BillLineInput } from '@opensociety/shared'
+import { computeBill, type BillLineInput } from '@sabha/shared'
 
 // The unique monthly index arbitrates concurrent admin/cron runs. Bills and
 // their line items commit together, so a failed charge cannot leave an empty bill.

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isGuardDeviceAllowed } from '@opensociety/shared'
+import { isGuardDeviceAllowed } from '@sabha/shared'
 
 describe('isGuardDeviceAllowed', () => {
   it('allows any device when the guard is unbound (null active)', () => {

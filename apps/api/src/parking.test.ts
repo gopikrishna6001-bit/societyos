@@ -8,8 +8,8 @@ import {
   isVisitorSlotFree,
   nextFreeVisitorSlot,
   visitorParkingSummary,
-} from '@opensociety/shared'
-import type { ParkingSlotType } from '@opensociety/shared'
+} from '@sabha/shared'
+import type { ParkingSlotType } from '@sabha/shared'
 
 const NOW = 1_000_000
 

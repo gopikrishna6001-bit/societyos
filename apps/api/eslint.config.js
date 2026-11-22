@@ -1,3 +1,3 @@
-import base from '@opensociety/eslint-config/base';
+import base from '@sabha/eslint-config/base';
 
 export default base;

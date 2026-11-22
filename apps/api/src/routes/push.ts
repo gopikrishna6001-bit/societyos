@@ -1,8 +1,8 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { and, eq } from 'drizzle-orm'
-import { pushDevices } from '@opensociety/db'
-import { registerPushTokenSchema, unregisterPushTokenSchema } from '@opensociety/shared'
+import { pushDevices } from '@sabha/db'
+import { registerPushTokenSchema, unregisterPushTokenSchema } from '@sabha/shared'
 import { withDb, withAuth, requireAuth, actingUserId } from '../middleware'
 import type { AppEnv } from '../types'
 

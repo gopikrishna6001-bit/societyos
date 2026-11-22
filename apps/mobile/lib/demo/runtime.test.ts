@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { onlineManager, QueryClient } from '@tanstack/react-query'
-import type { CreateVisitorEntry } from '@opensociety/shared'
+import type { CreateVisitorEntry } from '@sabha/shared'
 
 import { createDemoRuntime } from './runtime'
 import { CREATE_VISITOR_KEY, registerOfflineMutationDefaults } from '../offline/mutation-defaults'

@@ -6,16 +6,16 @@ module.exports = ({ config }) => {
   return {
     ...config,
     name: development ? 'SABHA Dev' : 'SABHA',
-    scheme: development ? 'opensociety-dev' : 'opensociety',
+    scheme: development ? 'sabha-dev' : 'sabha',
     ios: {
       ...config.ios,
-      bundleIdentifier: development ? 'com.opensociety.app.dev' : 'com.opensociety.app',
+      bundleIdentifier: development ? 'com.sabha.app.dev' : 'com.sabha.app',
       appleTeamId: 'H4JB3X394X',
       infoPlist: { ...config.ios?.infoPlist, ITSAppUsesNonExemptEncryption: false },
     },
     android: {
       ...config.android,
-      package: development ? 'com.opensociety.app.dev' : 'com.opensociety.app',
+      package: development ? 'com.sabha.app.dev' : 'com.sabha.app',
       ...(process.env.GOOGLE_SERVICES_JSON ? { googleServicesFile: process.env.GOOGLE_SERVICES_JSON } : {}),
     },
   }

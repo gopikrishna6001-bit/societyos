@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import * as s from '@opensociety/shared'
+import * as s from '@sabha/shared'
 import { createMobileDemoStore } from './store'
 import { createMobileDemoClient } from './client'
 import { setAuthTokenGetter } from '../../api/client'

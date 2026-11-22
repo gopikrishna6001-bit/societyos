@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Pressable, View } from 'react-native';
-import type { Apartment } from '@opensociety/shared';
+import type { Apartment } from '@sabha/shared';
 import type { HouseHelpWithRating } from '../api/client';
 import { useApiClient } from '../api/context';
 import { useT } from '../lib/i18n';
