@@ -35,10 +35,10 @@ jobs:
           node-version: 22.17.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @opensociety/shared build
-      - run: pnpm --filter @opensociety/mobile check-types
-      - run: pnpm --filter @opensociety/mobile lint
-      - run: pnpm --filter @opensociety/mobile test
+      - run: pnpm --filter @sabha/shared build
+      - run: pnpm --filter @sabha/mobile check-types
+      - run: pnpm --filter @sabha/mobile lint
+      - run: pnpm --filter @sabha/mobile test
       - run: pnpm dlx expo-doctor
         working-directory: apps/mobile
       - uses: expo/expo-github-action@v8
