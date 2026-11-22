@@ -1,17 +1,17 @@
 /**
- * Hosted Pages builds often ship with no API URL (or a localhost placeholder).
- * Without Neon/Clerk/API secrets that is expected — use the full in-browser demo
- * instead of a broken Live dashboard.
+ * Hosted Pages builds often ship with no API URL. Without Neon/Clerk/API
+ * secrets that is expected — use the full in-browser demo instead of a broken
+ * Live dashboard.
  *
- * Local `pnpm dev` still treats localhost API URLs as configured.
+ * An explicitly set VITE_API_URL (including localhost for local Live / vite
+ * preview) counts as configured. Only missing or CI placeholder URLs force demo.
  */
-export function liveApiConfigured(apiUrl: string | undefined, isDev: boolean): boolean {
+export function liveApiConfigured(apiUrl: string | undefined, _isDev = false): boolean {
   const raw = apiUrl?.trim()
   if (!raw) return false
   try {
     const url = new URL(raw)
     if (url.hostname === 'api.example.com') return false
-    if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') return isDev
     return true
   } catch {
     return false

@@ -38,7 +38,8 @@ pnpm --filter @sabha/db exec node --env-file=../../apps/api/.env src/seed.ts
 pnpm dev
 ```
 
-Open **http://localhost:3000** (marketing + demo) or **http://localhost:3000/admin**. API on **http://localhost:8787**.
+Open the **Vite dev** app (usually **http://127.0.0.1:3001** when 3000 is taken) → **/admin** for Live MNR. API on **http://127.0.0.1:8787**.  
+Hosted Pages (`*.pages.dev`) has **no login** — use **/demo** only.
 
 ### MNR Apartment (local real-society seed)
 
