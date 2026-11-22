@@ -1,5 +1,5 @@
-import type { Database } from '@opensociety/db'
-import type { UserRole, UserStatus } from '@opensociety/shared'
+import type { Database } from '@sabha/db'
+import type { UserRole, UserStatus } from '@sabha/shared'
 
 export interface UploadStore {
   put(key: string, body: ArrayBuffer, options: { httpMetadata: { contentType: string } }): Promise<unknown>

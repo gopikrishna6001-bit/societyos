@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import * as s from '@opensociety/shared'
+import * as s from '@sabha/shared'
 import { createDemoData } from './data'
 
 describe('demo society', () => {

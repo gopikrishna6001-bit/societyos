@@ -2,8 +2,8 @@ import { Hono } from 'hono'
 import type { Context } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { and, desc, eq, isNull } from 'drizzle-orm'
-import { visitorEntries, visitorPreApprovals, residencies } from '@opensociety/db'
-import type { VisitorStatus, VisitorAction } from '@opensociety/shared'
+import { visitorEntries, visitorPreApprovals, residencies } from '@sabha/db'
+import type { VisitorStatus, VisitorAction } from '@sabha/shared'
 import {
   createVisitorEntrySchema,
   denyVisitorSchema,
@@ -13,7 +13,7 @@ import {
   preApprovalRedeemError,
   VISITOR_TRANSITIONS,
   canTransition,
-} from '@opensociety/shared'
+} from '@sabha/shared'
 import { withDb, withAuth, requireAuth, requireRole, actingUserId } from '../middleware'
 import { parsePagination } from '../pagination'
 import { assignVisitorParking, releaseVisitorParking } from '../lib/visitor-parking'

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Database } from '@opensociety/db'
+import type { Database } from '@sabha/db'
 import type { Bindings } from './types'
 import { dispatchAndSchedule, requestPushDispatch } from './lib/push-dispatch'
 const { process } = vi.hoisted(() => ({ process: vi.fn() }))

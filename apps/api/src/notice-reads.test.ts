@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { unreadNoticeCount } from '@opensociety/shared'
+import { unreadNoticeCount } from '@sabha/shared'
 
 describe('unreadNoticeCount', () => {
   it('counts only notices explicitly flagged read=false', () => {

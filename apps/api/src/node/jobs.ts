@@ -1,4 +1,4 @@
-import { createDb } from '@opensociety/db'
+import { createDb } from '@sabha/db'
 import { runMonthlyBilling } from '../index'
 import { sendBillReminders } from '../lib/bill-reminders'
 import { dispatchAndSchedule } from '../lib/push-dispatch'

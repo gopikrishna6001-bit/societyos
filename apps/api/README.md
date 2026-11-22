@@ -1,6 +1,6 @@
-# @opensociety/api
+# @sabha/api
 
-Hono API for OpenSociety, running on **Cloudflare Workers** (single-tenant: one deployment per society).
+Hono API for SABHA, running on **Cloudflare Workers** (single-tenant: one deployment per society).
 
 ## Local dev
 
@@ -16,9 +16,9 @@ CLERK_WEBHOOK_SECRET=whsec_...
 Then:
 
 ```
-pnpm --filter @opensociety/api dev      # wrangler dev (http://localhost:8787)
-pnpm --filter @opensociety/api build    # type-check (tsc --noEmit)
-pnpm --filter @opensociety/api deploy   # wrangler deploy (needs CF auth)
+pnpm --filter @sabha/api dev      # wrangler dev (http://localhost:8787)
+pnpm --filter @sabha/api build    # type-check (tsc --noEmit)
+pnpm --filter @sabha/api deploy   # wrangler deploy (needs CF auth)
 ```
 
 Set the same secrets in production with `wrangler secret put <NAME>`.

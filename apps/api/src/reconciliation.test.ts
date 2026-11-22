@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { allocatePayment } from '@opensociety/shared'
+import { allocatePayment } from '@sabha/shared'
 
 const bills = [
   { billId: 'a', outstanding: 1000 },

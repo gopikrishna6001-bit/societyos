@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
-import type { CreateApartment, UpdateSocietyConfig } from '@opensociety/shared'
+import type { CreateApartment, UpdateSocietyConfig } from '@sabha/shared'
 
 import { apiClient } from '../../lib/api'
 import { useT } from '@/lib/i18n'

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { fillHours, peakHour, averagePerDay, hourLabel, visitorTrendsToCsv } from '@opensociety/shared'
+import { fillHours, peakHour, averagePerDay, hourLabel, visitorTrendsToCsv } from '@sabha/shared'
 
 describe('fillHours', () => {
   it('zero-fills to a full 24-hour histogram preserving counts', () => {

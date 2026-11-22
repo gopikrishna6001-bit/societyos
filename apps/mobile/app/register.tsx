@@ -7,7 +7,7 @@ import {
   type CreateVisitorEntry,
   type VisitorEntry,
   type VisitorType
-} from '@opensociety/shared';
+} from '@sabha/shared';
 
 import { useApiClient } from '../api/context';
 import { CREATE_VISITOR_KEY } from '../lib/offline/mutation-defaults';

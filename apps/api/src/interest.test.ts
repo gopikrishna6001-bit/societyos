@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeInterest, sumApartmentInterest } from '@opensociety/shared'
+import { computeInterest, sumApartmentInterest } from '@sabha/shared'
 
 const day = (y: number, m: number, d: number) => Date.UTC(y, m - 1, d)
 

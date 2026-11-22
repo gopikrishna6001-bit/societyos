@@ -2,7 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { Building2, IndianRupee, Landmark, Megaphone, TrendingUp, UserCheck, Users } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { formatPaise, collectionRatePct } from '@opensociety/shared'
+import { formatPaise, collectionRatePct } from '@sabha/shared'
 
 import { apiClient } from '../../lib/api'
 import { PageHeader } from '@/components/admin/ui'

@@ -1,5 +1,5 @@
-import type { Database } from '@opensociety/db'
-import { parkingSlots, visitorEntries } from '@opensociety/db'
+import type { Database } from '@sabha/db'
+import { parkingSlots, visitorEntries } from '@sabha/db'
 import { and, asc, eq, isNull } from 'drizzle-orm'
 
 // Auto-assign the next free visitor slot to a checked-in visitor entry, on a

@@ -21,7 +21,7 @@ export function readNodeConfig(env: Record<string, string | undefined>) {
   if (production && env.APP_ENV !== 'staging' && !clerkSecret?.startsWith('sk_live_')) {
     throw new Error('Live deployments require a live Clerk key; use APP_ENV=staging for test keys')
   }
-  const origins = (env.WEB_ORIGINS ?? (production ? '' : 'http://localhost:3000,http://localhost:8081')).split(',').filter(Boolean)
+  const origins = (env.WEB_ORIGINS ?? (production ? '' : 'http://localhost:3000,http://127.0.0.1:3000,http://localhost:8081')).split(',').filter(Boolean)
   if (!origins.length) throw new Error('WEB_ORIGINS is required')
   for (const origin of origins) {
     const url = parseUrl(origin, 'WEB_ORIGINS')

@@ -17,8 +17,8 @@ const { state, fakeDb } = vi.hoisted(() => {
   })
   return { state, fakeDb: chain }
 })
-vi.mock('@opensociety/db', async (orig) => ({
-  ...(await orig<typeof import('@opensociety/db')>()),
+vi.mock('@sabha/db', async (orig) => ({
+  ...(await orig<typeof import('@sabha/db')>()),
   createDb: () => fakeDb(),
 }))
 const { pushRoutes } = await import('./routes/push')

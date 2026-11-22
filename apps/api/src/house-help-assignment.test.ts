@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { canManageHouseHelpAssignment } from '@opensociety/shared'
+import { canManageHouseHelpAssignment } from '@sabha/shared'
 
 describe('canManageHouseHelpAssignment', () => {
   it('lets an admin manage any apartment assignment', () => {

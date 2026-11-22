@@ -1,4 +1,4 @@
-import { tableToCsv, type Table } from '@opensociety/shared'
+import { tableToCsv, type Table } from '@sabha/shared'
 import { buildXlsx } from './xlsx'
 
 // Return a report Table as an .xlsx or .csv download when ?format is set, else

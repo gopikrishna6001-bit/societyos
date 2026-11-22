@@ -14,7 +14,7 @@ pnpm build
 pnpm check-types
 pnpm lint
 pnpm test
-pnpm --filter @opensociety/api build:node
+pnpm --filter @sabha/api build:node
 ```
 
 Use `pnpm dev` for local API/web development. CI builds and smoke-tests both containers without using local Docker storage.
@@ -27,7 +27,7 @@ The manual **Build hosting images** GitHub workflow builds `linux/amd64` images.
 
 1. Provision the shared host and confirm its SSH alias, domains, firewall, Caddy installation, available memory, and unused application ports. Keep application ports on loopback.
 2. Create a production Neon database/branch, configure the society's Clerk instance and webhook, and create an R2 bucket with bucket-scoped object read/write credentials. Set Clerk application URLs to the actual web domain. The webhook endpoint is `/webhooks/clerk` on the API host.
-3. Back up the database or create a recovery branch. Review the query below before migration 0024 on an existing database. Resolve duplicates through an accounting review; the migration never deletes bills or payments. From the exact release checkout, run `pnpm --filter @opensociety/db db:migrate` with `DATABASE_URL` supplied securely. Migrations do not run during container startup.
+3. Back up the database or create a recovery branch. Review the query below before migration 0024 on an existing database. Resolve duplicates through an accounting review; the migration never deletes bills or payments. From the exact release checkout, run `pnpm --filter @sabha/db db:migrate` with `DATABASE_URL` supplied securely. Migrations do not run during container startup.
 4. Copy `compose.yaml`, `.env.example`, and `api.env.example` to a protected directory on the host. Rename the examples to `.env` and `api.env`, fill in actual values and immutable image references, then run `chmod 600 .env api.env`. Use a read-only GHCR token if image packages are private.
 5. Run `docker compose pull` and `docker compose up -d`. Add the sites from `Caddyfile.example` to the existing host configuration, validate it, and reload Caddy. Configure DNS and verify HTTPS.
 6. Check both `/health` endpoints, rendered pages, static assets, Clerk sign-in, role restrictions, private uploads, and the webhook. Health checks deliberately avoid Neon, so they do not wake a suspended database or certify database availability.

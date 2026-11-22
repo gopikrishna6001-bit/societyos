@@ -11,7 +11,7 @@ import {
   postPaymentReceived,
   splitReceivableAdvance,
   type JournalLineInput,
-} from '@opensociety/shared'
+} from '@sabha/shared'
 
 const balanced: JournalLineInput[] = [
   { accountId: 'a', debit: 1000, credit: 0 },

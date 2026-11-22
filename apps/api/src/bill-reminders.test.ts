@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Database } from '@opensociety/db'
+import type { Database } from '@sabha/db'
 import { localDay, reminderDue, reminderOffsets, sendBillReminders } from './lib/bill-reminders'
 
 const { enqueue, dispatch } = vi.hoisted(() => ({ enqueue: vi.fn(), dispatch: vi.fn() }))

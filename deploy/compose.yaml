@@ -1,4 +1,4 @@
-name: opensociety
+name: sabha
 services:
   api:
     image: ${API_IMAGE:?Set API_IMAGE to a tested image tag or digest}

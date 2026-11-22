@@ -22,7 +22,7 @@ cpSync(clientDir, outDir, { recursive: true })
 
 if (existsSync(join(outDir, 'index.html'))) {
   writeFileSync(join(outDir, '_redirects'), '/*    /index.html   200\n')
-  console.log('Cloudflare Pages dist ready (prerendered OpenSociety/SABHA app)')
+  console.log('Cloudflare Pages dist ready (prerendered SABHA/SABHA app)')
   process.exit(0)
 }
 

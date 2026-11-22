@@ -3,8 +3,8 @@ import {
   summarizeHouseHelpAttendance,
   formatWorkedMinutes,
   houseHelpAttendanceToCsv,
-} from '@opensociety/shared'
-import type { HouseHelpAttendanceRow } from '@opensociety/shared'
+} from '@sabha/shared'
+import type { HouseHelpAttendanceRow } from '@sabha/shared'
 
 const row = (o: Partial<HouseHelpAttendanceRow> & Pick<HouseHelpAttendanceRow, 'houseHelpId' | 'helpName'>): HouseHelpAttendanceRow => ({
   type: 'MAID',

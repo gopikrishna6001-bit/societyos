@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { and, asc, eq, inArray, isNull, ne } from 'drizzle-orm'
-import { apartments, residencies, users, maintenanceBills, payments } from '@opensociety/db'
+import { apartments, residencies, users, maintenanceBills, payments } from '@sabha/db'
 import {
   createApartmentSchema,
   createApartmentsBulkSchema,
@@ -9,7 +9,7 @@ import {
   buildStatement,
   INTEREST_BILL_TITLE_PREFIX,
   type StatementEntryInput,
-} from '@opensociety/shared'
+} from '@sabha/shared'
 import { withDb, withAuth, requireAuth, requireRole, actingUserId } from '../middleware'
 import type { AppEnv } from '../types'
 

@@ -1,4 +1,4 @@
-import * as s from '@opensociety/shared'
+import * as s from '@sabha/shared'
 import { PDFDocument, StandardFonts } from 'pdf-lib'
 import type { DemoData } from './data'
 import { demoFinance } from './finance'

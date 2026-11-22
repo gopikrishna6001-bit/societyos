@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { PushMessage } from '@opensociety/shared'
+import type { PushMessage } from '@sabha/shared'
 
 const resultSchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('ok'), id: z.string().optional() }),

@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import { PGlite } from '@electric-sql/pglite'
 import { drizzle } from 'drizzle-orm/pglite'
-import { accounts, apartments, billLineItems, journalEntries, journalLines, maintenanceBills, type Database } from '@opensociety/db'
+import { accounts, apartments, billLineItems, journalEntries, journalLines, maintenanceBills, type Database } from '@sabha/db'
 import { insertJournalEntry, postMonthlyBills } from './lib/ledger-posting'
 import { generateMonthlyBills } from './lib/generate-bills'
 

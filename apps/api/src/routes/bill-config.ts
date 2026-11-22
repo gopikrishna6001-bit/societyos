@@ -1,8 +1,8 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { eq } from 'drizzle-orm'
-import { billConfig } from '@opensociety/db'
-import { updateBillConfigSchema } from '@opensociety/shared'
+import { billConfig } from '@sabha/db'
+import { updateBillConfigSchema } from '@sabha/shared'
 import { withDb, withAuth, requireRole, actingUserId } from '../middleware'
 import type { AppEnv } from '../types'
 

@@ -1,5 +1,5 @@
 import * as Crypto from 'expo-crypto'
-import type { CreateVisitorEntry, VisitorEntry } from '@opensociety/shared'
+import type { CreateVisitorEntry, VisitorEntry } from '@sabha/shared'
 
 // Optimistic visitor entries created offline get a client-side id with this
 // prefix. Real entries carry a server UUID, so the prefix lets the UI tell a

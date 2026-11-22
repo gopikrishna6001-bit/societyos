@@ -1,5 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
-import type { Table } from '@opensociety/shared'
+import type { Table } from '@sabha/shared'
 
 // Print-ready PDF of a financial statement (#99). Renders a report Table (its
 // first row is the header) as a paginated A4 table: first column left-aligned,

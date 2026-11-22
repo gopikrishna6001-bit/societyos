@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { visitorEntrySchema, visitorPreApprovalSchema } from '@opensociety/shared'
+import { visitorEntrySchema, visitorPreApprovalSchema } from '@sabha/shared'
 import { createMobileDemoStore } from './store'
 import { demoVisitors } from './visitors'
 

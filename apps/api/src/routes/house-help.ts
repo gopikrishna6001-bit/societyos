@@ -9,8 +9,8 @@ import {
   houseHelpReviews,
   apartments,
   residencies,
-} from '@opensociety/db'
-import type { HouseHelpType } from '@opensociety/shared'
+} from '@sabha/db'
+import type { HouseHelpType } from '@sabha/shared'
 import {
   createHouseHelpSchema,
   updateHouseHelpSchema,
@@ -24,7 +24,7 @@ import {
   trustScore,
   computeTrustScore,
   verificationLevel,
-} from '@opensociety/shared'
+} from '@sabha/shared'
 import { withDb, withAuth, requireAuth, requireRole, actingUserId } from '../middleware'
 import type { AppEnv } from '../types'
 

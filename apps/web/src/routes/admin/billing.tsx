@@ -1,8 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import type { BillConfig, GenerateBills, MaintenanceBill, PaymentMethod } from '@opensociety/shared'
-import { formatPaise, paymentMethodSchema, billStatusSchema } from '@opensociety/shared'
+import type { BillConfig, GenerateBills, MaintenanceBill, PaymentMethod } from '@sabha/shared'
+import { formatPaise, paymentMethodSchema, billStatusSchema } from '@sabha/shared'
 
 import { apiClient } from '../../lib/api'
 import { useT } from '@/lib/i18n'

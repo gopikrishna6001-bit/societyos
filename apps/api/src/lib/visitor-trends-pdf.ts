@@ -1,6 +1,6 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
-import { hourLabel } from '@opensociety/shared'
-import type { VisitorTrends } from '@opensociety/shared'
+import { hourLabel } from '@sabha/shared'
+import type { VisitorTrends } from '@sabha/shared'
 
 // A simple one-page PDF summary of the visitor-trends analytics for a range.
 export async function renderVisitorTrendsPdf(society: string, data: VisitorTrends): Promise<Uint8Array> {

@@ -1,16 +1,16 @@
-// Dictionaries live in @opensociety/shared (single source of truth, shared with
+// Dictionaries live in @sabha/shared (single source of truth, shared with
 // the web app — this resolves the earlier "option B" TODO). This module is just
 // the React Native provider + hook, with AsyncStorage persistence.
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { type Language, translate, mobileResources } from '@opensociety/shared'
+import { type Language, translate, mobileResources } from '@sabha/shared'
 
 export type { Language }
 
 type I18nContextValue = { language: Language; setLanguage: (l: Language) => void; t: (key: string) => string }
 
 const I18nContext = createContext<I18nContextValue | null>(null)
-const STORAGE_KEY = 'opensociety-lang'
+const STORAGE_KEY = 'sabha-lang'
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>('en')

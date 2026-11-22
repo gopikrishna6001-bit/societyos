@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { resolutionHours, avgResolutionHours, dayOfWeekLabel, fillDaysOfWeek } from '@opensociety/shared'
+import { resolutionHours, avgResolutionHours, dayOfWeekLabel, fillDaysOfWeek } from '@sabha/shared'
 
 const HOUR = 3_600_000
 

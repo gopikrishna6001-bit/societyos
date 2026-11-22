@@ -1,5 +1,5 @@
 import { asc, inArray } from 'drizzle-orm'
-import { pushDeliveries, type Database } from '@opensociety/db'
+import { pushDeliveries, type Database } from '@sabha/db'
 import type { Bindings } from '../types'
 import { processPushQueue } from './push-queue'
 

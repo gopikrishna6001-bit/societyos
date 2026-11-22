@@ -21,13 +21,13 @@ async function start(image, port, environment = {}) {
 
 let api, web
 before(async () => {
-  api = await start('opensociety-api:test', 8787, {
+  api = await start('sabha-api:test', 8787, {
     DATABASE_URL: 'postgresql://test:test@localhost/test', APP_ENV: 'staging',
     CLERK_SECRET_KEY: 'sk_test_placeholder', WEB_ORIGINS: 'https://society.example.com',
     R2_ACCOUNT_ID: 'example', R2_BUCKET_NAME: 'test', R2_ACCESS_KEY_ID: 'test', R2_SECRET_ACCESS_KEY: 'test',
     BILLING_ENABLED: 'false', PUSH_ENABLED: 'false',
   })
-  web = await start('opensociety-web:test', 3000)
+  web = await start('sabha-web:test', 3000)
 })
 after(() => { for (const id of containers) docker('rm', '-f', id) })
 

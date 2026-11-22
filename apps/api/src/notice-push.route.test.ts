@@ -12,7 +12,7 @@ const { state, fakeDb } = vi.hoisted(() => {
   } })
   return { state, fakeDb: chain }
 })
-vi.mock('@opensociety/db', async (orig) => ({ ...(await orig<typeof import('@opensociety/db')>()), createDb: fakeDb }))
+vi.mock('@sabha/db', async (orig) => ({ ...(await orig<typeof import('@sabha/db')>()), createDb: fakeDb }))
 vi.mock('./lib/push-events', async (orig) => ({
   ...(await orig<typeof import('./lib/push-events')>()),
   notifyEvent: async (_c: unknown, _key: string, recipients: () => Promise<string[]>, message: object) => {

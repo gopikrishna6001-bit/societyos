@@ -6,4 +6,4 @@ Role switches keep changes in the same sandbox. Reset, Exit and a full app resta
 
 The demo simulates one device. It does not send notifications or messages, take payments, or synchronize with another phone or the web demo. The gate offers a sample guest pass so trying the flow does not require camera access.
 
-Run `pnpm --filter @opensociety/mobile test` for the visitor, contract and session isolation checks. `pnpm --filter @opensociety/shared build` prepares the shared fixtures; `pnpm --filter @opensociety/mobile exec expo export --platform all` checks web, iOS and Android bundles. A native smoke check still needs an Expo development build or a compatible Expo Go installation.
+Run `pnpm --filter @sabha/mobile test` for the visitor, contract and session isolation checks. `pnpm --filter @sabha/shared build` prepares the shared fixtures; `pnpm --filter @sabha/mobile exec expo export --platform all` checks web, iOS and Android bundles. A native smoke check still needs an Expo development build or a compatible Expo Go installation.

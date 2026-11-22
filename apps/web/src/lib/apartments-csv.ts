@@ -1,5 +1,5 @@
-import type { CreateApartment } from '@opensociety/shared'
-import { bhkTypeSchema } from '@opensociety/shared'
+import type { CreateApartment } from '@sabha/shared'
+import { bhkTypeSchema } from '@sabha/shared'
 
 export type ParseResult = { rows: CreateApartment[]; errors: string[] }
 

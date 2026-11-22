@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { normalizePlate, canManageVehicle } from '@opensociety/shared'
+import { normalizePlate, canManageVehicle } from '@sabha/shared'
 
 describe('normalizePlate', () => {
   it('uppercases and strips spaces and hyphens', () => {

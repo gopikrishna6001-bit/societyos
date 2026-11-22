@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeTds, postExpense, postExpenseSettlement, isBalanced, sumDebits } from '@opensociety/shared'
+import { computeTds, postExpense, postExpenseSettlement, isBalanced, sumDebits } from '@sabha/shared'
 
 const ACC = { bank: 'bank', cash: 'cash', tdsPayable: 'tds', vendorPayables: 'vp' }
 

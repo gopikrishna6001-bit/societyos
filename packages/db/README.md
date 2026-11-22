@@ -1,6 +1,6 @@
-# @opensociety/db
+# @sabha/db
 
-Database package for OpenSociety using Drizzle ORM and Neon Postgres.
+Database package for SABHA using Drizzle ORM and Neon Postgres.
 
 ## Setup
 
@@ -27,7 +27,7 @@ Current tables:
 ## Usage
 
 ```typescript
-import { db } from '@opensociety/db'
+import { db } from '@sabha/db'
 
 const users = await db.query.users.findMany()
 ```

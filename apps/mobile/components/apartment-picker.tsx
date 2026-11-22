@@ -1,5 +1,5 @@
 import { View } from 'react-native';
-import type { Apartment } from '@opensociety/shared';
+import type { Apartment } from '@sabha/shared';
 import { useT } from '../lib/i18n';
 import { Chip } from './ui/chip';
 import { Feedback, Field, LoadingState } from './ui/feedback';

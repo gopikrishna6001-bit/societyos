@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { dutySessionMinutes, summarizeGuardDuty, entriesDuringSession } from '@opensociety/shared'
-import type { GuardDutyRow } from '@opensociety/shared'
+import { dutySessionMinutes, summarizeGuardDuty, entriesDuringSession } from '@sabha/shared'
+import type { GuardDutyRow } from '@sabha/shared'
 
 const row = (o: Partial<GuardDutyRow> & Pick<GuardDutyRow, 'guardId' | 'guardName'>): GuardDutyRow => ({
   clockInAt: '2026-07-13T08:00:00.000Z',

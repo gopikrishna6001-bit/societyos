@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { collectionRatePct, collectionReportToCsv } from '@opensociety/shared'
+import { collectionRatePct, collectionReportToCsv } from '@sabha/shared'
 
 describe('collectionRatePct', () => {
   it('computes a one-decimal percentage', () => {

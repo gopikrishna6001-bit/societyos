@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Alert, View } from 'react-native'
 import { useMutation } from '@tanstack/react-query'
-import type { VehicleVerification } from '@opensociety/shared'
+import type { VehicleVerification } from '@sabha/shared'
 
 import { useApiClient } from '../api/context'
 import { useT } from '../lib/i18n'

@@ -1,9 +1,9 @@
 # SABHA capability inventory (option-2 independence)
 
-Checklist for preserving every OpenSociety capability after a rename to `@sabha/*`.
+Checklist for preserving every SABHA capability after a rename to `@sabha/*`.
 Tick **Preserve** items when the feature still works post-rename; tick **Rename** items when the identifier is updated.
 
-Scope: `/workspace` monorepo as of this inventory. User-facing brand already says SABHA in many places; package/deploy/mobile identifiers still say OpenSociety.
+Scope: `/workspace` monorepo as of this inventory. User-facing brand already says SABHA in many places; package/deploy/mobile identifiers still say SABHA.
 
 ---
 
@@ -49,7 +49,7 @@ Landing (non-admin): `/` → `apps/web/src/routes/index.tsx` (SABHA marketing + 
 | [ ] | Demo mirrors every admin module | `apps/web/src/routes/demo/*.tsx` → re-export admin components |
 | [ ] | Demo routes: `/demo`, `/demo/society`, `/demo/apartments`, `/demo/residents`, `/demo/guards`, `/demo/duty`, `/demo/house-help`, `/demo/vehicles`, `/demo/parking`, `/demo/visitors`, `/demo/pre-approvals`, `/demo/tickets`, `/demo/billing`, `/demo/expenses`, `/demo/reports`, `/demo/analytics`, `/demo/notices`, `/demo/setup` | same filenames under `routes/demo/` |
 | [ ] | Demo API client + fixtures | `apps/web/src/lib/demo/client.ts`, `data.ts`, `finance.ts`, `exports.ts`, `helpers.ts`, `mode.ts` |
-| [ ] | Shared demo seed | `packages/shared/src/demo.ts` (`@opensociety/shared/demo`) |
+| [ ] | Shared demo seed | `packages/shared/src/demo.ts` (`@sabha/shared/demo`) |
 | [ ] | No live API / Clerk in demo | enforced by demo layout + `useDashboardPath` |
 
 ---
@@ -103,7 +103,7 @@ Health (no DB/auth):
 
 | Done | Method | Path | Notes |
 | --- | --- | --- | --- |
-| [ ] | GET | `/` | `{ name: 'opensociety-api', status: 'ok' }` — rename response name |
+| [ ] | GET | `/` | `{ name: 'sabha-api', status: 'ok' }` — rename response name |
 | [ ] | GET | `/health` | `{ status: 'ok' }` |
 
 #### `/society` — `apps/api/src/routes/society.ts`
@@ -313,7 +313,7 @@ Node extras: `apps/api/src/node/server.ts`, `jobs.ts` — `BILLING_ENABLED`, pus
 
 ### 6. Shared domain (`packages/shared`)
 
-Package: `@opensociety/shared` → target `@sabha/shared`  
+Package: `@sabha/shared` → target `@sabha/shared`  
 Entry: `packages/shared/src/index.ts` + `./demo` export.
 
 | Done | Module | File | Retain |
@@ -347,7 +347,7 @@ Entry: `packages/shared/src/index.ts` + `./demo` export.
 
 ### 7. DB schema areas (`packages/db`)
 
-Package: `@opensociety/db` → `@sabha/db`  
+Package: `@sabha/db` → `@sabha/db`  
 Schema index: `packages/db/src/schema/index.ts`  
 Migrations: `packages/db/drizzle/0000_*.sql` … `0024_monthly_bill_uniqueness.sql`  
 Seed: `packages/db/src/seed.ts` (DEV_ADMIN / PENDING resident / approved resident)
@@ -415,10 +415,10 @@ Seed: `packages/db/src/seed.ts` (DEV_ADMIN / PENDING resident / approved residen
 | [ ] | `PUSH_ENABLED` | wrangler vars, Node env, `types.ts` | Queue/dispatch/reminders gated |
 | [ ] | `BILL_REMINDER_DAYS` | default `-7,0,3` | Hourly cron local 09:00 |
 | [ ] | `SOCIETY_TIME_ZONE` | default `Asia/Kolkata` | Reminder local hour |
-| [ ] | `PUSH_DISPATCH` queue | Workers producer/consumer | `opensociety-push` / `-failed` today |
+| [ ] | `PUSH_DISPATCH` queue | Workers producer/consumer | `sabha-push` / `-failed` today |
 | [ ] | Expo push + `EXPO_ACCESS_TOKEN` | `lib/expo-push.ts`, push routes | |
 | [ ] | Push devices/deliveries outbox | DB + `lib/push-*` | Durable recovery |
-| [ ] | R2 `UPLOADS` binding (Workers) | `wrangler.jsonc` bucket `opensociety-uploads` | |
+| [ ] | R2 `UPLOADS` binding (Workers) | `wrangler.jsonc` bucket `sabha-uploads` | |
 | [ ] | Node R2/S3 uploads | `node/config.ts` (`R2_*` / `S3_*`) | |
 | [ ] | Upload MIME/size limits | `routes/uploads.ts` | |
 | [ ] | `CF_PAGES` / `CLOUDFLARE` | `apps/web/vite.config.ts`, `turbo.json` | Pages build mode |
@@ -431,21 +431,21 @@ Seed: `packages/db/src/seed.ts` (DEV_ADMIN / PENDING resident / approved residen
 | Done | Surface | Path |
 | --- | --- | --- |
 | [ ] | Multi-stage Dockerfile (api + web) | `/workspace/Dockerfile` |
-| [ ] | Compose stack name + services | `deploy/compose.yaml` (`name: opensociety`) |
+| [ ] | Compose stack name + services | `deploy/compose.yaml` (`name: sabha`) |
 | [ ] | Compose env samples | `deploy/.env.example`, `deploy/api.env.example` |
 | [ ] | Caddy reverse proxy example | `deploy/Caddyfile.example` |
 | [ ] | Deploy runbook | `deploy/README.md` |
-| [ ] | API Workers config | `apps/api/wrangler.jsonc` (`opensociety-api`) |
+| [ ] | API Workers config | `apps/api/wrangler.jsonc` (`sabha-api`) |
 | [ ] | Web Workers/Pages config | `apps/web/wrangler.jsonc` (**already `name: "sabha"`**) |
 | [ ] | Pages prepare script | `scripts/prepare-cloudflare-pages.mjs` |
 | [ ] | Root `pages:build` | `package.json` |
-| [ ] | Hosting smoke test images | `scripts/hosting-smoke.test.mjs` (`opensociety-api:test`, `opensociety-web:test`) |
+| [ ] | Hosting smoke test images | `scripts/hosting-smoke.test.mjs` (`sabha-api:test`, `sabha-web:test`) |
 | [ ] | CI build + docker smoke | `.github/workflows/ci.yml` |
 | [ ] | Manual GHCR image publish | `.github/workflows/containers.yml` (`ghcr.io/${{ github.repository }}-*`) |
 | [ ] | Mobile EAS workflow | `.github/workflows/mobile-build.yml` |
 | [ ] | Turbo pipeline env allowlists | `turbo.json` |
 
-Image refs today: `ghcr.io/opencore-x/opensociety-api` / `opensociety-web`.
+Image refs today: `ghcr.io/gopikrishna6001-bit/sabha-api` / `sabha-web`.
 
 ---
 
@@ -456,7 +456,7 @@ Image refs today: `ghcr.io/opencore-x/opensociety-api` / `opensociety-web`.
 | [ ] | Languages: **en**, **hi**, **te** | `packages/shared/src/i18n.ts` (`Language`, `LANGUAGES`) |
 | [ ] | Common + web + mobile dictionaries | same file (`common*`, `web*`, `mobile*`) |
 | [ ] | Web LanguageSwitcher + provider | `apps/web/src/components/language-switcher.tsx`, `lib/i18n.tsx` (storage key `lang`) |
-| [ ] | Mobile language chips + provider | `apps/mobile/app/index.tsx`, `lib/i18n.tsx` (storage `opensociety-lang`) |
+| [ ] | Mobile language chips + provider | `apps/mobile/app/index.tsx`, `lib/i18n.tsx` (storage `sabha-lang`) |
 | [ ] | Parity test | `apps/web/src/i18n-parity.test.ts` |
 
 ---
@@ -469,31 +469,31 @@ Already SABHA (do not regress): user-facing wordmark, `apps/mobile/app.json` `na
 
 | Done | Current | Target | Files |
 | --- | --- | --- | --- |
-| [ ] | `"name": "opensociety"` | `"sabha"` (or `@sabha/root`) | `package.json` |
-| [ ] | `@opensociety/web` | `@sabha/web` | `apps/web/package.json` + all deps/filters |
-| [ ] | `@opensociety/api` | `@sabha/api` | `apps/api/package.json` |
-| [ ] | `@opensociety/mobile` | `@sabha/mobile` | `apps/mobile/package.json` |
-| [ ] | `@opensociety/shared` | `@sabha/shared` | `packages/shared/package.json` |
-| [ ] | `@opensociety/db` | `@sabha/db` | `packages/db/package.json` |
-| [ ] | `@opensociety/eslint-config` | `@sabha/eslint-config` | `packages/eslint-config/package.json` |
-| [ ] | `@opensociety/typescript-config` | `@sabha/typescript-config` | `packages/typescript-config/package.json` |
-| [ ] | `pnpm --filter @opensociety/*` | `@sabha/*` | `package.json` scripts, `Dockerfile`, `.github/workflows/*`, `deploy/README.md`, `docs/mobile.md`, `apps/mobile/DEMO.md`, `apps/*/package.json` scripts |
-| [ ] | `import … from '@opensociety/…'` | `@sabha/…` | **all** TS/TSX/JS across apps + packages + tests (hundreds of sites; regenerate lockfile) |
+| [ ] | `"name": "sabha"` | `"sabha"` (or `@sabha/root`) | `package.json` |
+| [ ] | `@sabha/web` | `@sabha/web` | `apps/web/package.json` + all deps/filters |
+| [ ] | `@sabha/api` | `@sabha/api` | `apps/api/package.json` |
+| [ ] | `@sabha/mobile` | `@sabha/mobile` | `apps/mobile/package.json` |
+| [ ] | `@sabha/shared` | `@sabha/shared` | `packages/shared/package.json` |
+| [ ] | `@sabha/db` | `@sabha/db` | `packages/db/package.json` |
+| [ ] | `@sabha/eslint-config` | `@sabha/eslint-config` | `packages/eslint-config/package.json` |
+| [ ] | `@sabha/typescript-config` | `@sabha/typescript-config` | `packages/typescript-config/package.json` |
+| [ ] | `pnpm --filter @sabha/*` | `@sabha/*` | `package.json` scripts, `Dockerfile`, `.github/workflows/*`, `deploy/README.md`, `docs/mobile.md`, `apps/mobile/DEMO.md`, `apps/*/package.json` scripts |
+| [ ] | `import … from '@sabha/…'` | `@sabha/…` | **all** TS/TSX/JS across apps + packages + tests (hundreds of sites; regenerate lockfile) |
 | [ ] | `pnpm-lock.yaml` workspace links | regenerate after rename | `pnpm-lock.yaml` |
 
 ### B2. Mobile identifiers / EAS
 
 | Done | Current | Target (suggested) | Files |
 | --- | --- | --- | --- |
-| [ ] | scheme `opensociety` / `opensociety-dev` | `sabha` / `sabha-dev` | `apps/mobile/app.config.js` |
-| [ ] | iOS `com.opensociety.app` / `.dev` | `com.sabha.app` / `.dev` (or chosen reverse-DNS) | `app.config.js` |
-| [ ] | Android `com.opensociety.app` / `.dev` | matching | `app.config.js` |
+| [ ] | scheme `sabha` / `sabha-dev` | `sabha` / `sabha-dev` | `apps/mobile/app.config.js` |
+| [ ] | iOS `com.sabha.app` / `.dev` | `com.sabha.app` / `.dev` (or chosen reverse-DNS) | `app.config.js` |
+| [ ] | Android `com.sabha.app` / `.dev` | matching | `app.config.js` |
 | [ ] | EAS submit `applicationId` | matching | `apps/mobile/eas.json` |
-| [ ] | Docs EAS project `ankitsejwal/opensociety` | new SABHA Expo project | `docs/mobile.md` (+ Expo dashboard) |
-| [ ] | Deep-link test URL `opensociety://gate?…` | `sabha://…` | `apps/api/src/pre-approval-qr.test.ts` |
-| [ ] | Storage `opensociety-device-id` | `sabha-device-id` | `apps/mobile/api/client.ts` |
-| [ ] | Storage `opensociety-lang` | `sabha-lang` | `apps/mobile/lib/i18n.tsx` |
-| [ ] | Persist key `opensociety-query-cache` | `sabha-query-cache` | `apps/mobile/lib/offline/query-client.ts` |
+| [ ] | Docs EAS project `sabha/sabha` | new SABHA Expo project | `docs/mobile.md` (+ Expo dashboard) |
+| [ ] | Deep-link test URL `sabha://gate?…` | `sabha://…` | `apps/api/src/pre-approval-qr.test.ts` |
+| [ ] | Storage `sabha-device-id` | `sabha-device-id` | `apps/mobile/api/client.ts` |
+| [ ] | Storage `sabha-lang` | `sabha-lang` | `apps/mobile/lib/i18n.tsx` |
+| [ ] | Persist key `sabha-query-cache` | `sabha-query-cache` | `apps/mobile/lib/offline/query-client.ts` |
 
 Note: `apps/mobile/app.json` already has `"slug": "sabha"` and `"name": "SABHA"`; EAS `projectId` / `owner` may stay until a new Expo project is created.
 
@@ -501,54 +501,54 @@ Note: `apps/mobile/app.json` already has `"slug": "sabha"` and `"name": "SABHA"`
 
 | Done | Current | Target | Files |
 | --- | --- | --- | --- |
-| [ ] | Worker name `opensociety-api` | `sabha-api` | `apps/api/wrangler.jsonc` |
-| [ ] | R2 bucket `opensociety-uploads` | `sabha-uploads` | `wrangler.jsonc`, `deploy/api.env.example`, `apps/api/.env.example`, root `.env.example` (`opensociety`) |
-| [ ] | Queue `opensociety-push` | `sabha-push` | `wrangler.jsonc`, `docs/mobile.md` |
-| [ ] | DLQ `opensociety-push-failed` | `sabha-push-failed` | same |
-| [ ] | Health JSON `name: 'opensociety-api'` | `sabha-api` | `apps/api/src/index.ts` |
+| [ ] | Worker name `sabha-api` | `sabha-api` | `apps/api/wrangler.jsonc` |
+| [ ] | R2 bucket `sabha-uploads` | `sabha-uploads` | `wrangler.jsonc`, `deploy/api.env.example`, `apps/api/.env.example`, root `.env.example` (`sabha`) |
+| [ ] | Queue `sabha-push` | `sabha-push` | `wrangler.jsonc`, `docs/mobile.md` |
+| [ ] | DLQ `sabha-push-failed` | `sabha-push-failed` | same |
+| [ ] | Health JSON `name: 'sabha-api'` | `sabha-api` | `apps/api/src/index.ts` |
 
 ### B4. Droplet / Docker / CI image tags
 
 | Done | Current | Target | Files |
 | --- | --- | --- | --- |
-| [ ] | Compose `name: opensociety` | `sabha` | `deploy/compose.yaml` |
-| [ ] | `opensociety-api:test` / `opensociety-web:test` | `sabha-api:test` / `sabha-web:test` | `.github/workflows/ci.yml`, `scripts/hosting-smoke.test.mjs` |
-| [ ] | `ghcr.io/opencore-x/opensociety-api` / `-web` | new org/repo tags | `deploy/.env.example` |
-| [ ] | Dockerfile `@opensociety/*` filters | `@sabha/*` | `Dockerfile` |
+| [ ] | Compose `name: sabha` | `sabha` | `deploy/compose.yaml` |
+| [ ] | `sabha-api:test` / `sabha-web:test` | `sabha-api:test` / `sabha-web:test` | `.github/workflows/ci.yml`, `scripts/hosting-smoke.test.mjs` |
+| [ ] | `ghcr.io/gopikrishna6001-bit/sabha-api` / `-web` | new org/repo tags | `deploy/.env.example` |
+| [ ] | Dockerfile `@sabha/*` filters | `@sabha/*` | `Dockerfile` |
 
 ### B5. Domain / QR brand tokens
 
 | Done | Current | Target | Notes |
 | --- | --- | --- | --- |
 | [ ] | `PRE_APPROVAL_QR_PREFIX = 'OS-PA:'` | e.g. `SABHA-PA:` | `packages/shared/src/visitor.ts` — **accept old prefix during migration** so printed passes keep working |
-| [ ] | Tests asserting `OS-PA:` / `opensociety://` | update + dual-parse cases | `apps/api/src/pre-approval-qr.test.ts` |
+| [ ] | Tests asserting `OS-PA:` / `sabha://` | update + dual-parse cases | `apps/api/src/pre-approval-qr.test.ts` |
 
 ### B6. Docs / comments / brand policy
 
 | Done | Current | Action | Files |
 | --- | --- | --- | --- |
-| [ ] | Link `https://github.com/opencore-x/opensociety` | point to SABHA repo (or archive note) | `README.md` |
-| [ ] | PR link `opencore-x/opensociety/pull/111` | update or leave historical | `docs/screenshots/README.md` |
-| [ ] | “branded product build of OpenSociety” / retained technical names | rewrite for independence | `README.md`, `docs/BRAND.md` |
-| [ ] | “OpenSociety still needs store records…” | SABHA store records | `docs/mobile.md` |
-| [ ] | Package READMEs “OpenSociety” | SABHA | `apps/api/README.md`, `packages/db/README.md` |
-| [ ] | `schema.dbml` Project `opensociety` | `sabha` | `packages/db/schema.dbml` |
-| [ ] | Log “OpenSociety/SABHA app” | SABHA | `scripts/prepare-cloudflare-pages.mjs` |
-| [ ] | CSS comment “OpenSociety design system” | SABHA | `apps/web/src/styles.css` |
-| [ ] | Comment refs to `@opensociety/shared` | `@sabha/shared` | `apps/web/src/lib/i18n.tsx`, `apps/mobile/lib/i18n.tsx`, `apps/mobile/components/README.md` |
+| [ ] | Link `https://github.com/gopikrishna6001-bit/societyos` | point to SABHA repo (or archive note) | `README.md` |
+| [ ] | PR link `gopikrishna6001-bit/societyos/pull/111` | update or leave historical | `docs/screenshots/README.md` |
+| [ ] | “branded product build of SABHA” / retained technical names | rewrite for independence | `README.md`, `docs/BRAND.md` |
+| [ ] | “SABHA still needs store records…” | SABHA store records | `docs/mobile.md` |
+| [ ] | Package READMEs “SABHA” | SABHA | `apps/api/README.md`, `packages/db/README.md` |
+| [ ] | `schema.dbml` Project `sabha` | `sabha` | `packages/db/schema.dbml` |
+| [ ] | Log “SABHA/SABHA app” | SABHA | `scripts/prepare-cloudflare-pages.mjs` |
+| [ ] | CSS comment “SABHA design system” | SABHA | `apps/web/src/styles.css` |
+| [ ] | Comment refs to `@sabha/shared` | `@sabha/shared` | `apps/web/src/lib/i18n.tsx`, `apps/mobile/lib/i18n.tsx`, `apps/mobile/components/README.md` |
 
 ### B7. ESLint package import paths
 
 | Done | Current | Target | Files |
 | --- | --- | --- | --- |
-| [ ] | `@opensociety/eslint-config/react` | `@sabha/eslint-config/react` | `apps/web/eslint.config.js` |
-| [ ] | `@opensociety/eslint-config/base` | `@sabha/eslint-config/base` | `apps/api/eslint.config.js` |
+| [ ] | `@sabha/eslint-config/react` | `@sabha/eslint-config/react` | `apps/web/eslint.config.js` |
+| [ ] | `@sabha/eslint-config/base` | `@sabha/eslint-config/base` | `apps/api/eslint.config.js` |
 
 ---
 
 ## C. Suggested implementer order
 
-1. Rename packages + lockfile + Dockerfile/CI filters (`@opensociety` → `@sabha`).
+1. Rename packages + lockfile + Dockerfile/CI filters (`@sabha` → `@sabha`).
 2. Update Workers/R2/queue/compose/image identifiers (coordinate with Cloudflare + GHCR).
 3. Update mobile schemes/bundle IDs/EAS (requires store + Expo project work).
 4. Dual-support QR prefix + deep links; then prefer SABHA prefix for new passes.

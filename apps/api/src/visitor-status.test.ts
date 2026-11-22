@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import type { VisitorStatus } from '@opensociety/shared'
+import type { VisitorStatus } from '@sabha/shared'
 import {
   VISITOR_TRANSITIONS,
   canTransition,
   availableVisitorActions,
   type VisitorAction,
-} from '@opensociety/shared'
+} from '@sabha/shared'
 
 const ALL_STATUSES: VisitorStatus[] = [
   'PENDING',

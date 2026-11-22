@@ -6,7 +6,7 @@ import {
   dutySessionMinutes,
   formatWorkedMinutes,
   entriesDuringSession,
-} from '@opensociety/shared'
+} from '@sabha/shared'
 
 import { apiClient } from '../../lib/api'
 import { useT } from '@/lib/i18n'

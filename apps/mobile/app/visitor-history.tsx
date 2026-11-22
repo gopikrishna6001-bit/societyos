@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { FlatList, Share, View } from 'react-native'
 import { useQuery } from '@tanstack/react-query'
-import { visitorStatusSchema, visitorEntriesToCsv, type VisitorStatus } from '@opensociety/shared'
+import { visitorStatusSchema, visitorEntriesToCsv, type VisitorStatus } from '@sabha/shared'
 
 import { useApiClient } from '../api/context'
 import { useT } from '../lib/i18n'

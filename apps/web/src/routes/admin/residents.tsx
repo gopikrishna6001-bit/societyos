@@ -1,8 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Fragment, useState } from 'react'
-import type { ResidencyRelation, User, UserRole, UserStatus } from '@opensociety/shared'
-import { residencyRelationSchema, userRoleSchema } from '@opensociety/shared'
+import type { ResidencyRelation, User, UserRole, UserStatus } from '@sabha/shared'
+import { residencyRelationSchema, userRoleSchema } from '@sabha/shared'
 
 import { apiClient } from '../../lib/api'
 import { useT } from '@/lib/i18n'

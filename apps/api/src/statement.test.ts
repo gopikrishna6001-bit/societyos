@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildStatement, type StatementEntryInput } from '@opensociety/shared'
+import { buildStatement, type StatementEntryInput } from '@sabha/shared'
 
 const rows: StatementEntryInput[] = [
   { date: '2026-01-05T00:00:00.000Z', type: 'BILL', description: 'Maintenance Jan', debit: 100000, credit: 0 },

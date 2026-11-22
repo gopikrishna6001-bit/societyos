@@ -1,5 +1,5 @@
-import type { Database } from '@opensociety/db'
-import { accounts, journalEntries, journalLines, maintenanceBills, billLineItems, payments } from '@opensociety/db'
+import type { Database } from '@sabha/db'
+import { accounts, journalEntries, journalLines, maintenanceBills, billLineItems, payments } from '@sabha/db'
 import { and, eq, inArray, isNull, ne, sql } from 'drizzle-orm'
 import {
   ACCOUNT_CODES,
@@ -15,7 +15,7 @@ import {
   type BillPostingLine,
   type PaymentMethod,
   type ExpenseStatus,
-} from '@opensociety/shared'
+} from '@sabha/shared'
 
 // Auto-posting service (#97, design §6). Turns bill/payment writes into balanced
 // journal entries. Posting is best-effort and idempotent: it never blocks the

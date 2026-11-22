@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { houseHelpWorkedMinutes } from '@opensociety/shared'
+import { houseHelpWorkedMinutes } from '@sabha/shared'
 
 describe('houseHelpWorkedMinutes', () => {
   it('returns null while still inside (no check-out)', () => {

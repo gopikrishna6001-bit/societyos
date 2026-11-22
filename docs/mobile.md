@@ -16,8 +16,8 @@ Use the same Clerk instance as the API. An Android emulator reaches the host API
 From the repository root:
 
 ```sh
-pnpm --filter @opensociety/shared build
-pnpm --filter @opensociety/mobile start
+pnpm --filter @sabha/shared build
+pnpm --filter @sabha/mobile start
 ```
 
 Open Metro with an installed development build. Build profiles and native credentials are described below. [Mobile component guidance](../apps/mobile/components/README.md) covers visual changes, text scaling, safe areas, and native review.
@@ -28,7 +28,7 @@ The mobile design was reviewed on iPhone and Android simulators on 2026-10-03. T
 
 ## Build profiles
 
-EAS project: [ankitsejwal/opensociety](https://expo.dev/accounts/ankitsejwal/projects/opensociety). Run EAS commands from `apps/mobile`. `eas.json` provides development, iOS simulator, preview APK/ad-hoc, TestFlight, and Play internal profiles. Development installs use `com.opensociety.app.dev`; preview and store installs use `com.opensociety.app`. EAS manages store build numbers. The post-install hook builds the shared workspace package before Metro runs.
+EAS project: [sabha/sabha](https://expo.dev/accounts/ankitsejwal/projects/sabha). Run EAS commands from `apps/mobile`. `eas.json` provides development, iOS simulator, preview APK/ad-hoc, TestFlight, and Play internal profiles. Development installs use `com.sabha.app.dev`; preview and store installs use `com.sabha.app`. EAS manages store build numbers. The post-install hook builds the shared workspace package before Metro runs.
 
 ```sh
 eas build --platform ios --profile simulator
@@ -37,7 +37,7 @@ eas build --platform ios --profile testflight
 eas build --platform android --profile play-internal
 ```
 
-Apple and Google developer memberships are available. OpenSociety still needs its own store app records, signing/provisioning credentials, and a Google publishing service account with access to this app. Configure the OpenSociety credentials in EAS and grant testing-track access for this app before submitting. Set the new App Store Connect app ID in `submit.testflight.ios.ascAppId` once Apple creates it. Play submission starts as a draft for the first Console rollout.
+Apple and Google developer memberships are available. SABHA still needs its own store app records, signing/provisioning credentials, and a Google publishing service account with access to this app. Configure the SABHA credentials in EAS and grant testing-track access for this app before submitting. Set the new App Store Connect app ID in `submit.testflight.ios.ascAppId` once Apple creates it. Play submission starts as a draft for the first Console rollout.
 
 Configure `EXPO_PUBLIC_API_URL` and `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` in each EAS environment. Preview/store builds require HTTPS and reject `EXPO_PUBLIC_DEV_USER_ID`; store profiles also require a live Clerk key. The current local `.env` is for development and cannot be used to ship the app. Android push will also need an EAS file variable `GOOGLE_SERVICES_JSON` for this app's Firebase configuration. Keep signing keys and service-account JSON outside Git.
 
@@ -49,7 +49,7 @@ The service supports visitor approval/check-in alerts, notice publication (all r
 
 Apply migration `0023_push_delivery.sql` before enabling push. The database stores per-account tokens and a durable delivery outbox with event/device deduplication, bounded retries, Expo receipt checks, and stale/dead-token cleanup. Expo ticket acceptance is not treated as delivery. Messages can still arrive more than once if an upstream timeout occurs after Expo accepted a request. Gate messages take precedence over broadcasts; dispatch is limited to 500 messages per pass, with follow-up jobs draining larger backlogs. Terminal deliveries are retained for seven days and expired work is discarded.
 
-For the current Workers adapter, provision `opensociety-push` and `opensociety-push-failed`, then deploy the queue bindings in `apps/api/wrangler.jsonc`. Queue wake-ups carry no personal data and run only while deliveries/receipts are pending. The morning reminder run also recovers outbox records whose wake-up publication failed. Monitor the dead-letter queue for repeated failures.
+For the current Workers adapter, provision `sabha-push` and `sabha-push-failed`, then deploy the queue bindings in `apps/api/wrangler.jsonc`. Queue wake-ups carry no personal data and run only while deliveries/receipts are pending. The morning reminder run also recovers outbox records whose wake-up publication failed. Monitor the dead-letter queue for repeated failures.
 
 | Setting | Purpose |
 | --- | --- |

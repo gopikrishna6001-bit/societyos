@@ -66,7 +66,7 @@ import type {
   VisitorEntry,
   VisitorPreApproval,
   VisitorStatus,
-} from '@opensociety/shared'
+} from '@sabha/shared'
 
 // House help with its anonymous rating summary + verification/trust (directory list).
 export type HouseHelpRow = HouseHelp & {

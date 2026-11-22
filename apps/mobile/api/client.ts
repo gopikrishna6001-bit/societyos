@@ -24,7 +24,7 @@ import type {
   VisitorPreApproval,
   VisitorStatus,
   RegisterPushToken,
-} from '@opensociety/shared'
+} from '@sabha/shared'
 
 export const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8787'
 
@@ -58,10 +58,10 @@ function deviceHeaders(): Record<string, string> {
   let id = 'unknown-device'
   try {
     const store = (globalThis as { localStorage?: Storage }).localStorage
-    id = store?.getItem('opensociety-device-id') ?? ''
+    id = store?.getItem('sabha-device-id') ?? ''
     if (!id) {
       id = globalThis.crypto?.randomUUID?.() ?? `dev-${Date.now()}`
-      store?.setItem('opensociety-device-id', id)
+      store?.setItem('sabha-device-id', id)
     }
   } catch {
     // storage unavailable; fall back to the placeholder id

@@ -1,14 +1,14 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { and, asc, eq } from 'drizzle-orm'
-import { parkingSlots, apartments, visitorEntries } from '@opensociety/db'
+import { parkingSlots, apartments, visitorEntries } from '@sabha/db'
 import {
   createParkingSlotSchema,
   updateParkingSlotSchema,
   assignParkingSlotSchema,
   normalizeSlotNumber,
   visitorParkingSummary,
-} from '@opensociety/shared'
+} from '@sabha/shared'
 import { withDb, withAuth, requireAuth, requireRole, actingUserId } from '../middleware'
 import type { AppEnv } from '../types'
 

@@ -1,5 +1,5 @@
-import { createDemoData, demoId } from '@opensociety/shared/demo'
-import type { HouseHelpEntry } from '@opensociety/shared'
+import { createDemoData, demoId } from '@sabha/shared/demo'
+import type { HouseHelpEntry } from '@sabha/shared'
 import type { apiClient } from '../../api/client'
 
 export type MobileApi = typeof apiClient

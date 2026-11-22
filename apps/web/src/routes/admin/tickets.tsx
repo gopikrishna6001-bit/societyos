@@ -1,13 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
-import type { TicketAction, TicketCategory, TicketPriority, TicketStatus, User } from '@opensociety/shared'
+import type { TicketAction, TicketCategory, TicketPriority, TicketStatus, User } from '@sabha/shared'
 import {
   availableTicketActions,
   ticketCategorySchema,
   ticketPrioritySchema,
   ticketStatusSchema,
-} from '@opensociety/shared'
+} from '@sabha/shared'
 
 import { apiClient } from '../../lib/api'
 import { useT } from '@/lib/i18n'

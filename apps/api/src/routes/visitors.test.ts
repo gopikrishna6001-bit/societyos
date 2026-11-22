@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import type { Context } from 'hono'
-import type { VisitorStatus, UserRole } from '@opensociety/shared'
-import { residencies, type Database } from '@opensociety/db'
+import type { VisitorStatus, UserRole } from '@sabha/shared'
+import { residencies, type Database } from '@sabha/db'
 import { applyTransition } from './visitors'
 import type { AppEnv } from '../types'
 

@@ -1,4 +1,4 @@
-import { updateSocietyConfigSchema, type UpdateSocietyConfig } from '@opensociety/shared'
+import { updateSocietyConfigSchema, type UpdateSocietyConfig } from '@sabha/shared'
 
 // Ordered steps of the first-run society setup wizard.
 export const SETUP_STEPS = [

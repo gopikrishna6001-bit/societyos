@@ -1,8 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { hourLabel, visitorTrendsToCsv, dayOfWeekLabel } from '@opensociety/shared'
-import type { HourCount, TypeCount, LabelCount, DowCount } from '@opensociety/shared'
+import { hourLabel, visitorTrendsToCsv, dayOfWeekLabel } from '@sabha/shared'
+import type { HourCount, TypeCount, LabelCount, DowCount } from '@sabha/shared'
 
 import { apiClient } from '../../lib/api'
 import { useT } from '@/lib/i18n'

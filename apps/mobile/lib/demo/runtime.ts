@@ -1,4 +1,4 @@
-import type { CreateVisitorEntry } from '@opensociety/shared'
+import type { CreateVisitorEntry } from '@sabha/shared'
 import { MutationCache, QueryClient } from '@tanstack/react-query'
 import { createMobileDemoClient } from './client'
 import { createMobileDemoStore, type DemoRole, type MobileApi } from './store'

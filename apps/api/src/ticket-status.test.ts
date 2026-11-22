@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import type { TicketStatus } from '@opensociety/shared'
+import type { TicketStatus } from '@sabha/shared'
 import {
   TICKET_TRANSITIONS,
   canTicketTransition,
   availableTicketActions,
   type TicketAction,
-} from '@opensociety/shared'
+} from '@sabha/shared'
 
 const ALL_STATUSES: TicketStatus[] = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'CANCELLED']
 
