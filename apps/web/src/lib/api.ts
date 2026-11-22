@@ -1,4 +1,5 @@
 import { isDemoBrowser } from './demo/mode'
+import { hasSocietySessionClient } from './society-session-client'
 import type {
   Apartment,
   ApproveUser,
@@ -506,11 +507,18 @@ export type ApiClient = typeof liveApiClient
 export const apiClient: ApiClient = new Proxy(liveApiClient, {
   get(target, property: keyof ApiClient) {
     return (...args: unknown[]) => {
+      // Demo sandbox stays isolated. Signed-in MNR society reuses the same
+      // in-browser ApiClient shape as demo so /admin screens need no rebuild.
       if (isDemoBrowser()) {
         return import('./demo/client').then(({ getDemoClient }) => {
           const client = getDemoClient()
           return Reflect.apply(client[property], client, args)
         })
+      }
+      if (hasSocietySessionClient()) {
+        return import('./society-session-client').then(({ getSocietySessionClient }) =>
+          getSocietySessionClient().then((client) => Reflect.apply(client[property], client, args)),
+        )
       }
       return Reflect.apply(target[property], target, args)
     }

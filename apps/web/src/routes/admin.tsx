@@ -1,4 +1,5 @@
-import { createFileRoute, Link, Outlet, useRouterState } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
+import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import {
   BarChart3,
@@ -24,11 +25,14 @@ import type { LucideIcon } from 'lucide-react'
 import { apiClient } from '../lib/api'
 import { AuthControls, CLERK_ENABLED } from '@/components/auth-controls'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { LanguageSwitcher } from '@/components/language-switcher'
 import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { useDashboardPath } from '@/lib/dashboard-path'
+import { clearSocietySession, readSocietySession } from '@/lib/society-auth'
+import { hasSocietySessionClient } from '@/lib/society-session-client'
 
 export const Route = createFileRoute('/admin')({ component: AdminLayout })
 
@@ -54,6 +58,7 @@ const NAV: { to: string; tKey: string; icon: LucideIcon }[] = [
 
 export function AdminLayout() {
   const dashboardPath = useDashboardPath()
+  const navigate = useNavigate()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const setupOnly =
     pathname === '/demo/setup' ||
@@ -61,14 +66,23 @@ export function AdminLayout() {
     pathname === '/admin/setup' ||
     pathname.startsWith('/admin/setup/')
   const demo = dashboardPath('/admin') === '/demo'
+  // Read localStorage only after mount so SSR markup matches the first client paint.
+  const [societySession, setSocietySession] = useState(false)
+  const [sessionName, setSessionName] = useState<string | null>(null)
+  useEffect(() => {
+    if (demo) return
+    const active = hasSocietySessionClient()
+    setSocietySession(active)
+    setSessionName(active ? (readSocietySession()?.resident.name ?? null) : null)
+  }, [demo])
   const health = useQuery({
-    queryKey: ['health'],
+    queryKey: ['health', societySession ? 'society' : 'live'],
     queryFn: apiClient.health,
     retry: false,
     enabled: !demo,
   })
   const { t } = useT()
-  const apiOffline = !demo && !health.isLoading && !health.isSuccess
+  const apiOffline = !demo && !societySession && !health.isLoading && !health.isSuccess
 
   return (
     <div className="bg-background text-foreground min-h-screen overflow-x-hidden overscroll-none touch-pan-y">
@@ -119,6 +133,8 @@ export function AdminLayout() {
               {!setupOnly &&
                 (demo ? (
                   <Badge>{t('demo.badge')}</Badge>
+                ) : societySession ? (
+                  <Badge variant="default">{sessionName ?? t('home.signedInAs')}</Badge>
                 ) : (
                   <Badge variant={health.isSuccess ? 'default' : 'destructive'}>
                     {t('header.api')}{' '}
@@ -126,7 +142,20 @@ export function AdminLayout() {
                   </Badge>
                 ))}
               <LanguageSwitcher />
-              {CLERK_ENABLED && !demo && <AuthControls />}
+              {societySession ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    clearSocietySession()
+                    void navigate({ to: '/login' })
+                  }}
+                >
+                  {t('home.signOut')}
+                </Button>
+              ) : (
+                CLERK_ENABLED && !demo && <AuthControls />
+              )}
               <ThemeToggle />
             </div>
           </header>

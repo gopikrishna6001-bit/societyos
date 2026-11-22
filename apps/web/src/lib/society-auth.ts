@@ -81,4 +81,5 @@ export function readSocietySession(): SocietySession | null {
 
 export function clearSocietySession() {
   localStorage.removeItem(STORAGE_KEY)
+  void import('./society-session-client').then((m) => m.resetSocietySessionClient())
 }

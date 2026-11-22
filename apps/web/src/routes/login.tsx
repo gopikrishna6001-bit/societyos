@@ -29,7 +29,7 @@ function LoginPage() {
     setPending(true)
     try {
       await loginWithPhonePin(phone, pin)
-      void navigate({ to: '/home' })
+      void navigate({ to: '/admin' })
     } catch (err) {
       setError(err instanceof Error ? err.message : t('login.failed'))
     } finally {

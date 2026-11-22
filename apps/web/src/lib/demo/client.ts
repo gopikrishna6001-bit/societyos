@@ -171,8 +171,11 @@ export function createDemoClient(initial = createDemoData()) {
     },
   }
   // Clone responses like an HTTP boundary so query caches cannot mutate the store.
-  return new Proxy(methods, { get(target, property: keyof DemoMethods) {
-    const method = target[property]
+  // Never expose `.then` — returning this proxy from an async function would make
+  // Promise resolution treat it as a thenable and call `then` as an action.
+  return new Proxy(methods, { get(target, property: keyof DemoMethods | 'then') {
+    if (property === 'then') return undefined
+    const method = target[property as keyof DemoMethods]
     if (typeof method !== 'function') throw new Error(`Unsupported demo action: ${String(property)}`)
     return async (...args: unknown[]) => structuredClone(await Reflect.apply(method, target, args))
   } }) as typeof apiClient
