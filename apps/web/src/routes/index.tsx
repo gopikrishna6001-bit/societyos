@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { Shield, Receipt, Megaphone, Users, Ticket, Scale } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -29,9 +29,6 @@ function App() {
           <span className="font-display text-lg font-bold tracking-tight">SABHA</span>
         </a>
         <div className="flex items-center gap-2 sm:gap-3">
-          <Button asChild size="sm" variant="outline">
-            <a href="/login">{t('landing.logIn')}</a>
-          </Button>
           <LanguageSwitcher />
           <ThemeToggle />
         </div>
@@ -45,13 +42,10 @@ function App() {
           <p className="text-muted-foreground mt-5 text-sm">{t('landing.ctaHint')}</p>
           <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
             <Button asChild size="lg">
-              <a href="/login">{t('landing.logIn')}</a>
-            </Button>
-            <Button asChild size="lg" variant="outline">
               <a href="/demo">{t('landing.exploreDemo')}</a>
             </Button>
             <Button asChild size="lg" variant="outline">
-              <a href="/demo/setup">{t('landing.startSetup')}</a>
+              <Link to="/admin">{t('landing.openDashboard')}</Link>
             </Button>
           </div>
         </div>

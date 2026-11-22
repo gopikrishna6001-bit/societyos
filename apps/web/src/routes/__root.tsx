@@ -22,12 +22,7 @@ function AuthBridge() {
 }
 
 function Providers({ children }: { children: React.ReactNode }) {
-  const publicPage = useLocation({
-    select: (location) => {
-      const p = location.pathname
-      return p === '/' || p === '/login' || p === '/home' || isDemoPath(p)
-    },
-  })
+  const publicPage = useLocation({ select: location => location.pathname === '/' || isDemoPath(location.pathname) })
   const tree = (
     <ThemeProvider>
       <I18nProvider>
