@@ -12,9 +12,13 @@ SABHA is a Community Governance & Transparency Platform: resident app, gate desk
 
 Brand rules: [docs/BRAND.md](docs/BRAND.md). Capability checklist: [docs/SABHA-CAPABILITY-INVENTORY.md](docs/SABHA-CAPABILITY-INVENTORY.md). Deploy notes: [deploy/README.md](deploy/README.md), [docs/mobile.md](docs/mobile.md).
 
-## Try the demo
+## Try the demo (recommended hosted path)
 
 The web dashboard has a no-signup demo at `/demo`. The phone app offers **Try demo** on the sign-in screen. Both use fictional sample data in the browser or on device and never call the society API or Clerk.
+
+**Cloudflare Pages / any static host without API secrets uses this path automatically.** If `VITE_API_URL` is unset or points at localhost in a production build, `/admin` redirects to `/demo` so the full SABHA product stays usable without Neon, Clerk, or a society API.
+
+Optional live API later: any Postgres URL (Neon, Supabase, or self-hosted) as `DATABASE_URL`, skip Clerk and use seeded `VITE_DEV_USER_ID` + `WEB_ORIGINS`, then set a public `VITE_API_URL`.
 
 ## Run locally
 
@@ -26,7 +30,7 @@ cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env
 ```
 
-Set `DATABASE_URL` (and Clerk credentials for production auth). For local live admin without Clerk, set `VITE_DEV_USER_ID` to the seeded admin id after migrate+seed. Then:
+Set `DATABASE_URL` (Clerk is optional). For local live admin without Clerk, set `VITE_DEV_USER_ID` to the seeded admin id after migrate+seed. Then:
 
 ```sh
 pnpm --filter @sabha/db db:migrate

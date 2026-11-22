@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { LanguageSwitcher } from '@/components/language-switcher'
 import { useT } from '@/lib/i18n'
+import { isLiveApiConfigured } from '@/lib/live-mode'
 
 export const Route = createFileRoute('/')({ component: App })
 
@@ -21,6 +22,7 @@ const FEATURES: { icon: LucideIcon; titleKey: string; descKey: string }[] = [
 
 function App() {
   const { t } = useT()
+  const live = isLiveApiConfigured()
   return (
     <div className="bg-background text-foreground min-h-screen overflow-x-hidden">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
@@ -39,14 +41,22 @@ function App() {
           <h1 className="font-display text-5xl font-black tracking-tight md:text-6xl">SABHA</h1>
           <p className="text-muted-foreground mt-4 text-xl">{t('landing.tagline')}</p>
           <p className="text-muted-foreground mx-auto mt-3 max-w-2xl">{t('landing.body')}</p>
-          <p className="text-muted-foreground mt-5 text-sm">{t('landing.ctaHint')}</p>
+          <p className="text-muted-foreground mt-5 text-sm">
+            {live ? t('landing.ctaHint') : t('landing.ctaHintDemoOnly')}
+          </p>
           <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
             <Button asChild size="lg">
               <a href="/demo">{t('landing.exploreDemo')}</a>
             </Button>
-            <Button asChild size="lg" variant="outline">
-              <Link to="/admin">{t('landing.openDashboard')}</Link>
-            </Button>
+            {live ? (
+              <Button asChild size="lg" variant="outline">
+                <Link to="/admin">{t('landing.openDashboard')}</Link>
+              </Button>
+            ) : (
+              <Button asChild size="lg" variant="outline">
+                <a href="/demo/setup">{t('landing.openDemoSetup')}</a>
+              </Button>
+            )}
           </div>
         </div>
       </section>

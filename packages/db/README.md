@@ -1,10 +1,10 @@
 # @sabha/db
 
-Database package for SABHA using Drizzle ORM and Neon Postgres.
+Database package for SABHA using Drizzle ORM and Postgres (Neon, Supabase, local Docker, or any compatible host).
 
 ## Setup
 
-1. Copy `.env.example` to `.env` and add your Neon database URL
+1. Copy `.env.example` to `.env` and set `DATABASE_URL` to any Postgres connection string
 2. Install dependencies: `pnpm install`
 3. Generate migrations: `pnpm db:generate`
 4. Run migrations: `pnpm db:migrate`

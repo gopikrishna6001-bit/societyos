@@ -19,7 +19,11 @@ pnpm --filter @sabha/api build:node
 
 Use `pnpm dev` for local API/web development. CI builds and smoke-tests both containers without using local Docker storage.
 
-Only public configuration goes into web build arguments. Secrets belong in the API runtime environment. Production web builds require a live Clerk publishable key. Production API runtime requires a live secret unless `APP_ENV=staging` is explicit. Both require exact HTTPS origins. Set `WEB_ORIGINS` for the Workers adapter too if deploying it.
+Only public configuration goes into web build arguments. Secrets belong in the API runtime environment.
+
+**Zero-config Pages:** leave `VITE_API_URL` and Clerk keys unset. The static site serves the full interactive demo (`/demo`); `/admin` redirects there. No Neon, Clerk, or API container is required.
+
+**Optional live stack:** any Postgres `DATABASE_URL` (Neon, Supabase, or self-hosted). Clerk is optional — without `CLERK_SECRET_KEY` the API accepts seeded `x-user-id` / `VITE_DEV_USER_ID`. Set `WEB_ORIGINS` to the HTTPS web origin(s). Production web builds that open Live need a public `VITE_API_URL` (not localhost).
 
 The manual **Build hosting images** GitHub workflow builds `linux/amd64` images. Set the chosen GitHub environment's `API_ORIGIN` and `CLERK_PUBLISHABLE_KEY` variables first. Run it against a revision whose CI passed. Tags include the environment and full commit SHA; record image digests for deployment and rollback. This workflow publishes images when manually invoked and does not connect to a server.
 

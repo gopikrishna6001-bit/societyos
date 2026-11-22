@@ -1,4 +1,4 @@
-import { createFileRoute, Link, Outlet, useRouterState } from '@tanstack/react-router'
+import { createFileRoute, Link, Outlet, redirect, useRouterState } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import {
   BarChart3,
@@ -29,8 +29,17 @@ import { LanguageSwitcher } from '@/components/language-switcher'
 import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { useDashboardPath } from '@/lib/dashboard-path'
+import { demoPathForAdmin, isLiveApiConfigured } from '@/lib/live-mode'
 
-export const Route = createFileRoute('/admin')({ component: AdminLayout })
+export const Route = createFileRoute('/admin')({
+  beforeLoad: ({ location }) => {
+    // Zero-config hosted deploys have no API secrets — send Live URLs to the full demo.
+    if (!isLiveApiConfigured()) {
+      throw redirect({ href: demoPathForAdmin(location.pathname) })
+    }
+  },
+  component: AdminLayout,
+})
 
 const NAV: { to: string; tKey: string; icon: LucideIcon }[] = [
   { to: '/admin', tKey: 'nav.overview', icon: LayoutDashboard },
@@ -135,11 +144,11 @@ export function AdminLayout() {
             <div className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-amber-950 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-50 sm:px-6">
               <p className="font-semibold">Live API is offline</p>
               <p className="mt-1 text-sm">
-                This preview has no Neon database or society API yet, so saving units and other live writes will fail.
-                Use the browser demo for full flows with sample data — no setup required.
+                The society API is unreachable right now, so live writes will fail. The interactive demo has the full
+                SABHA product with sample data and needs no database or auth keys.
               </p>
-              <a href="/demo/setup" className="mt-2 inline-flex text-sm font-semibold underline">
-                Open demo setup wizard
+              <a href="/demo" className="mt-2 inline-flex text-sm font-semibold underline">
+                Open full demo dashboard
               </a>
             </div>
           )}
