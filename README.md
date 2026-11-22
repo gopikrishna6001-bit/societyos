@@ -40,6 +40,25 @@ pnpm dev
 
 Open **http://localhost:3000** (marketing + demo) or **http://localhost:3000/admin**. API on **http://localhost:8787**.
 
+### MNR Apartment (local real-society seed)
+
+To register **MNR Apartment** with role personas (no Clerk):
+
+```sh
+pnpm --filter @sabha/db db:seed:mnr
+node scripts/mnr-role-e2e.mjs
+```
+
+| Persona | `x-user-id` / `VITE_DEV_USER_ID` | Role |
+| --- | --- | --- |
+| Gopikrishna Bhuvanam | `00000000-0000-0000-0000-000000000001` | ADMIN (owner of MNR-101) |
+| Pending → approved resident | `…0002` | RESIDENT |
+| Household co-resident | `…0003` | RESIDENT (MNR-102) |
+| MNR Gate Guard | `…0004` | GUARD |
+| MNR Maintenance Staff | `…0005` | STAFF |
+
+Web admin uses the admin id via `apps/web/.env` `VITE_DEV_USER_ID`. Switch roles by changing that id (or the mobile/dev `x-user-id` header).
+
 Workspace packages are `@sabha/*`. User-facing product name is SABHA.
 
 Do not promote a production deployment without explicit OK.

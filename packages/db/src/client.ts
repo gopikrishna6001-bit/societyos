@@ -1,21 +1,33 @@
-import { drizzle } from 'drizzle-orm/neon-http'
+import { drizzle as drizzleNeon } from 'drizzle-orm/neon-http'
+import type { NeonHttpDatabase } from 'drizzle-orm/neon-http'
+import { drizzle as drizzleNode } from 'drizzle-orm/node-postgres'
 import { neon } from '@neondatabase/serverless'
+import pg from 'pg'
 import * as schema from './schema'
 
-// Factory: build a Drizzle client from an explicit connection string using the
-// stateless neon-http driver — ideal for per-request use on Cloudflare Workers
-// (no connection pooling/cleanup) and works the same in Node against Neon.
-// Cloudflare Workers has no process.env at module-load time; the connection
-// string arrives per-request via the fetch handler's `env`, so callers there
-// use createDb(env.DATABASE_URL).
-export function createDb(connectionString: string) {
-  const sql = neon(connectionString)
-  return drizzle({ client: sql, schema })
+function isLocalPostgres(connectionString: string) {
+  try {
+    const host = new URL(connectionString).hostname
+    return host === 'localhost' || host === '127.0.0.1' || host === 'postgres'
+  } catch {
+    return false
+  }
 }
 
-export type Database = ReturnType<typeof createDb>
+// Neon HTTP for Workers / hosted Neon; node-postgres for local Docker/E2E.
+// Typed as NeonHttpDatabase so API/route typecheck stays single-shaped; local
+// pg is cast because callers only use the shared query/insert surface.
+export type Database = NeonHttpDatabase<typeof schema>
 
-// Convenience for Node contexts (scripts/tests) where DATABASE_URL is present.
+export function createDb(connectionString: string): Database {
+  if (isLocalPostgres(connectionString)) {
+    const pool = new pg.Pool({ connectionString })
+    return drizzleNode({ client: pool, schema }) as unknown as Database
+  }
+  const sql = neon(connectionString)
+  return drizzleNeon({ client: sql, schema })
+}
+
 let cached: Database | undefined
 export function getDb(): Database {
   if (!cached) {
