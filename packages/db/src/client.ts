@@ -5,27 +5,27 @@ import { neon } from '@neondatabase/serverless'
 import pg from 'pg'
 import * as schema from './schema'
 
-function isLocalPostgres(connectionString: string) {
+function isNeonHttpHost(connectionString: string) {
   try {
     const host = new URL(connectionString).hostname
-    return host === 'localhost' || host === '127.0.0.1' || host === 'postgres'
+    return host.includes('neon.tech')
   } catch {
     return false
   }
 }
 
-// Neon HTTP for Workers / hosted Neon; node-postgres for local Docker/E2E.
-// Typed as NeonHttpDatabase so API/route typecheck stays single-shaped; local
-// pg is cast because callers only use the shared query/insert surface.
+// Neon HTTP for Workers against Neon; node-postgres for local Docker, Supabase,
+// and other Postgres hosts (Workers need nodejs_compat + a reachable URL /
+// Hyperdrive). Typed as NeonHttpDatabase so API typecheck stays single-shaped.
 export type Database = NeonHttpDatabase<typeof schema>
 
 export function createDb(connectionString: string): Database {
-  if (isLocalPostgres(connectionString)) {
-    const pool = new pg.Pool({ connectionString })
-    return drizzleNode({ client: pool, schema }) as unknown as Database
+  if (isNeonHttpHost(connectionString)) {
+    const sql = neon(connectionString)
+    return drizzleNeon({ client: sql, schema })
   }
-  const sql = neon(connectionString)
-  return drizzleNeon({ client: sql, schema })
+  const pool = new pg.Pool({ connectionString, max: 5 })
+  return drizzleNode({ client: pool, schema }) as unknown as Database
 }
 
 let cached: Database | undefined

@@ -39,7 +39,7 @@ pnpm dev
 ```
 
 Open the **Vite dev** app (usually **http://127.0.0.1:3001** when 3000 is taken) → **/admin** for Live MNR. API on **http://127.0.0.1:8787**.  
-Hosted Pages (`*.pages.dev`) has **no login** — use **/demo** only.
+Hosted Pages without Live secrets uses **/demo**. To enable **Clerk + live API** on Pages, follow [docs/HOSTED-LIVE.md](docs/HOSTED-LIVE.md).
 
 ### MNR Apartment (local real-society seed)
 
