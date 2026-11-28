@@ -80,6 +80,34 @@ function AuthScreen() {
   const [pending, setPending] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [register, setRegister] = useState(false);
+  const [notice, setNotice] = useState("");
+  const attemptRegister = async ({ email: nextEmail, password: nextPassword, website = "" }) => {
+    setPending(true);
+    setError("");
+    setNotice("");
+    try {
+      if (String(website || "").trim()) throw new Error("credentials");
+      const rule = passwordRule(String(nextPassword || ""));
+      if (rule) throw new Error(rule);
+      const address = String(nextEmail || "").trim();
+      if (isDemoEmail(address)) throw new Error("Use your own email address.");
+      const { data, error: failure } = await supabase.auth.signUp({
+        email: address,
+        password: String(nextPassword),
+        options: { emailRedirectTo: window.location.origin },
+      });
+      if (failure) throw failure;
+      if (!data.session) setNotice("Check your email and open the confirmation link. Then sign in to set up your society.");
+    } catch (cause) {
+      const text = String(cause?.message || "");
+      setError(text === "Use at least 8 characters." || text === "Use your own email address."
+        ? text
+        : isNetworkAuthError(cause) ? signInMessage(cause) : "The account could not be created. Check the email and password and try again.");
+    } finally {
+      setPending(false);
+    }
+  };
   const attemptSignIn = async ({ email: nextEmail, password: nextPassword, website = "" }) => {
     setPending(true);
     setError("");
@@ -100,7 +128,7 @@ function AuthScreen() {
   const submit = async (event) => {
     event.preventDefault();
     const data = Object.fromEntries(new FormData(event.currentTarget));
-    await attemptSignIn({ email: data.email, password: data.password, website: data.website });
+    await (register ? attemptRegister : attemptSignIn)({ email: data.email, password: data.password, website: data.website });
   };
   return (
     <main className="auth-screen">
@@ -112,16 +140,22 @@ function AuthScreen() {
       <p className="auth-lead">{brand.loginLead}</p>
       <form className="auth-form" onSubmit={submit}>
         <Field label="Email"><input className={control} type="email" name="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} required /></Field>
-        <Field label="Password"><input className={control} type="password" name="password" autoComplete="current-password" minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} required /></Field>
+        <Field label="Password"><input className={control} type="password" name="password" autoComplete={register ? "new-password" : "current-password"} minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} required /></Field>
         <input name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" className="auth-honeypot" />
         {error && <p role="alert" className="auth-error">{error}</p>}
+        {notice && <p role="status">{notice}</p>}
         <button disabled={pending} type="submit">
-          {pending ? "Please wait…" : "Sign in"}
+          {pending ? "Please wait…" : register ? "Create account" : "Sign in"}
         </button>
       </form>
+      <p className="auth-forgot">
+        <button type="button" className="underline" onClick={() => { setRegister(!register); setError(""); setNotice(""); }}>
+          {register ? "Already have an account? Sign in" : "Register your society"}
+        </button>
+      </p>
       <DemoAccounts disabled={pending} onPick={(account) => attemptSignIn(account)} />
       <p className="auth-forgot"><Link to="/reset">Forgot password</Link></p>
-      <p className="auth-note">Sign in with the email your community issued. This form does not ask for a phone number or a PIN, and it does not create accounts.</p>
+      <p className="auth-note">Sign in with the email your community issued. This form does not ask for a phone number or a PIN. To start a new society, choose Register your society, create your own login, then set up the community.</p>
     </main>
   );
 }
