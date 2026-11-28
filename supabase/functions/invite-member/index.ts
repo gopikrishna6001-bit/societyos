@@ -9,6 +9,8 @@ const headers = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const siteAllowed = /^(https:\/\/([a-z0-9-]+\.)*societyos\.pages\.dev|http:\/\/(localhost|127\.0\.0\.1)(:\d+)?)$/;
+
 function json(body: unknown, status: number) {
   return new Response(JSON.stringify(body), { status, headers });
 }
@@ -25,11 +27,13 @@ serve(async (req) => {
   let communityId = "";
   let email = "";
   let role = "";
+  let siteUrl = "";
   try {
     const body = await req.json();
     communityId = String(body?.community_id ?? "");
     email = String(body?.email ?? "").trim().toLowerCase();
     role = String(body?.role ?? "");
+    siteUrl = String(body?.site_url ?? "");
   } catch {
     return json({ error: "Invitation could not be sent." }, 400);
   }
@@ -52,11 +56,14 @@ serve(async (req) => {
     return json({ error: "Invitation could not be sent." }, 403);
   }
 
-  const site = Deno.env.get("SITE_URL") ?? "https://societyos.pages.dev";
+  const site = siteAllowed.test(siteUrl) ? siteUrl : Deno.env.get("SITE_URL") ?? "https://societyos.pages.dev";
   const admin = createClient(url, serviceKey);
   const invited = await admin.auth.admin.inviteUserByEmail(email, {
     redirectTo: `${site}/join?invite=${encodeURIComponent(created.data)}`,
   });
-  if (invited.error) return json({ error: "Invitation could not be sent." }, 502);
+  if (invited.error) {
+    if (invited.error.code === "email_exists") return json({ error: "already_registered" }, 409);
+    return json({ error: "Invitation could not be sent." }, 502);
+  }
   return json({ ok: true }, 200);
 });

@@ -20,9 +20,13 @@ export default function InviteResident({ communityId, roles }) {
     setPending(true);
     setMessage("");
     const result = await supabase.functions.invoke("invite-member", {
-      body: { community_id: communityId, email: String(data.email || "").trim(), role: data.role },
+      body: { community_id: communityId, email: String(data.email || "").trim(), role: data.role, site_url: window.location.origin },
     });
     setPending(false);
+    if (result.error?.context?.status === 409 || result.data?.error === "already_registered") {
+      setMessage("This person already has an account. Link them to a unit from Units instead.");
+      return;
+    }
     setMessage(result.error || !result.data?.ok
       ? "Invitation could not be sent."
       : "Invitation sent. The link expires and works once.");
