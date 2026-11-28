@@ -1,4 +1,5 @@
 -- Invitation, role, and tenant checks. Runs after the ledger fixture.
+SET search_path = public, extensions;
 
 RESET ROLE;
 SELECT set_config('request.jwt.claim.sub', '11111111-1111-1111-1111-111111111111', false);

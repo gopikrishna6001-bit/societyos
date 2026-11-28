@@ -32,7 +32,7 @@ CREATE OR REPLACE FUNCTION public.create_invitation(p_community uuid, p_email te
 RETURNS text
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions
 AS $$
 DECLARE
   v_email text := lower(btrim(COALESCE(p_email, '')));
@@ -79,7 +79,7 @@ CREATE OR REPLACE FUNCTION public.accept_invitation(p_token text)
 RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions
 AS $$
 DECLARE
   v_hash text;
