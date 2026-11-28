@@ -18,9 +18,11 @@ Community Governance & Transparency Platform
 
 Every rupee. Every decision. Accounted for.
 
-## What the name replaces
+## What this repository is
 
-SABHA is the product name for the application previously presented as SocietyOS. User-facing titles, the sign-in screen, navigation, the installable app name, and this documentation use SABHA.
+This repository is the SABHA product monorepo. All packages, mobile identifiers, and deploy names use SABHA (`@sabha/*`, `com.sabha.app*`). There is no runtime dependency on an external OpenSociety service or package registry.
+
+Preserve the full capability set in [SABHA-CAPABILITY-INVENTORY.md](./SABHA-CAPABILITY-INVENTORY.md) when changing product surfaces.
 
 ## Voice
 
@@ -30,53 +32,21 @@ Avoid generic apartment-management slogans, decorative cultural motifs, a govern
 
 ## Colour
 
-Approved on 19 November 2026. Terracotta and forest green are not part of the palette.
-
 | Role | Value | Use |
 | --- | --- | --- |
-| Navy | `#031D27` | Sign-in background, application chrome, browser theme |
-| Cyan | `#00D4E8` | Current navigation item and the mark on navy |
-| Blue | `#0878E8` | Primary buttons and the mark on white. White text on this blue is the button label. |
+| Navy | `#031D27` | Chrome, dark surfaces, browser theme |
+| Cyan | `#00D4E8` | Accent, current navigation, mark on navy |
+| Blue | `#0878E8` | Primary buttons. White text on this blue is the button label. |
 | White | `#FFFFFF` | Cards, button labels, and text on navy |
-
-Module screens still use a light content surface (`#F7F5F0` and white) so existing tables stay readable. Amounts stay in the same ink as the surrounding text.
 
 Manrope is used for the wordmark and headings. Inter is used for interface text.
 
 ## Mark
 
-The mark currently in the repository is an open ring with one horizontal stroke. The approved circular emblem of eight figures and a central S is not in the repository. Do not draw a substitute and call it that emblem. The ring is recolored blue or cyan until the emblem file is added.
+Brand SVG/PNG assets live under `public/brand/` and `apps/web/public/brand/`.
 
-It is drawn in `currentColor` in the app.
+## Technical names
 
-## Assets
-
-| File | Use |
-| --- | --- |
-| `public/favicon.svg` | Browser tab icon |
-| `public/brand/sabha-mark.svg` | Mark on a light surface |
-| `public/brand/sabha-mark-light.svg` | Mark on a dark surface |
-| `public/brand/sabha-wordmark.svg` | Wordmark for light backgrounds |
-| `public/brand/sabha-wordmark-light.svg` | Wordmark for dark backgrounds |
-| `public/icon-192.png`, `public/icon-512.png` | PWA icons |
-| `public/icon-maskable-192.png`, `public/icon-maskable-512.png` | Maskable PWA icons |
-| `public/apple-touch-icon.png` | Home-screen icon on Apple browsers |
-| `src/brand.js` | Name, tagline, descriptor, and promise |
-| `src/brand/Mark.jsx` | Mark and wordmark used in the interface |
-
-Change the strings in `src/brand.js` when the name or tagline changes, then update this document and `index.html` to match. `index.html` cannot import that module, so the document title and meta description are duplicated there on purpose.
-
-## Retained technical names
-
-These still say SocietyOS because renaming them would break an integration or a saved session:
-
-- The npm package name `societyos`.
-- The repository and the Cloudflare host `societyos.pages.dev`.
-- The module `src/SocietyOS.jsx` and the local variable that loads it.
-- The browser storage key `societyos_auth`.
-- The legacy synthetic address `*@societyos.app` created by the phone sign-in function.
-- The local test database `societyos_test`.
-- Environment variables `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_AUTH_URL`, and `VITE_SOCIETY_ID`.
-- Database tables, functions, migration filenames, and the default WhatsApp verify token `societyos_verify_2026`.
-- Existing links to `https://societyos.pages.dev` in the legacy payment reminder and the WhatsApp bot. That hostname is the current deployment.
-- Historical notes that describe the earlier product or the unused `supabase/schema.sql`.
+- npm workspace packages `@sabha/*`
+- Mobile URL schemes and bundle IDs `com.sabha.app*` / `sabha` / `sabha-dev`
+- Pre-approval QR prefix `SABHA-PA:` (legacy `OS-PA:` still accepted when scanning)

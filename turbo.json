@@ -1,0 +1,32 @@
+{
+  "$schema": "https://turborepo.dev/schema.json",
+  "ui": "tui",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": ["dist/**", ".vinxi/**", ".tanstack/**", ".expo/**"],
+      "env": ["CF_PAGES", "CLOUDFLARE", "DEPLOY_ENV", "VITE_API_URL", "VITE_CLERK_PUBLISHABLE_KEY", "VITE_DEV_USER_ID"]
+    },
+    "lint": {
+      "dependsOn": ["^lint"]
+    },
+    "check-types": {
+      "dependsOn": ["^check-types"]
+    },
+    "test": {
+      "dependsOn": ["^build"]
+    },
+    "dev": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "persistent": true,
+      "interruptible": true,
+      "passThroughEnv": [
+        "DATABASE_URL", "CLERK_*", "WEB_ORIGINS", "R2_*", "S3_*",
+        "BILLING_ENABLED", "PUSH_ENABLED", "EXPO_ACCESS_TOKEN",
+        "BILL_REMINDER_DAYS", "SOCIETY_TIME_ZONE"
+      ]
+    }
+  }
+}

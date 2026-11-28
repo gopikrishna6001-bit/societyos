@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "sabha-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-06-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "r2_buckets": [{ "binding": "UPLOADS", "bucket_name": "sabha-uploads" }],
+  // Push queues are optional while PUSH_ENABLED=false. Add them back before enabling push.
+  "vars": {
+    "PUSH_ENABLED": "false",
+    "BILL_REMINDER_DAYS": "-7,0,3",
+    "SOCIETY_TIME_ZONE": "Asia/Kolkata",
+    "WEB_ORIGINS": "https://cursor-sabha-product-deliver.societyos.pages.dev,https://societyos.pages.dev"
+  }
+  // Secrets (wrangler secret put / CI):
+  //   DATABASE_URL  — Supabase pooler URL with options=-csearch_path%3Dsabha
+  //   CLERK_SECRET_KEY, CLERK_PUBLISHABLE_KEY, CLERK_WEBHOOK_SECRET
+}
