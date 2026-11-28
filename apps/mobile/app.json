@@ -1,0 +1,61 @@
+{
+  "expo": {
+    "name": "SABHA",
+    "slug": "sabha",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#031D27",
+        "monochromeImage": "./assets/monochrome-icon.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow SABHA to use the camera to scan visitor pre-approval QR codes at the gate.",
+          "recordAudioAndroid": false,
+          "microphonePermission": false
+        }
+      ],
+      "expo-router",
+      "expo-secure-store",
+      "expo-web-browser",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#031D27",
+          "imageWidth": 160
+        }
+      ],
+      "expo-status-bar",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#0878E8"
+        }
+      ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "8f52e8f5-da3c-4a16-ac82-1b5d10d75e07"
+      }
+    },
+    "owner": "ankitsejwal"
+  }
+}

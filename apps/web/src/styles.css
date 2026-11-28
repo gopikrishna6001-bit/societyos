@@ -1,0 +1,111 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/inter/700.css';
+@import '@fontsource/manrope/600.css';
+@import '@fontsource/manrope/700.css';
+@import '@fontsource/manrope/800.css';
+
+@custom-variant dark (&:is(.dark *));
+
+/* SABHA brand tokens on the SABHA design system.
+   Keep :root / .dark in lockstep with apps/mobile/global.css. */
+:root {
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.216 0.037 226.7);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.216 0.037 226.7);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.216 0.037 226.7);
+  --primary: oklch(0.582 0.191 255.3);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.96 0.01 226);
+  --secondary-foreground: oklch(0.216 0.037 226.7);
+  --muted: oklch(0.97 0.007 88.6);
+  --muted-foreground: oklch(0.45 0.03 226);
+  --accent: oklch(0.95 0.03 206);
+  --accent-foreground: oklch(0.216 0.037 226.7);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.9 0.015 226);
+  --input: oklch(0.9 0.015 226);
+  --ring: oklch(0.795 0.136 206.8);
+  --brand-navy: oklch(0.216 0.037 226.7);
+  --brand-cyan: oklch(0.795 0.136 206.8);
+  --brand-blue: oklch(0.582 0.191 255.3);
+}
+
+.dark {
+  --background: oklch(0.216 0.037 226.7);
+  --foreground: oklch(0.98 0.01 206);
+  --card: oklch(0.26 0.04 226);
+  --card-foreground: oklch(0.98 0.01 206);
+  --popover: oklch(0.26 0.04 226);
+  --popover-foreground: oklch(0.98 0.01 206);
+  --primary: oklch(0.795 0.136 206.8);
+  --primary-foreground: oklch(0.216 0.037 226.7);
+  --secondary: oklch(0.3 0.04 226);
+  --secondary-foreground: oklch(0.98 0.01 206);
+  --muted: oklch(0.3 0.04 226);
+  --muted-foreground: oklch(0.75 0.03 206);
+  --accent: oklch(0.32 0.05 226);
+  --accent-foreground: oklch(0.98 0.01 206);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.795 0.136 206.8);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html,
+  body {
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
+  }
+  body {
+    @apply m-0 bg-background text-foreground;
+    font-family: Inter, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    touch-action: pan-y;
+  }
+  h1,
+  h2,
+  h3,
+  .font-display {
+    font-family: Manrope, Inter, sans-serif;
+  }
+  code {
+    font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+  }
+}

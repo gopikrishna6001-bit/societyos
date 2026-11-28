@@ -1,0 +1,518 @@
+import { isDemoBrowser } from './demo/mode'
+import type {
+  Apartment,
+  ApproveUser,
+  CreateApartment,
+  CreateApartmentsBulk,
+  CreateGuard,
+  GuardDutySession,
+  GuardDevice,
+  CreateHouseHelp,
+  CreateNotice,
+  CreatePreApproval,
+  CreateTicket,
+  Guard,
+  HouseHelp,
+  HouseHelpReview,
+  CreateHouseHelpReview,
+  UpdateVerification,
+  BackgroundCheckStatus,
+  VerificationLevel,
+  HouseHelpAssignment,
+  HouseHelpAttendanceRow,
+  Notice,
+  NoticeReadReceipt,
+  Ticket,
+  TicketAction,
+  SocietyConfig,
+  UpdateApartment,
+  UpdateGuard,
+  UpdateHouseHelp,
+  UpdateSocietyConfig,
+  User,
+  UserRole,
+  UserStatus,
+  Vehicle,
+  CreateVehicle,
+  UpdateVehicle,
+  CreateParkingSlot,
+  UpdateParkingSlot,
+  AssignParkingSlot,
+  MaintenanceBill,
+  GenerateBills,
+  CreateBill,
+  RecordPayment,
+  Payment,
+  DuesRow,
+  BillConfig,
+  UpdateBillConfig,
+  FinanceReport,
+  TrialBalance,
+  IncomeExpenditure,
+  BalanceSheet,
+  ReceiptsPayments,
+  AgingSummary,
+  Vendor,
+  Expense,
+  CreateVendor,
+  UpdateVendor,
+  CreateExpense,
+  Account,
+  StatementEntry,
+  TdsSection,
+  VisitorTrends,
+  HouseHelpAnalytics,
+  MaintenanceAnalytics,
+  VisitorEntry,
+  VisitorPreApproval,
+  VisitorStatus,
+} from '@sabha/shared'
+
+// House help with its anonymous rating summary + verification/trust (directory list).
+export type HouseHelpRow = HouseHelp & {
+  ratingAvg: number | null
+  reviewCount: number
+  trustScore: number
+  idVerified: boolean
+  backgroundCheck: BackgroundCheckStatus
+  incidentCount: number
+  verificationLevel: VerificationLevel
+}
+
+export type HouseHelpReviewsView = {
+  reviews: HouseHelpReview[]
+  summary: { average: number | null; count: number; trustScore: number }
+}
+
+// Collection analytics (#70): monthly rate trend, tower comparison, payer patterns.
+export type CollectionAnalytics = {
+  byMonth: { period: string; billed: number; collected: number; ratePct: number }[]
+  byTower: { tower: string; billed: number; collected: number }[]
+  payers: {
+    early: number
+    onTime: number
+    late: number
+    outstanding: number
+    fullyPaid: number
+    avgDaysToPay: number | null
+  }
+  totalBilled: number
+  totalCollected: number
+  overallRatePct: number
+  fullyPaidPct: number
+}
+
+// Statutory statements (#98) + aging (#100) — server responses wrap the shared
+// shapes with their date context.
+export type TrialBalanceReport = TrialBalance & { toDate: string | null }
+export type IncomeExpenditureReport = IncomeExpenditure & { fromDate: string | null; toDate: string | null }
+export type BalanceSheetReport = BalanceSheet & { toDate: string | null }
+export type ReceiptsPaymentsReport = ReceiptsPayments & { fromDate: string | null; toDate: string | null }
+export type AgingReport = {
+  asOf: string
+  buckets: AgingSummary
+  total: number
+  byApartment: { apartmentId: string; apartment: string; buckets: AgingSummary; outstanding: number }[]
+}
+
+// Expense/vendor + TDS (#94)
+export type TdsSummaryRow = { section: TdsSection; amount: number; count: number }
+export type InterestPreview = {
+  enabled: boolean
+  ratePct?: number
+  graceDays?: number
+  asOf: string | null
+  rows: { apartmentId: string; apartment: string; interest: number }[]
+}
+// Per-flat statement (#96)
+export type ApartmentStatement = {
+  apartmentId: string
+  apartment: string
+  from: string | null
+  to: string | null
+  opening: number
+  closing: number
+  totalDebit: number
+  totalCredit: number
+  entries: StatementEntry[]
+}
+
+// A parking slot with its resolved assigned-flat label (admin inventory view).
+export type ParkingSlotRow = {
+  id: string
+  slotNumber: string
+  type: 'COVERED' | 'OPEN'
+  apartmentId: string | null
+  isTemporary: boolean
+  assignedUntil: string | null
+  assignedBy: string | null
+  assignedAt: string | null
+  isVisitor: boolean
+  occupiedByEntryId: string | null
+  occupiedAt: string | null
+  notes: string | null
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+  apartment: string | null
+}
+
+// A visitor-pool slot with its current occupant (from the /parking/visitor view).
+export type VisitorParkingSlot = {
+  id: string
+  slotNumber: string
+  type: 'COVERED' | 'OPEN'
+  isActive: boolean
+  isVisitor: boolean
+  occupiedByEntryId: string | null
+  occupiedAt: string | null
+  visitorName: string | null
+  vehicleNumber: string | null
+}
+
+export type VisitorParkingView = {
+  slots: VisitorParkingSlot[]
+  summary: { total: number; available: number; occupied: number; isFull: boolean }
+}
+
+// A public parking-directory row (active slots only).
+export type ParkingDirectoryRow = {
+  slotNumber: string
+  type: 'COVERED' | 'OPEN'
+  isTemporary: boolean
+  assignedUntil: string | null
+  apartment: string | null
+}
+
+// A row from the vehicle gate log (visitor entries that arrived with a vehicle).
+export type VehicleGateLogRow = {
+  id: string
+  visitorName: string
+  vehicleNumber: string | null
+  type: string
+  status: string
+  checkInAt: string | null
+  checkOutAt: string | null
+  createdAt: string
+  apartment: string | null
+  registered: boolean
+}
+
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8787'
+// Dev stand-in for the acting user, used only when no Clerk session is present.
+// Writes that need an author (notices, visitor approvals) send this as `x-user-id`.
+const DEV_USER_ID = import.meta.env.VITE_DEV_USER_ID as string | undefined
+
+// Bridge to the Clerk session token. A React component registers this getter
+// (see AuthBridge); when signed in it returns a JWT the API verifies as a
+// Bearer token, taking precedence over the dev header.
+let tokenGetter: (() => Promise<string | null>) | null = null
+export function setAuthTokenGetter(fn: (() => Promise<string | null>) | null) {
+  tokenGetter = fn
+}
+
+async function authHeaders(): Promise<Record<string, string>> {
+  const token = tokenGetter ? await tokenGetter().catch(() => null) : null
+  if (token) return { authorization: `Bearer ${token}` }
+  return DEV_USER_ID ? { 'x-user-id': DEV_USER_ID } : {}
+}
+
+async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, {
+    headers: {
+      'content-type': 'application/json',
+      ...(await authHeaders()),
+      ...(init?.headers ?? {}),
+    },
+    ...init,
+  })
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '')
+    throw new Error(`API ${path} -> ${res.status}${detail ? ` ${detail}` : ''}`)
+  }
+  return (await res.json()) as T
+}
+
+const json = (body: unknown) => JSON.stringify(body)
+
+const liveApiClient = {
+  health: () => api<{ status: string }>('/health'),
+
+  // Society
+  getSociety: () => api<SocietyConfig | null>('/society'),
+  updateSociety: (body: UpdateSocietyConfig) => api<SocietyConfig>('/society', { method: 'PUT', body: json(body) }),
+
+  // Apartments
+  listApartments: () => api<Apartment[]>('/apartments'),
+  createApartment: (body: CreateApartment) => api<Apartment>('/apartments', { method: 'POST', body: json(body) }),
+  createApartmentsBulk: (body: CreateApartmentsBulk) =>
+    api<{ count: number; apartments: Apartment[] }>('/apartments/bulk', { method: 'POST', body: json(body) }),
+  updateApartment: (id: string, body: UpdateApartment) =>
+    api<Apartment>(`/apartments/${id}`, { method: 'PATCH', body: json(body) }),
+
+  // Users / residents
+  listUsers: (status?: UserStatus) => api<User[]>(`/users${status ? `?status=${status}` : ''}`),
+  approveUser: (id: string, body: ApproveUser) =>
+    api<User>(`/users/${id}/approve`, { method: 'POST', body: json(body) }),
+  updateUserRole: (id: string, role: UserRole) =>
+    api<User>(`/users/${id}/role`, { method: 'PATCH', body: json({ role }) }),
+
+  // Guards
+  listGuards: () => api<Guard[]>('/guards'),
+  createGuard: (body: CreateGuard) => api<Guard>('/guards', { method: 'POST', body: json(body) }),
+  updateGuard: (id: string, body: UpdateGuard) => api<Guard>(`/guards/${id}`, { method: 'PATCH', body: json(body) }),
+  listGuardDevices: (id: string) => api<GuardDevice[]>(`/guards/${id}/devices`),
+  revokeGuardDevice: (id: string, deviceId: string) =>
+    api<GuardDevice>(`/guards/${id}/devices/${deviceId}/revoke`, { method: 'POST' }),
+
+  // Visitors
+  listVisitors: (status?: VisitorStatus) => api<VisitorEntry[]>(`/visitors${status ? `?status=${status}` : ''}`),
+  approveVisitor: (id: string) => api<VisitorEntry>(`/visitors/${id}/approve`, { method: 'POST' }),
+  denyVisitor: (id: string, reason: string) =>
+    api<VisitorEntry>(`/visitors/${id}/deny`, { method: 'POST', body: json({ reason }) }),
+  checkInVisitor: (id: string) =>
+    api<VisitorEntry>(`/visitors/${id}/checkin`, { method: 'POST', body: json({}) }),
+  checkOutVisitor: (id: string) => api<VisitorEntry>(`/visitors/${id}/checkout`, { method: 'POST' }),
+
+  // Pre-approvals (expected visitors)
+  listPreApprovals: () => api<VisitorPreApproval[]>('/visitors/pre-approvals'),
+  createPreApproval: (body: CreatePreApproval) =>
+    api<VisitorPreApproval>('/visitors/pre-approvals', { method: 'POST', body: json(body) }),
+  redeemPreApproval: (code: string) =>
+    api<VisitorEntry>('/visitors/pre-approvals/redeem', { method: 'POST', body: json({ code }) }),
+  revokePreApproval: (id: string) =>
+    api<VisitorPreApproval>(`/visitors/pre-approvals/${id}/revoke`, { method: 'POST' }),
+
+  // Notices
+  listNotices: (params?: { q?: string; category?: string; from?: string; to?: string }) => {
+    const p = new URLSearchParams()
+    if (params?.q) p.set('q', params.q)
+    if (params?.category) p.set('category', params.category)
+    if (params?.from) p.set('from', params.from)
+    if (params?.to) p.set('to', params.to)
+    const qs = p.toString()
+    return api<Notice[]>(`/notices${qs ? `?${qs}` : ''}`)
+  },
+  createNotice: (body: CreateNotice) => api<Notice>('/notices', { method: 'POST', body: json(body) }),
+  listNoticeReads: (id: string) => api<NoticeReadReceipt[]>(`/notices/${id}/reads`),
+
+  // Uploads (R2): raw file POST + auth-fetched object URL for display/download.
+  uploadFile: async (file: File): Promise<{ key: string; url: string }> => {
+    const res = await fetch(`${API_URL}/uploads`, {
+      method: 'POST',
+      headers: { 'content-type': file.type, ...(await authHeaders()) },
+      body: file,
+    })
+    if (!res.ok) throw new Error(`upload failed (${res.status})`)
+    return res.json()
+  },
+  fetchUploadObjectUrl: async (path: string): Promise<string> => {
+    const res = await fetch(`${API_URL}${path}`, { headers: await authHeaders() })
+    if (!res.ok) throw new Error(`attachment fetch failed (${res.status})`)
+    return URL.createObjectURL(await res.blob())
+  },
+
+  // Maintenance tickets
+  listTickets: (status?: string) =>
+    api<Ticket[]>(`/tickets${status ? `?status=${status}` : ''}`),
+  createTicket: (body: CreateTicket) => api<Ticket>('/tickets', { method: 'POST', body: json(body) }),
+  transitionTicket: (id: string, action: TicketAction, resolutionNote?: string) =>
+    api<Ticket>(`/tickets/${id}/transition`, { method: 'POST', body: json({ action, resolutionNote }) }),
+  assignTicket: (id: string, assignedTo: string) =>
+    api<Ticket>(`/tickets/${id}/assign`, { method: 'PATCH', body: json({ assignedTo }) }),
+
+  // House help (domestic staff registry)
+  listHouseHelp: (type?: string) => api<HouseHelpRow[]>(`/house-help${type ? `?type=${type}` : ''}`),
+  getHouseHelpReviews: (id: string) => api<HouseHelpReviewsView>(`/house-help/${id}/reviews`),
+  createHouseHelpReview: (id: string, body: CreateHouseHelpReview) =>
+    api<{ ok: true; id: string; rating: number }>(`/house-help/${id}/reviews`, { method: 'POST', body: json(body) }),
+  updateHouseHelpVerification: (id: string, body: UpdateVerification) =>
+    api<HouseHelp>(`/house-help/${id}/verification`, { method: 'POST', body: json(body) }),
+  createHouseHelp: (body: CreateHouseHelp) => api<HouseHelp>('/house-help', { method: 'POST', body: json(body) }),
+  updateHouseHelp: (id: string, body: UpdateHouseHelp) =>
+    api<HouseHelp>(`/house-help/${id}`, { method: 'PUT', body: json(body) }),
+  listHouseHelpAssignments: (id: string) => api<HouseHelpAssignment[]>(`/house-help/${id}/assignments`),
+  assignHouseHelp: (id: string, apartmentId: string) =>
+    api<HouseHelpAssignment>(`/house-help/${id}/assignments`, { method: 'POST', body: json({ apartmentId }) }),
+  removeHouseHelpAssignment: (id: string, apartmentId: string) =>
+    api<HouseHelpAssignment>(`/house-help/${id}/assignments/${apartmentId}`, { method: 'DELETE' }),
+  listHouseHelpEntries: (params?: { from?: string; to?: string }) => {
+    const q = new URLSearchParams()
+    if (params?.from) q.set('from', params.from)
+    if (params?.to) q.set('to', params.to)
+    const qs = q.toString()
+    return api<(HouseHelpAttendanceRow & { id: string })[]>(`/house-help/entries${qs ? `?${qs}` : ''}`)
+  },
+
+  // Vehicles (resident registry + gate log)
+  listVehicles: (apartmentId?: string) =>
+    api<Vehicle[]>(`/vehicles${apartmentId ? `?apartmentId=${apartmentId}` : ''}`),
+  createVehicle: (body: CreateVehicle) => api<Vehicle>('/vehicles', { method: 'POST', body: json(body) }),
+  updateVehicle: (id: string, body: UpdateVehicle) =>
+    api<Vehicle>(`/vehicles/${id}`, { method: 'PUT', body: json(body) }),
+  listVehicleGateLog: () => api<VehicleGateLogRow[]>('/vehicles/gate-log'),
+
+  // Parking (slot inventory + allocation)
+  listParkingSlots: () => api<ParkingSlotRow[]>('/parking/slots'),
+  listParkingDirectory: () => api<ParkingDirectoryRow[]>('/parking/directory'),
+  listVisitorParking: () => api<VisitorParkingView>('/parking/visitor'),
+  createParkingSlot: (body: CreateParkingSlot) =>
+    api<ParkingSlotRow>('/parking/slots', { method: 'POST', body: json(body) }),
+  updateParkingSlot: (id: string, body: UpdateParkingSlot) =>
+    api<ParkingSlotRow>(`/parking/slots/${id}`, { method: 'PUT', body: json(body) }),
+  assignParkingSlot: (id: string, body: AssignParkingSlot) =>
+    api<ParkingSlotRow>(`/parking/slots/${id}/assign`, { method: 'POST', body: json(body) }),
+  deleteParkingSlot: (id: string) => api<{ ok: true }>(`/parking/slots/${id}`, { method: 'DELETE' }),
+
+  // Billing (finance)
+  generateBills: (body: GenerateBills) =>
+    api<{ created: number; skipped: number }>('/bills/generate', { method: 'POST', body: json(body) }),
+  createBill: (body: CreateBill) => api<MaintenanceBill>('/bills', { method: 'POST', body: json(body) }),
+  listBills: (params?: { apartmentId?: string; status?: string; period?: string }) => {
+    const q = new URLSearchParams()
+    if (params?.apartmentId) q.set('apartmentId', params.apartmentId)
+    if (params?.status) q.set('status', params.status)
+    if (params?.period) q.set('period', params.period)
+    const qs = q.toString()
+    return api<MaintenanceBill[]>(`/bills${qs ? `?${qs}` : ''}`)
+  },
+  getBill: (id: string) => api<MaintenanceBill>(`/bills/${id}`),
+  listDues: () => api<DuesRow[]>('/bills/dues'),
+  recordPayment: (body: RecordPayment) => api<Payment>('/payments', { method: 'POST', body: json(body) }),
+  getBillConfig: () => api<BillConfig>('/bill-config'),
+  updateBillConfig: (body: UpdateBillConfig) => api<BillConfig>('/bill-config', { method: 'PUT', body: json(body) }),
+  getFinanceReport: () => api<FinanceReport>('/reports/finance'),
+  getCollectionAnalytics: () => api<CollectionAnalytics>('/reports/collection-analytics'),
+
+  // Statutory statements (#98) + aging (#100)
+  getTrialBalance: (toDate?: string) =>
+    api<TrialBalanceReport>(`/reports/trial-balance${toDate ? `?toDate=${toDate}` : ''}`),
+  getIncomeExpenditure: (fromDate?: string, toDate?: string) => {
+    const q = new URLSearchParams()
+    if (fromDate) q.set('fromDate', fromDate)
+    if (toDate) q.set('toDate', toDate)
+    const qs = q.toString()
+    return api<IncomeExpenditureReport>(`/reports/income-expenditure${qs ? `?${qs}` : ''}`)
+  },
+  getBalanceSheet: (toDate?: string) =>
+    api<BalanceSheetReport>(`/reports/balance-sheet${toDate ? `?toDate=${toDate}` : ''}`),
+  getReceiptsPayments: (fromDate?: string, toDate?: string) => {
+    const q = new URLSearchParams()
+    if (fromDate) q.set('fromDate', fromDate)
+    if (toDate) q.set('toDate', toDate)
+    const qs = q.toString()
+    return api<ReceiptsPaymentsReport>(`/reports/receipts-payments${qs ? `?${qs}` : ''}`)
+  },
+  getAging: (asOf?: string) => api<AgingReport>(`/reports/aging${asOf ? `?asOf=${asOf}` : ''}`),
+
+  // Ledger / chart of accounts (#97)
+  listAccounts: () => api<Account[]>('/ledger/accounts'),
+  initLedger: () => api<{ inserted: number; total: number }>('/ledger/init', { method: 'POST' }),
+
+  // Expenses + vendors + TDS (#94)
+  listVendors: () => api<Vendor[]>('/expenses/vendors'),
+  createVendor: (body: CreateVendor) => api<Vendor>('/expenses/vendors', { method: 'POST', body: json(body) }),
+  updateVendor: (id: string, body: UpdateVendor) =>
+    api<Vendor>(`/expenses/vendors/${id}`, { method: 'PATCH', body: json(body) }),
+  listExpenses: (params?: { accountId?: string; vendorId?: string; status?: string; from?: string; to?: string }) => {
+    const q = new URLSearchParams()
+    for (const [k, v] of Object.entries(params ?? {})) if (v) q.set(k, v)
+    const qs = q.toString()
+    return api<Expense[]>(`/expenses${qs ? `?${qs}` : ''}`)
+  },
+  createExpense: (body: CreateExpense) => api<Expense>('/expenses', { method: 'POST', body: json(body) }),
+  payExpense: (id: string, method?: string) =>
+    api<Expense>(`/expenses/${id}/pay`, { method: 'POST', body: json(method ? { method } : {}) }),
+  getTdsSummary: (from?: string, to?: string) => {
+    const q = new URLSearchParams()
+    if (from) q.set('from', from)
+    if (to) q.set('to', to)
+    const qs = q.toString()
+    return api<TdsSummaryRow[]>(`/expenses/tds-summary${qs ? `?${qs}` : ''}`)
+  },
+
+  // Interest on arrears (#95)
+  getInterestPreview: (asOf?: string) =>
+    api<InterestPreview>(`/bills/interest-preview${asOf ? `?asOf=${asOf}` : ''}`),
+  applyInterest: (asOf?: string) =>
+    api<{ created: number; skipped: number; period?: string }>(`/bills/apply-interest${asOf ? `?asOf=${asOf}` : ''}`, {
+      method: 'POST',
+    }),
+  cancelBill: (id: string, reason?: string) =>
+    api<MaintenanceBill>(`/bills/${id}/cancel`, { method: 'POST', body: json(reason ? { reason } : {}) }),
+
+  // Per-flat statement of account (#96)
+  getApartmentStatement: (apartmentId: string, from?: string, to?: string) => {
+    const q = new URLSearchParams()
+    if (from) q.set('from', from)
+    if (to) q.set('to', to)
+    const qs = q.toString()
+    return api<ApartmentStatement>(`/apartments/${apartmentId}/statement${qs ? `?${qs}` : ''}`)
+  },
+  // Auth-fetch a report export (xlsx/csv/pdf/tally) and return a local object URL.
+  reportExportObjectUrl: async (path: string): Promise<string> => {
+    const res = await fetch(`${API_URL}${path}`, { headers: await authHeaders() })
+    if (!res.ok) throw new Error(`export failed (${res.status})`)
+    return URL.createObjectURL(await res.blob())
+  },
+  getVisitorTrends: (from?: string, to?: string) => {
+    const q = new URLSearchParams()
+    if (from) q.set('from', from)
+    if (to) q.set('to', to)
+    const qs = q.toString()
+    return api<VisitorTrends>(`/reports/visitor-trends${qs ? `?${qs}` : ''}`)
+  },
+  getHouseHelpAnalytics: () => api<HouseHelpAnalytics>('/reports/house-help-analytics'),
+  getMaintenanceAnalytics: () => api<MaintenanceAnalytics>('/reports/maintenance-analytics'),
+  visitorTrendsPdfObjectUrl: async (from?: string, to?: string): Promise<string> => {
+    const q = new URLSearchParams()
+    if (from) q.set('from', from)
+    if (to) q.set('to', to)
+    const qs = q.toString()
+    const res = await fetch(`${API_URL}/reports/visitor-trends/pdf${qs ? `?${qs}` : ''}`, { headers: await authHeaders() })
+    if (!res.ok) throw new Error(`PDF export failed (${res.status})`)
+    return URL.createObjectURL(await res.blob())
+  },
+  // Auth-fetch a bill's PDF invoice and return a local object URL to open it.
+  invoiceObjectUrl: async (billId: string): Promise<string> => {
+    const res = await fetch(`${API_URL}/bills/${billId}/invoice`, { headers: await authHeaders() })
+    if (!res.ok) throw new Error(`invoice failed (${res.status})`)
+    return URL.createObjectURL(await res.blob())
+  },
+  listPayments: (params?: { apartmentId?: string; billId?: string }) => {
+    const q = new URLSearchParams()
+    if (params?.apartmentId) q.set('apartmentId', params.apartmentId)
+    if (params?.billId) q.set('billId', params.billId)
+    const qs = q.toString()
+    return api<Payment[]>(`/payments${qs ? `?${qs}` : ''}`)
+  },
+
+  // Guard duty sessions
+  listActiveDuty: () => api<GuardDutySession[]>('/guards/duty/active'),
+  listDutySessions: (params?: { guardId?: string; from?: string; to?: string }) => {
+    const q = new URLSearchParams()
+    if (params?.guardId) q.set('guardId', params.guardId)
+    if (params?.from) q.set('from', params.from)
+    if (params?.to) q.set('to', params.to)
+    const qs = q.toString()
+    return api<GuardDutySession[]>(`/guards/duty${qs ? `?${qs}` : ''}`)
+  },
+}
+
+export type ApiClient = typeof liveApiClient
+
+// Resolve the transport before any credentials, uploads or network requests.
+// Unknown demo actions fail inside the sandbox; they never fall back to live.
+export const apiClient: ApiClient = new Proxy(liveApiClient, {
+  get(target, property: keyof ApiClient) {
+    return (...args: unknown[]) => {
+      if (isDemoBrowser()) {
+        return import('./demo/client').then(({ getDemoClient }) => {
+          const client = getDemoClient()
+          return Reflect.apply(client[property], client, args)
+        })
+      }
+      return Reflect.apply(target[property], target, args)
+    }
+  },
+})
