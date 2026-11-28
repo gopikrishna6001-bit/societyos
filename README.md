@@ -1,65 +1,11 @@
 # SABHA
 
-**Clarity in Community.**
+Clarity in Community.
 
-SABHA is a Community Governance & Transparency Platform: resident app, gate desk, and admin dashboard — guests, notices, bills, maintenance, house help, parking, and reports.
+SABHA is a Community Governance & Transparency Platform. Every rupee. Every decision. Accounted for.
 
-| For | What you can do |
-| --- | --- |
-| **Residents** | Pre-approve guests and share QR passes, approve or deny visitors, read notices, view bills and payment history, raise maintenance tickets, and manage household help and vehicles. |
-| **Gate staff** | Register visitors, scan passes or enter codes, check people in and out, verify vehicles, and record duty attendance. |
-| **Administrators** | Manage apartments and resident approvals, gate staff, notices, billing, expenses, maintenance tickets, parking, and reports from the web dashboard. |
+The application is a responsive web app and an installable PWA. It is not a native Android or iOS app.
 
-Brand rules: [docs/BRAND.md](docs/BRAND.md). Capability checklist: [docs/SABHA-CAPABILITY-INVENTORY.md](docs/SABHA-CAPABILITY-INVENTORY.md). Deploy notes: [deploy/README.md](deploy/README.md), [docs/mobile.md](docs/mobile.md).
+Brand rules, the wordmark, and icon files are in [docs/BRAND.md](docs/BRAND.md). Product behaviour is in [docs/PRODUCT_REQUIREMENTS.md](docs/PRODUCT_REQUIREMENTS.md). Setup is in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
-## Try the demo (recommended hosted path)
-
-The web dashboard has a no-signup demo at `/demo`. The phone app offers **Try demo** on the sign-in screen. Both use fictional sample data in the browser or on device and never call the society API or Clerk.
-
-**Cloudflare Pages / any static host without API secrets uses this path automatically.** If `VITE_API_URL` is unset or points at localhost in a production build, `/admin` redirects to `/demo` so the full SABHA product stays usable without Neon, Clerk, or a society API.
-
-Optional live API later: any Postgres URL (Neon, Supabase, or self-hosted) as `DATABASE_URL`, skip Clerk and use seeded `VITE_DEV_USER_ID` + `WEB_ORIGINS`, then set a public `VITE_API_URL`.
-
-## Run locally
-
-Use **Node 22** and **pnpm 10.0.0**.
-
-```sh
-pnpm install --frozen-lockfile
-cp apps/api/.env.example apps/api/.env
-cp apps/web/.env.example apps/web/.env
-```
-
-Set `DATABASE_URL` (Clerk is optional). For local live admin without Clerk, set `VITE_DEV_USER_ID` to the seeded admin id after migrate+seed. Then:
-
-```sh
-pnpm --filter @sabha/db db:migrate
-pnpm --filter @sabha/db exec node --env-file=../../apps/api/.env src/seed.ts
-pnpm dev
-```
-
-Open the **Vite dev** app (usually **http://127.0.0.1:3001** when 3000 is taken) → **/admin** for Live MNR. API on **http://127.0.0.1:8787**.  
-Hosted Pages without Live secrets uses **/demo**. To enable **Clerk + live API** on Pages, follow [docs/HOSTED-LIVE.md](docs/HOSTED-LIVE.md).
-
-### MNR Apartment (local real-society seed)
-
-To register **MNR Apartment** with role personas (no Clerk):
-
-```sh
-pnpm --filter @sabha/db db:seed:mnr
-node scripts/mnr-role-e2e.mjs
-```
-
-| Persona | `x-user-id` / `VITE_DEV_USER_ID` | Role |
-| --- | --- | --- |
-| Gopikrishna Bhuvanam | `00000000-0000-0000-0000-000000000001` | ADMIN (owner of MNR-101) |
-| Pending → approved resident | `…0002` | RESIDENT |
-| Household co-resident | `…0003` | RESIDENT (MNR-102) |
-| MNR Gate Guard | `…0004` | GUARD |
-| MNR Maintenance Staff | `…0005` | STAFF |
-
-Web admin uses the admin id via `apps/web/.env` `VITE_DEV_USER_ID`. Switch roles by changing that id (or the mobile/dev `x-user-id` header).
-
-Workspace packages are `@sabha/*`. User-facing product name is SABHA.
-
-Do not promote a production deployment without explicit OK.
+The repository and several internal names still say SocietyOS. Those names are kept so existing databases, environment variables, and saved sessions continue to work. They are listed in the brand document.

@@ -1,0 +1,72 @@
+[
+  {
+    "w": "1-login",
+    "status": "DEMO ONLY",
+    "detail": "Kabir, November is 88.9% collected."
+  },
+  {
+    "w": "1-drilldown",
+    "status": "PASS",
+    "detail": "Outstanding opened Due maintenance list"
+  },
+  {
+    "w": "1-payment",
+    "status": "DEMO ONLY",
+    "detail": "Payment recorded in this demo. No bank or ledger was updated."
+  },
+  {
+    "w": "1-dashboard",
+    "status": "DEMO ONLY",
+    "detail": "Kabir, November is 89.4% collected."
+  },
+  {
+    "w": "4-public",
+    "status": "DEMO ONLY",
+    "detail": "Concern saved in this demo. Nothing was written to a community ticket register."
+  },
+  {
+    "w": "4-private",
+    "status": "DEMO ONLY",
+    "detail": "private raised"
+  },
+  {
+    "w": "4-hide-other-private",
+    "status": "PASS",
+    "detail": "resident cannot see B-702 private"
+  },
+  {
+    "w": "2-create",
+    "status": "DEMO ONLY",
+    "detail": "Expense draft kept in this demo. The community ledger was not changed."
+  },
+  {
+    "w": "2-approve",
+    "status": "DEMO ONLY",
+    "detail": "Recorded in this demo. The community ledger was not changed."
+  },
+  {
+    "w": "3-observe",
+    "status": "DEMO ONLY",
+    "detail": "Audit observation saved in this demo."
+  },
+  {
+    "w": "4-committee-private",
+    "status": "PASS",
+    "detail": "private visible=1"
+  },
+  {
+    "w": "4-committee-reply",
+    "status": "DEMO ONLY",
+    "detail": "Reply saved in this demo."
+  },
+  {
+    "w": "5-meeting",
+    "status": "DEMO ONLY",
+    "detail": "November committee meeting | Agenda | Resolutions"
+  },
+  {
+    "w": "6-invite",
+    "status": "DEMO ONLY",
+    "detail": "Invitation kept in this demo. No email was sent and no membership was created."
+  }
+]
